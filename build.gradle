@@ -4,7 +4,7 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'com.EssentialsCore'
+group = 'com.github.Baumkrieger69' // ⛔ WICHTIG: Muss so sein für GitHub Packages
 version = '1.0.0'
 
 repositories {
@@ -25,12 +25,9 @@ dependencies {
 
 tasks {
     runServer {
-        // Configure the Minecraft version for our task.
-        // This is the only required configuration besides applying the plugin.
-        // Your plugin's jar (or shadowJar if present) will be used automatically.
         minecraftVersion("1.21")
     }
-    
+
     jar {
         archiveBaseName.set(project.name)
         archiveClassifier.set('')
@@ -53,7 +50,6 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release.set(targetJavaVersion)
     }
@@ -68,18 +64,72 @@ processResources {
     }
 }
 
+task apiJar(type: Jar) {
+    archiveBaseName.set("${project.name}-api")
+    archiveClassifier.set('')
+    archiveVersion.set(project.version.toString())
+    from sourceSets.main.output
+    include 'com/essentialscore/api/**'
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            groupId = 'com.EssentialsCore'
+            groupId = project.group
             artifactId = 'essentials-core'
             version = project.version
+
+            pom {
+                name = 'EssentialsCore'
+                description = 'Minecraft Module structure Plugin'
+                url = 'https://github.com/Baumkrieger69/EssentialsCore'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'Baumkrieger69'
+                        name = 'Baumkrieger69'
+                        email = 'github@example.com'
+                    }
+                }
+            }
+        }
+
+        api(MavenPublication) {
+            artifact apiJar
+            groupId = project.group
+            artifactId = 'essentials-core-api'
+            version = project.version
+
+            pom {
+                name = 'EssentialsCore API'
+                description = 'API for Minecraft Module structure Plugin'
+                url = 'https://github.com/Baumkrieger69/EssentialsCore'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'Baumkrieger69'
+                        name = 'Baumkrieger69'
+                        email = 'github@example.com'
+                    }
+                }
+            }
         }
     }
+
     repositories {
         maven {
-            url = uri("${System.getProperty('user.home')}/gradle-local-repo")
-        }
-    }
-}
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Baumkrieger69/EssentialsCore")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("GIT

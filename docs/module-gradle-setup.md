@@ -20,13 +20,21 @@ repositories {
     mavenCentral()
     // SpigotMC Repository für Bukkit/Spigot-APIs
     maven { url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/' }
-    // JitPack für EssentialsCore-API
-    maven { url = 'https://jitpack.io' }
+    
+    // GitHub Packages Repository für EssentialsCore-API
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/Baumkrieger69/EssentialsCore")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
 }
 
 dependencies {
-    // Verwende NUR die API, nicht den gesamten Core
-    compileOnly 'com.github.EssentialsCore:EssentialsCore-API:1.0.0'
+    // Verwende die API aus GitHub Packages
+    compileOnly 'com.essentialscore:essentialscore-api:1.0.0'
     
     // Spigot/Bukkit API
     compileOnly 'org.spigotmc:spigot-api:1.19.2-R0.1-SNAPSHOT'
@@ -81,10 +89,66 @@ jar {
     finalizedBy buildModule
 }
 
+// Konfiguration für die Veröffentlichung als GitHub Package
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name.toLowerCase()
+            version = project.version
+            
+            from components.java
+        }
+    }
+    
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Baumkrieger69/EssentialsCore")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+
 test {
     useJUnitPlatform()
 }
 ```
+
+## GitHub Packages Authentifizierung einrichten
+
+Um GitHub Packages zu verwenden, musst du dich authentifizieren. Dafür gibt es zwei Möglichkeiten:
+
+### 1. Über Umgebungsvariablen
+
+Setze diese Umgebungsvariablen in deinem System:
+```
+GITHUB_USERNAME=dein-github-benutzername
+GITHUB_TOKEN=dein-persönliches-access-token
+```
+
+### 2. Über gradle.properties
+
+Erstelle eine Datei `~/.gradle/gradle.properties` mit folgendem Inhalt:
+```properties
+gpr.user=dein-github-benutzername
+gpr.key=dein-persönliches-access-token
+```
+
+Du benötigst ein Personal Access Token mit den Berechtigungen `read:packages` und `write:packages`. Du kannst ein Token erstellen unter [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens).
+
+## Modul als GitHub Package veröffentlichen
+
+Um dein Modul als GitHub Package zu veröffentlichen, führe diesen Befehl aus:
+
+```bash
+./gradlew publish
+```
+
+Andere Entwickler können dann dein Modul in ihren Projekten nutzen, indem sie die entsprechenden Repository- und Dependency-Einträge in ihrer `build.gradle` hinzufügen.
 
 ## settings.gradle
 
@@ -198,4 +262,28 @@ task buildModule(type: Copy, dependsOn: shadowJar) {
 }
 ```
 
-Mit dieser Konfiguration kannst du Module entwickeln, die nur von der stabilen API abhängen, nicht vom gesamten EssentialsCore. 
+## Verwendung von GitHub Packages in anderen Projekten
+
+Um dein veröffentlichtes Modul in anderen Projekten zu verwenden:
+
+```groovy
+repositories {
+    // Andere Repositories...
+    
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/Baumkrieger69/EssentialsCore")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+    // Ersetze 'MeinModul' mit dem tatsächlichen artifactId und 'com.deinplugin' mit der groupId
+    implementation 'com.deinplugin:meinmodul:1.0.0'
+}
+```
+
+Mit dieser Konfiguration kannst du Module entwickeln, die nur von der stabilen API abhängen, nicht vom gesamten EssentialsCore, und sie als GitHub Packages veröffentlichen und verwenden. 
