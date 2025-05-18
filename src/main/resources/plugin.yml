@@ -1,0 +1,41 @@
+name: ApiCore
+version: 1.0.0
+main: com.essentialscore.ApiCore
+api-version: 1.16
+description: A core plugin that manages modular extensions
+author: Baumkrieger69
+commands:
+  apicore:
+    description: Main command for controlling the ApiCore system
+    usage: /apicore <subcommand> [arguments]
+    aliases: [acore, ac]
+    permission: apicore.admin
+permissions:
+  apicore.admin:
+    description: Allows full access to all ApiCore features
+    default: op
+  apicore.admin.*:
+    description: Grants admin permissions for all modules
+    default: op
+    children:
+      apicore.admin: true
+  apicore.admin.system:
+    description: Allows access to system-level features
+    default: op
+    children:
+      apicore.admin.system.performance: true
+      apicore.admin.system.benchmark: true
+      apicore.admin.system.diagnose: true
+      apicore.admin.system.cache: true
+  apicore.admin.system.performance:
+    description: Allows access to performance monitoring data
+    default: op
+  apicore.admin.system.benchmark:
+    description: Allows running benchmarks
+    default: op
+  apicore.admin.system.diagnose:
+    description: Allows using diagnostic tools
+    default: op
+  apicore.admin.system.cache:
+    description: Allows managing system caches
+    default: op
