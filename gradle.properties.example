@@ -1,4 +1,0 @@
-# GitHub Packages Konfiguration
-# Kopiere diese Datei zu gradle.properties und aktualisiere die Werte
-gpr.user=DEIN_GITHUB_BENUTZERNAME
-gpr.key=DEIN_GITHUB_TOKEN 

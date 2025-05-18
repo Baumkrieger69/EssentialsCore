@@ -4,7 +4,7 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'com.github.Baumkrieger69' // ⛔ WICHTIG: Muss so sein für GitHub Packages
+group = 'com.github.Baumkrieger69' // Für JitPack muss die Group-ID dem GitHub-Nutzernamen/Organisation entsprechen
 version = '1.0.0'
 
 repositories {
@@ -64,22 +64,25 @@ processResources {
     }
 }
 
+// API-JAR-Aufgabe, die nur die Schnittstellen-Klassen enthält
 task apiJar(type: Jar) {
     archiveBaseName.set("${project.name}-api")
-    archiveClassifier.set('')
+    archiveClassifier.set('api')
     archiveVersion.set(project.version.toString())
     from sourceSets.main.output
     include 'com/essentialscore/api/**'
+}
+
+// Füge API-JAR zu den Build-Artefakten hinzu
+artifacts {
+    archives apiJar
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            groupId = project.group
-            artifactId = 'essentials-core'
-            version = project.version
-
+            
             pom {
                 name = 'EssentialsCore'
                 description = 'Minecraft Module structure Plugin'
@@ -99,37 +102,10 @@ publishing {
                 }
             }
         }
-
-        api(MavenPublication) {
-            artifact apiJar
-            groupId = project.group
-            artifactId = 'essentials-core-api'
-            version = project.version
-
-            pom {
-                name = 'EssentialsCore API'
-                description = 'API for Minecraft Module structure Plugin'
-                url = 'https://github.com/Baumkrieger69/EssentialsCore'
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'Baumkrieger69'
-                        name = 'Baumkrieger69'
-                        email = 'github@example.com'
-                    }
-                }
-            }
-        }
     }
-
+    
+    // Veröffentliche im lokalen Maven-Repository für Tests
     repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Baumkrieger69/EssentialsCore")
-            credentials {
-                username = project.findProperty("gpr.user") ?: System.getenv("GIT
+        mavenLocal()
+    }
+}
