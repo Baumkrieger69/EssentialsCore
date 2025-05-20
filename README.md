@@ -1,4 +1,5 @@
 # EssentialsCore
+<<<<<<< HEAD
 
 Ein modulares Minecraft Plugin-System für Paper/Spigot Server.
 
@@ -17,6 +18,22 @@ Ein modulares Minecraft Plugin-System für Paper/Spigot Server.
 ## Installation
 
 ### Gradle (Empfohlen)
+=======
+Minecraft Module structure Plugin
+
+## Features
+
+- Modulares System für Minecraft-Plugins
+- API für Modulentwicklung
+- Einfache Berechtigungsverwaltung
+- Event-basierte Modulkommunikation
+- Java 21 Unterstützung
+- Paper 1.21.x Kompatibilität
+
+## Installation mit JitPack
+
+Füge EssentialsCore als Abhängigkeit in dein Projekt ein:
+>>>>>>> 1dbe3842cb620a5d096f474bd0b2ab86863b873a
 
 Füge JitPack zu deinem `build.gradle` hinzu:
 
@@ -30,10 +47,15 @@ Füge die Abhängigkeit hinzu:
 
 ```gradle
 dependencies {
+<<<<<<< HEAD
     implementation 'com.github.Baumkrieger69:EssentialsCore:Tag'
+=======
+    implementation 'com.github.Baumkrieger69:EssentialsCore:1.0.2'
+>>>>>>> 1dbe3842cb620a5d096f474bd0b2ab86863b873a
 }
-```
+Module Entwickeln
 
+<<<<<<< HEAD
 Ersetze `Tag` mit:
 - `main-SNAPSHOT` für die neueste Version
 - `v1.0.0` für eine spezifische Version
@@ -445,3 +467,6 @@ Bei Fragen oder Problemen:
 ## Lizenz
 
 Dieses Projekt ist unter der MIT-Lizenz lizenziert. Siehe [LICENSE](LICENSE) für Details.
+=======
+Grundstruktur
+>>>>>>> 1dbe3842cb620a5d096f474bd0b2ab86863b873a
