@@ -22,3 +22,6 @@ repositories {
 dependencies {
     implementation 'com.github.Baumkrieger69:EssentialsCore:1.0.2'
 }
+Module Entwickeln
+
+Grundstruktur
