@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id('xyz.jpenilla.run-paper') version "2.3.1"
     id 'maven-publish'
 }
@@ -21,57 +21,20 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
+    // Weitere Abhängigkeiten hier einfügen
 }
 
-// API SourceSet definieren
-sourceSets {
-    api {
-        java {
-            srcDir 'src/main/java'
-            include 'com/essentialscore/api/**'
-        }
-    }
-}
-
-tasks {
-    runServer {
-        minecraftVersion("1.21")
-    }
-
-    // Haupt-JAR
-    jar {
-        archiveBaseName.set(project.name)
-        archiveClassifier.set('')
-        archiveVersion.set(project.version.toString())
-        from {
-            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-        }
-    }
-
-    // API-JAR
-    task apiJar(type: Jar) {
-        from sourceSets.api.output
-        archiveBaseName.set("${project.name}-api")
-        archiveClassifier.set('api')
-        archiveVersion.set(project.version.toString())
-    }
-}
-
-def targetJavaVersion = 21
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release.set(targetJavaVersion)
-    }
+    options.release.set(21)
 }
 
 processResources {
@@ -83,17 +46,21 @@ processResources {
     }
 }
 
-// API als separates Artefakt hinzufügen
-artifacts {
-    api tasks.named('apiJar')
+tasks {
+    runServer {
+        minecraftVersion("1.21")
+    }
+    jar {
+        archiveBaseName.set(project.name)
+        archiveClassifier.set('')
+        archiveVersion.set(project.version.toString())
+    }
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            artifact tasks.named('apiJar')
-            
             pom {
                 name = 'EssentialsCore'
                 description = 'Minecraft Module structure Plugin'
