@@ -997,13 +997,13 @@ public class ModuleManager {
                         // Prüfe auf die Signatur mit ModuleAPI
                         try {
                             Method initMethod = moduleMainClass.getMethod("init", ModuleAPI.class, FileConfiguration.class);
-                            Method onDisableMethod = moduleMainClass.getMethod("onDisable");
-                            
-                            if (initMethod != null && onDisableMethod != null) {
+                        Method onDisableMethod = moduleMainClass.getMethod("onDisable");
+                        
+                        if (initMethod != null && onDisableMethod != null) {
                                 implementsModuleInterface = true;
                                 console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Interface Module gefunden (über Methodensignatur): init und onDisable vorhanden", apiCore.isDebugMode());
-                            }
-                        } catch (NoSuchMethodException e) {
+                        }
+                    } catch (NoSuchMethodException e) {
                             // Prüfe auf die alte Signatur mit ApiCore
                             try {
                                 Method initMethod = moduleMainClass.getMethod("init", ApiCore.class, FileConfiguration.class);
@@ -1095,9 +1095,9 @@ public class ModuleManager {
                                 console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Initialisierung mit ModuleAPI erfolgreich", apiCore.isDebugMode());
                             } catch (NoSuchMethodException e) {
                                 // Wenn nicht gefunden, versuche die alte Methode mit ApiCore
-                                try {
-                                    Method initMethod = moduleMainClass.getMethod("init", ApiCore.class, FileConfiguration.class);
-                                    initMethod.invoke(moduleInstance, apiCore, config);
+                            try {
+                                Method initMethod = moduleMainClass.getMethod("init", ApiCore.class, FileConfiguration.class);
+                                initMethod.invoke(moduleInstance, apiCore, config);
                                     console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Legacy-Initialisierung erfolgreich", apiCore.isDebugMode());
                                 } catch (NoSuchMethodException ex) {
                                     console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Konnte keine init-Methode finden. Das Modul " + moduleName + " wird nicht initialisiert!");

@@ -57,7 +57,7 @@ public class SimpleCommand implements CommandDefinition {
     /**
      * Sets the function that provides tab completions for this command
      * 
-     * @param tabCompleter The function that takes a CommandSender and String[] args and returns a List<String>
+     * @param tabCompleter The function that takes a CommandSender and String[] args and returns a List&lt;String&gt;
      * @return This command for method chaining
      */
     public SimpleCommand setTabCompleter(BiFunction<CommandSender, String[], List<String>> tabCompleter) {
