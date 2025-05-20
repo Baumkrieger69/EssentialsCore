@@ -1,16 +1,18 @@
 # EssentialsCore
-Minecraft Module strukture Plugin ( IN DEVELOPMENT (MANY BUGS))
+Minecraft Module structure Plugin
 
-## Funktionen
+## Features
 
 - Modulares System für Minecraft-Plugins
 - API für Modulentwicklung
 - Einfache Berechtigungsverwaltung
-- System für Modulübergreifende Kommunikation
+- Event-basierte Modulkommunikation
+- Java 21 Unterstützung
+- Paper 1.21.x Kompatibilität
 
-## Verwendung mit JitPack
+## Installation mit JitPack
 
-Du kannst dieses Projekt als Abhängigkeit in deinen Projekten mit JitPack verwenden:
+Füge EssentialsCore als Abhängigkeit in dein Projekt ein:
 
 ```groovy
 repositories {
@@ -18,21 +20,5 @@ repositories {
 }
 
 dependencies {
-    // Nur API für Module (empfohlen)
-    compileOnly 'com.github.EssentialsCore:EssentialsCore-API:1.0.0'
-    
-    // Oder das vollständige Plugin
-    // compileOnly 'com.github.EssentialsCore:EssentialsCore:1.0.0'
+    implementation 'com.github.Baumkrieger69:EssentialsCore:1.0.2'
 }
-```
-
-## Eigene Module entwickeln
-
-Alle Informationen zur Entwicklung von Modulen findest du in unserer [umfassenden Modul-Entwicklungsanleitung](docs/comprehensive-module-guide.md).
-
-Diese Anleitung enthält:
-- Projekteinrichtung mit Gradle
-- Modulstruktur und API-Nutzung
-- Berechtigungssystem und Befehle
-- Veröffentlichung eigener Module
-- Beispiele und Best Practices
