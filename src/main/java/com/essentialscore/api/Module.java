@@ -20,6 +20,12 @@ public interface Module {
     void init(ModuleAPI api, FileConfiguration config);
     
     /**
+     * Called when the module is enabled or re-enabled after a reload
+     * This is called after init() and can be used to start tasks or register listeners
+     */
+    default void onEnable() {}
+    
+    /**
      * Called when the module is disabled
      */
     void onDisable();

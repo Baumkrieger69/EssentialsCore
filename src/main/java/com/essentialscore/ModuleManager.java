@@ -1070,6 +1070,15 @@ public class ModuleManager {
                         // Initialize module
                         ((com.essentialscore.api.Module) moduleInstance).init(moduleAPI, config);
                         
+                        // Nach der Initialisierung onEnable aufrufen
+                        try {
+                            ((com.essentialscore.api.Module) moduleInstance).onEnable();
+                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für " + moduleName + " aufgerufen");
+                        } catch (Exception e) {
+                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
+                                "Fehler beim Aufrufen von onEnable für " + moduleName + ": " + e.getMessage());
+                        }
+                        
                         // Create adapter for legacy systems if needed
                         if (implementsModuleInterface) {
                             // Create an adapter that presents the Module as a legacy module
@@ -1093,12 +1102,36 @@ public class ModuleManager {
                                 ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
                                 initMethod.invoke(moduleInstance, moduleAPI, config);
                                 console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Initialisierung mit ModuleAPI erfolgreich", apiCore.isDebugMode());
+                                
+                                // Nach der Initialisierung onEnable aufrufen, falls vorhanden
+                                try {
+                                    Method onEnableMethod = moduleMainClass.getMethod("onEnable");
+                                    onEnableMethod.invoke(moduleInstance);
+                                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für " + moduleName + " aufgerufen");
+                                } catch (NoSuchMethodException e) {
+                                    // onEnable nicht gefunden, ist okay für Legacy-Module
+                                } catch (Exception e) {
+                                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
+                                        "Fehler beim Aufrufen von onEnable für " + moduleName + ": " + e.getMessage());
+                                }
                             } catch (NoSuchMethodException e) {
                                 // Wenn nicht gefunden, versuche die alte Methode mit ApiCore
                             try {
                                 Method initMethod = moduleMainClass.getMethod("init", ApiCore.class, FileConfiguration.class);
                                 initMethod.invoke(moduleInstance, apiCore, config);
-                                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Legacy-Initialisierung erfolgreich", apiCore.isDebugMode());
+                                console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Legacy-Initialisierung erfolgreich", apiCore.isDebugMode());
+                                
+                                // Nach der Initialisierung onEnable aufrufen, falls vorhanden
+                                try {
+                                    Method onEnableMethod = moduleMainClass.getMethod("onEnable");
+                                    onEnableMethod.invoke(moduleInstance);
+                                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für Legacy-Modul " + moduleName + " aufgerufen");
+                                } catch (NoSuchMethodException ex) {
+                                    // onEnable nicht gefunden, ist okay für Legacy-Module
+                                } catch (Exception ex) {
+                                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
+                                        "Fehler beim Aufrufen von onEnable für Legacy-Modul " + moduleName + ": " + ex.getMessage());
+                                }
                                 } catch (NoSuchMethodException ex) {
                                     console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Konnte keine init-Methode finden. Das Modul " + moduleName + " wird nicht initialisiert!");
                                 }
@@ -1579,9 +1612,11 @@ public class ModuleManager {
             String moduleName = modulesToReload.get(i);
             try {
                 // Speichere Informationen über das Modul vor dem Entladen
-                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) loadedModules.get(moduleName);
+                Object moduleObj = loadedModules.get(moduleName);
                 File jarFile = null;
-                if (info != null) {
+                
+                if (moduleObj instanceof ApiCore.ModuleInfo) {
+                    ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleObj;
                     jarFile = info.getJarFile();
                 }
                 
@@ -1595,6 +1630,9 @@ public class ModuleManager {
                 }
             } catch (Exception e) {
                 console.error("Fehler beim Entladen von Modul " + moduleName + ": " + e.getMessage());
+                if (apiCore.isDebugMode()) {
+                    e.printStackTrace();
+                }
             }
         }
         
@@ -1625,13 +1663,81 @@ public class ModuleManager {
             return;
         }
         
+        // Alle statischen Caches leeren, die Modulreferenzen enthalten könnten
+        apiCore.cleanMethodCache(null); // Leert den gesamten Methoden-Cache
+        
         // Lade alle Module mit Abhängigkeitsauflösung neu
         loadModulesWithDependencyResolution();
         
         // Befehle nach dem Neuladen synchronisieren
         synchronizeCommands();
         
+        // Stelle sicher, dass alle Listener korrekt registriert sind
+        for (String moduleName : loadedModules.keySet()) {
+            Object moduleObj = loadedModules.get(moduleName);
+            if (moduleObj instanceof ApiCore.ModuleInfo) {
+                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleObj;
+                Object instance = info.getInstance();
+                
+                if (instance != null) {
+                    // Prüfe, ob das Modul ein Listener ist
+                    if (instance.getClass().isAnnotationPresent(com.essentialscore.api.event.Listener.class)) {
+                        try {
+                            // Registriere Listener erneut
+                            Bukkit.getPluginManager().registerEvents((Listener)instance, apiCore);
+                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
+                                "Listener für Modul " + moduleName + " neu registriert");
+                        } catch (Exception e) {
+                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
+                                "Konnte Listener für Modul " + moduleName + " nicht neu registrieren: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Führe onEnable für alle Module erneut aus, um sicherzustellen, dass sie korrekt initialisiert sind
+        for (String moduleName : loadedModules.keySet()) {
+            Object moduleObj = loadedModules.get(moduleName);
+            if (moduleObj instanceof ApiCore.ModuleInfo) {
+                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleObj;
+                Object instance = info.getInstance();
+                
+                if (instance != null) {
+                    try {
+                        // Versuche onEnable aufzurufen
+                        if (instance instanceof com.essentialscore.api.Module) {
+                            ((com.essentialscore.api.Module) instance).onEnable();
+                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
+                                "onEnable für Modul " + moduleName + " aufgerufen");
+                        } else {
+                            // Versuche über Reflection
+                            try {
+                                Method onEnableMethod = instance.getClass().getMethod("onEnable");
+                                onEnableMethod.invoke(instance);
+                                console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
+                                    "onEnable für Legacy-Modul " + moduleName + " aufgerufen");
+                            } catch (NoSuchMethodException e) {
+                                // Keine onEnable-Methode gefunden, ist okay
+                            }
+                        }
+                    } catch (Exception e) {
+                        console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
+                            "Fehler beim Aufrufen von onEnable für Modul " + moduleName + ": " + e.getMessage());
+                        if (apiCore.isDebugMode()) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+        
         console.success("Module wurden neu geladen");
+        
+        // Event für das Neuladen der Module auslösen
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("moduleCount", loadedModules.size());
+        apiCore.fireModuleEvent("modules_reloaded", eventData);
     }
     
     /**

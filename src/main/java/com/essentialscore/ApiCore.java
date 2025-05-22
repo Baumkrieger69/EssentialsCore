@@ -1273,12 +1273,21 @@ public class ApiCore extends JavaPlugin implements Listener {
             
             // Ressourcen nach dem Neuladen extrahieren, falls konfiguriert
             if (getConfig().getBoolean("general.extract-module-resources", true)) {
-                getServer().getScheduler().runTaskAsynchronously(this, this::extractModuleResources);
+                getServer().getScheduler().runTaskAsynchronously(this, () -> {
+                    console.info("Extrahiere Modul-Ressourcen nach Reload...");
+                    extractModuleResources();
+                });
             }
             
-            console.success("Alle Module wurden neu geladen");
+            // Alle Caches leeren, die auf Module verweisen könnten
+            formattedMessageCache.clear();
+            permissionCache.clear();
+            permissionExactCache.clear();
+            
+            // Stelle sicher, dass alle Module korrekt registriert sind
+            console.info("Module wurden neu geladen. Anzahl: " + loadedModules.size());
         } else {
-            console.error("ModuleManager ist nicht initialisiert, Module können nicht neu geladen werden");
+            console.error("ModuleManager ist nicht initialisiert!");
         }
     }
 }
