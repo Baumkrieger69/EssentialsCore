@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.github.Baumkrieger69'
-version = '1.0.2'
+version = '1.0.4'
 
 repositories {
     mavenCentral()
@@ -30,6 +30,22 @@ java {
     }
     withSourcesJar()
     withJavadocJar()
+}
+
+// Configure toolchain repositories to download Java if needed
+toolchainManagement {
+    jvm {
+        javaRepositories {
+            repository('adoptium') {
+                url = uri('https://packages.adoptium.net/artifactory/jdk')
+                credentials {
+                    // No credentials needed for Adoptium
+                    username = ''
+                    password = ''
+                }
+            }
+        }
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
