@@ -82,7 +82,7 @@ plugins {
 }
 
 group = 'com.your.group'
-version = '1.0.0'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -118,7 +118,7 @@ import com.essentialscore.api.module.ModuleInfo;
 
 @ModuleInfo(
     name = "DeinModul",
-    version = "1.0.0",
+    version = "1.1.0",
     description = "Beschreibung deines Moduls"
 )
 public class DeinModul extends Module {
@@ -138,7 +138,7 @@ public class DeinModul extends Module {
 
 ```yaml
 name: DeinModul
-version: 1.0.0
+version: 1.1.0
 description: Beschreibung deines Moduls
 main: com.your.package.DeinModul
 author: DeinName

@@ -1,5 +1,5 @@
 name: ApiCore
-version: 1.0.0
+version: 1.1.0
 main: com.essentialscore.ApiCore
 api-version: 1.16
 description: A core plugin that manages modular extensions

@@ -1476,137 +1476,162 @@ public class ModuleManager {
         }
         
         console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Entlade Modul: " + moduleName);
-        ApiCore.ModuleInfo moduleInfo = (ApiCore.ModuleInfo) loadedModules.get(moduleName);
-        if (moduleInfo == null) {
-            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Das Modul " + moduleName + " ist nicht geladen!");
-            return;
-        }
-
-        // Modul schließen mit verbesserter Fehlerbehandlung
+        
         try {
-            Object instance = moduleInfo.getInstance();
-            if (instance == null) {
-                console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Modulinstanz für " + moduleName + " ist null!");
-            } else if (instance instanceof ModuleAdapter) {
-                try {
-                    ((ModuleAdapter)instance).onDisable();
-                } catch (Exception e) {
-                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                        "Fehler in onDisable() für Modul " + moduleName + ": " + e.getMessage());
-                    if (apiCore.isDebugMode()) {
-                        e.printStackTrace();
-                    }
-                }
-            } else if (instance instanceof com.essentialscore.api.Module) {
-                try {
-                    ((com.essentialscore.api.Module)instance).onDisable();
-                } catch (Exception e) {
-                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                        "Fehler in onDisable() für Modul " + moduleName + ": " + e.getMessage());
-                    if (apiCore.isDebugMode()) {
-                        e.printStackTrace();
-                    }
-                }
-            } else {
-                try {
-                    // Standard-Methoden-Aufruf
-                    apiCore.invokeMethod(instance, "onDisable", new Class[]{});
-                } catch (NoSuchMethodException methodEx) {
-                    // Versuch B: Mit Reflection alle Methoden prüfen, die "onDisable" heißen
+            Object moduleInfo = loadedModules.get(moduleName);
+            
+            if (moduleInfo instanceof ApiCore.ModuleInfo) {
+                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleInfo;
+                
+                // Modul-Instanz abrufen
+                Object moduleInstance = info.getInstance();
+                
+                // Methode zum Deaktivieren aufrufen
+                if (moduleInstance != null) {
+                    // Verwende ApiCore, um die Methode aufzurufen
                     try {
-                        boolean found = false;
-                        for (Method method : instance.getClass().getDeclaredMethods()) {
-                            if (method.getName().equalsIgnoreCase("onDisable") && method.getParameterCount() == 0) {
-                                method.setAccessible(true);
-                                method.invoke(instance);
-                                found = true;
-                                console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Modul " + moduleName + " deaktiviert über alternative onDisable-Methode");
-                                break;
+                        Class<?>[] paramTypes = new Class<?>[0];
+                        apiCore.invokeMethod(moduleInstance, "onDisable", paramTypes);
+                    } catch (Exception e) {
+                        console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE,
+                            "Fehler beim Aufrufen von onDisable für " + moduleName + ": " + e.getMessage());
+                    }
+                }
+                
+                // Listener des Moduls entfernen
+                // Wir benutzen Reflection, um auf die private Map der Module-Listener zuzugreifen
+                try {
+                    Field listenersField = ApiCore.class.getDeclaredField("moduleListeners");
+                    listenersField.setAccessible(true);
+                    Map<String, List<com.essentialscore.api.ModuleEventListener>> moduleListeners = 
+                        (Map<String, List<com.essentialscore.api.ModuleEventListener>>) listenersField.get(apiCore);
+                    
+                    if (moduleListeners != null) {
+                        Set<String> eventNames = new HashSet<>(moduleListeners.keySet());
+                        
+                        for (String eventName : eventNames) {
+                            List<com.essentialscore.api.ModuleEventListener> listeners = moduleListeners.get(eventName);
+                            if (listeners != null) {
+                                // Kopie der Liste erstellen, um ConcurrentModificationException zu vermeiden
+                                List<com.essentialscore.api.ModuleEventListener> listenersCopy = new ArrayList<>(listeners);
+                                for (com.essentialscore.api.ModuleEventListener listener : listenersCopy) {
+                                    if (listener.getClass().getClassLoader() == info.getLoader()) {
+                                        apiCore.unregisterModuleListener(eventName, listener);
+                                    }
+                                }
                             }
                         }
-                        if (!found) {
-                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Keine onDisable-Methode für Modul " + moduleName + " gefunden");
-                        }
-                    } catch (Exception ex) {
-                        console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                            "Alternativer Aufruf von onDisable() für Modul " + moduleName + " fehlgeschlagen: " + ex.getMessage());
                     }
-                } catch (NullPointerException e) {
-                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                        "NullPointerException in onDisable() für Modul " + moduleName + ": " + e.getMessage());
                 } catch (Exception e) {
-                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                        "Fehler beim Aufrufen von onDisable() für Modul " + moduleName + ": " + e.getMessage());
+                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE,
+                        "Fehler beim Entfernen von Event-Listenern für " + moduleName + ": " + e.getMessage());
+                }
+                
+                // Befehle des Moduls entfernen
+                List<DynamicCommand> commands = moduleCommands.get(moduleName);
+                if (commands != null && !commands.isEmpty()) {
+                    apiCore.unregisterCommands(commands);
+                    moduleCommands.remove(moduleName);
+                }
+                
+                // ClassLoader des Moduls schließen
+                try {
+                    URLClassLoader loader = info.getLoader();
+                    if (loader != null) {
+                        loader.close();
+                    }
+                } catch (Exception e) {
+                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE,
+                        "Fehler beim Schließen des ClassLoaders für " + moduleName + ": " + e.getMessage());
                 }
             }
+            
+            // Modul aus der Liste entfernen
+            loadedModules.remove(moduleName);
+            console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Modul " + moduleName + " wurde entladen");
+            
+            // Tab-Completions synchronisieren
+            synchronizeCommands();
+            
+            return;
         } catch (Exception e) {
-            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Deaktivieren des Moduls " + moduleName + ": " + e.getMessage());
+            console.categoryError(ConsoleFormatter.MessageCategory.MODULE,
+                "Kritischer Fehler beim Entladen des Moduls " + moduleName + ": " + e.getMessage());
+            if (apiCore.isDebugMode()) {
+                e.printStackTrace();
+            }
         }
+    }
 
-        // Befehle entfernen
-        List<DynamicCommand> commands = moduleCommands.get(moduleName);
-        if (commands != null && !commands.isEmpty()) {
+    /**
+     * Lädt alle Module neu - verbesserte Implementierung für sicheren Reload
+     */
+    public void reloadAllModules() {
+        console.header("MODULE NEU LADEN");
+        
+        // Zuerst alle Module entladen
+        List<String> modulesToReload = new ArrayList<>(loadedModules.keySet());
+        
+        console.info("Entlade " + modulesToReload.size() + " Module...");
+        
+        // Module in umgekehrter Reihenfolge entladen (für Abhängigkeiten)
+        for (int i = modulesToReload.size() - 1; i >= 0; i--) {
+            String moduleName = modulesToReload.get(i);
             try {
-                // Befehle zuerst in einer Kopie speichern, da unregisterCommands die Liste modifizieren könnte
-                List<DynamicCommand> commandsCopy = new ArrayList<>(commands);
+                // Speichere Informationen über das Modul vor dem Entladen
+                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) loadedModules.get(moduleName);
+                File jarFile = null;
+                if (info != null) {
+                    jarFile = info.getJarFile();
+                }
                 
-                // Befehle deregistrieren
-                apiCore.unregisterCommands(commandsCopy);
+                // Modul entladen
+                unloadModule(moduleName);
                 
-                // Kommandos synchronisieren, um Tab-Completion sofort zu aktualisieren
-                synchronizeCommands();
-                
-                if (apiCore.isDebugMode()) {
-                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Alle " + commandsCopy.size() + " Befehle des Moduls " + moduleName + " entfernt", true);
+                // Falls die JAR-Datei bekannt ist, speichern wir sie für das spätere Neuladen
+                if (jarFile != null) {
+                    // Wir speichern die Informationen in einem gemeinsamen Kontext
+                    apiCore.setSharedData("reload_jar_" + moduleName, jarFile);
                 }
             } catch (Exception e) {
-                console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                    "Fehler beim Entfernen der Befehle für Modul " + moduleName + ": " + e.getMessage());
+                console.error("Fehler beim Entladen von Modul " + moduleName + ": " + e.getMessage());
             }
         }
         
-        // Entferne die Befehle des Moduls aus der moduleCommands-Map
-        moduleCommands.remove(moduleName);
-
-        // ClassLoader schließen
+        // Kleine Pause, um dem System Zeit zum Aufräumen zu geben
         try {
-            if (moduleInfo.getLoader() != null) {
-                moduleInfo.getLoader().close();
-            }
-        } catch (IOException e) {
-            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                "Fehler beim Schließen des ClassLoaders für " + moduleName + ": " + e.getMessage());
-        } catch (Exception e) {
-            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                "Unerwarteter Fehler beim Schließen des ClassLoaders für " + moduleName + ": " + e.getMessage());
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-
-        // Clean up cached methods for this module
+        
+        // System.gc() aufrufen, um nicht mehr benötigte ClassLoader zu entfernen
+        System.gc();
+        
+        // Kleine Pause nach GC
         try {
-            if (moduleInfo.getInstance() != null) {
-                String methodPrefix = moduleInfo.getInstance().getClass().getName() + "#";
-                apiCore.cleanMethodCache(methodPrefix);
-            }
-        } catch (Exception e) {
-            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
-                "Fehler beim Bereinigen des Methoden-Cache für " + moduleName + ": " + e.getMessage());
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-
-        // Modul aus der Liste entfernen
-        loadedModules.remove(moduleName);
-        console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Modul " + moduleName + " wurde erfolgreich entladen!");
         
-        // Event für das Entladen des Moduls auslösen
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("name", moduleName);
-        apiCore.fireModuleEvent("module_unloaded", eventData);
+        console.info("Module wurden entladen, lade Module neu...");
         
-        // Überprüfe und bereinige mögliche verbleibende Tab-Completions
-        Bukkit.getScheduler().runTaskLater(apiCore, () -> {
-            // Nochmals die synchronizeCommands aufrufen, um sicherzustellen, dass
-            // alle Befehle des Moduls wirklich aus der Command-Map entfernt wurden
-            synchronizeCommands();
-        }, 5L);
+        // Modul-Verzeichnis aktualisieren
+        File[] files = modulesDir.listFiles((dir, name) -> name.endsWith(".jar"));
+        
+        if (files == null || files.length == 0) {
+            console.warning("Keine Module im Verzeichnis gefunden");
+            return;
+        }
+        
+        // Lade alle Module mit Abhängigkeitsauflösung neu
+        loadModulesWithDependencyResolution();
+        
+        // Befehle nach dem Neuladen synchronisieren
+        synchronizeCommands();
+        
+        console.success("Module wurden neu geladen");
     }
     
     /**

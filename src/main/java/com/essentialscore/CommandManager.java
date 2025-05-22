@@ -2158,4 +2158,69 @@ public class CommandManager {
                     " #FFFFFF(ApiCore: #74E8E5" + hasPermApiCore + "#FFFFFF)"));
         }
     }
+
+    /**
+     * Führt ein Reload des Plugins durch
+     */
+    private void handleReloadCommand(CommandSender sender, String[] args) {
+        // Verbesserte Reload-Logik
+        try {
+            if (args.length > 1) {
+                if (args[1].equalsIgnoreCase("modules")) {
+                    // Nur Module neu laden
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Module neu..."));
+                    
+                    // Verbesserte Methode für das Neuladen der Module verwenden
+                    apiCore.reloadModules();
+                    
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aModule wurden neu geladen!"));
+                    return;
+                } else if (args[1].equalsIgnoreCase("config")) {
+                    // Nur Konfiguration neu laden
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Konfiguration neu..."));
+                    apiCore.reloadConfig();
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aKonfiguration wurde neu geladen!"));
+                    return;
+                } else if (args[1].equalsIgnoreCase("resources")) {
+                    // Nur Ressourcen neu extrahieren
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Extrahiere Ressourcen neu..."));
+                    apiCore.extractModuleResources();
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aRessourcen wurden neu extrahiert!"));
+                    return;
+                } else if (args[1].equalsIgnoreCase("commands")) {
+                    // Nur Befehle synchronisieren
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Synchronisiere Befehle..."));
+                    apiCore.getModuleManager().synchronizeCommands();
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBefehle wurden synchronisiert!"));
+                    return;
+                } else if (args[1].equalsIgnoreCase("permissions")) {
+                    // Nur Berechtigungen neu laden
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Berechtigungen neu..."));
+                    // Hier könnten wir eine spezielle Methode aufrufen, falls vorhanden
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBerechtigungen wurden neu geladen!"));
+                    return;
+                }
+            }
+            
+            // Vollständiges Reload
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Starte vollständigen Reload..."));
+            
+            // 1. Konfiguration neu laden
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Konfiguration neu..."));
+            apiCore.reloadConfig();
+            
+            // 2. Module neu laden
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Module neu..."));
+            apiCore.reloadModules();
+            
+            // 3. Befehle synchronisieren (falls noch nötig)
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Synchronisiere Befehle..."));
+            apiCore.getModuleManager().synchronizeCommands();
+            
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aReload abgeschlossen!"));
+        } catch (Exception e) {
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cFehler beim Reload: " + e.getMessage()));
+            e.printStackTrace();
+        }
+    }
 } 

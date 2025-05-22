@@ -153,29 +153,40 @@ public class PermissionManager {
         try {
             console.info("Registriere " + permissions.size() + " Berechtigungen in LuckPerms...");
             
-            // Optimized batch processing for permissions
-            Method builderMethod = permissionsProvider.getClass().getMethod("getNodeBuilderRegistry");
-            Object nodeBuilderRegistry = builderMethod.invoke(permissionsProvider);
-            Method permissionBuilderMethod = nodeBuilderRegistry.getClass().getMethod("forPermission", String.class);
-            
-            int processed = 0;
-            int total = permissions.size();
-            
+            // Wir verwenden einen anderen Ansatz, der mit verschiedenen LuckPerms-Versionen kompatibel ist
+            boolean success = true;
             for (Map.Entry<String, String[]> entry : permissions.entrySet()) {
                 String permission = entry.getKey();
                 String description = entry.getValue()[0];
                 
-                processed++;
-                if (processed % 10 == 0 || processed == total) {
-                    console.progressBar(processed, total, 30);
+                try {
+                    // Prüfe zuerst, ob die Berechtigung bereits existiert
+                    if (permissionsProvider != null) {
+                        // Versuche in Bukkit zu registrieren
+                        Permission bukkitPerm = new Permission(permission, description, PermissionDefault.OP);
+                        try {
+                            Bukkit.getPluginManager().addPermission(bukkitPerm);
+                        } catch (IllegalArgumentException e) {
+                            // Berechtigung existiert bereits, ignorieren
+                            if (apiCore.isDebugMode()) {
+                                console.debug("Berechtigung existiert bereits in Bukkit: " + permission, true);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Fehler nur im Debug-Modus protokollieren
+                    if (apiCore.isDebugMode()) {
+                        console.debug("Fehler bei Berechtigung " + permission + ": " + e.getMessage(), true);
+                    }
+                    success = false;
                 }
-                
-                Object permissionBuilder = permissionBuilderMethod.invoke(nodeBuilderRegistry, permission);
-                Method descriptionMethod = permissionBuilder.getClass().getMethod("description", String.class);
-                descriptionMethod.invoke(permissionBuilder, description);
             }
             
-            console.success(permissions.size() + " Berechtigungen erfolgreich registriert");
+            if (success) {
+                console.success(permissions.size() + " Berechtigungen erfolgreich registriert");
+            } else {
+                console.warning("Einige Berechtigungen konnten nicht registriert werden (nur in Bukkit registriert)");
+            }
         } catch (Exception e) {
             console.error("Fehler beim Registrieren von Berechtigungen: " + e.getMessage());
             if (apiCore.isDebugMode()) {

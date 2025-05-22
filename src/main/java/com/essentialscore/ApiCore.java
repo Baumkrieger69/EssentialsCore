@@ -1185,8 +1185,7 @@ public class ApiCore extends JavaPlugin implements Listener {
     
     /**
      * Gibt den ModuleManager zurück
-     * 
-     * @return ModuleManager-Instanz
+     * @return Der ModuleManager
      */
     public ModuleManager getModuleManager() {
         return moduleManager;
@@ -1194,8 +1193,7 @@ public class ApiCore extends JavaPlugin implements Listener {
 
     /**
      * Gibt den ModuleFileManager zurück
-     * 
-     * @return ModuleFileManager-Instanz
+     * @return Der ModuleFileManager
      */
     public ModuleFileManager getModuleFileManager() {
         return moduleFileManager;
@@ -1259,6 +1257,28 @@ public class ApiCore extends JavaPlugin implements Listener {
         } catch (ClassNotFoundException e) {
             getLogger().severe("Failed to export API packages: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Lädt alle Module neu
+     * Diese Methode verwendet den ModuleManager, um alle Module sauber neu zu laden
+     */
+    public void reloadModules() {
+        console.header("MODULE NEU LADEN");
+        
+        if (moduleManager != null) {
+            // Rufe die verbesserte Reload-Methode des ModuleManagers auf
+            moduleManager.reloadAllModules();
+            
+            // Ressourcen nach dem Neuladen extrahieren, falls konfiguriert
+            if (getConfig().getBoolean("general.extract-module-resources", true)) {
+                getServer().getScheduler().runTaskAsynchronously(this, this::extractModuleResources);
+            }
+            
+            console.success("Alle Module wurden neu geladen");
+        } else {
+            console.error("ModuleManager ist nicht initialisiert, Module können nicht neu geladen werden");
         }
     }
 }

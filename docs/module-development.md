@@ -36,7 +36,7 @@ plugins {
 }
 
 group = 'com.your.group'
-version = '1.0.0'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -93,7 +93,7 @@ import com.essentialscore.api.module.ModuleInfo;
 
 @ModuleInfo(
     name = "DeinModul",
-    version = "1.0.0",
+    version = "1.1.0",
     description = "Beschreibung deines Moduls"
 )
 public class DeinModul extends Module {
@@ -113,7 +113,7 @@ public class DeinModul extends Module {
 
 ```yaml
 name: DeinModul
-version: 1.0.0
+version: 1.1.0
 description: Beschreibung deines Moduls
 main: com.your.package.DeinModul
 author: DeinName
@@ -440,7 +440,7 @@ public class MeinModul implements Module {
     private ModuleAPI api;
     private FileConfiguration config;
     private String name = "MeinModul";
-    private String version = "1.0.0";
+    private String version = "1.1.0";
     private String description = "Ein Beispielmodul";
 
     @Override
@@ -541,7 +541,7 @@ public class MeinModul implements Module {
 ```java
 @ModuleInfo(
     name = "WelcomeModule",
-    version = "1.0.0",
+    version = "1.1.0",
     description = "Ein einfaches Welcome-Modul"
 )
 @Listener
