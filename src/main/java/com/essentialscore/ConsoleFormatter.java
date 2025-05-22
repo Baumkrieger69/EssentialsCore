@@ -288,11 +288,11 @@ public class ConsoleFormatter {
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
-            logger.info(timeStr + BRIGHT_CYAN + prefix + RESET + " " + CYAN + symbol + WHITE + message + RESET);
+            logger.info(timeStr + CYAN + formatWithPrefix(formatHexCodes(message)) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " " + symbol + message);
+            logger.info(timeStr + formatWithPrefix(formatHexCodes(message)));
         }
     }
     
@@ -305,11 +305,11 @@ public class ConsoleFormatter {
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + BRIGHT_GREEN + prefix + RESET + " " + GREEN + symbol + WHITE + message + RESET);
+            logger.info(timeStr + GREEN + formatWithPrefix(symbol + formatHexCodes(message)) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " " + symbol + message);
+            logger.info(timeStr + formatWithPrefix(symbol + formatHexCodes(message)));
         }
     }
     
@@ -322,11 +322,11 @@ public class ConsoleFormatter {
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + BRIGHT_YELLOW + prefix + RESET + " " + YELLOW + symbol + WHITE + message + RESET);
+            logger.warning(timeStr + YELLOW + formatWithPrefix(symbol + formatHexCodes(message)) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + prefix + " " + symbol + message);
+            logger.warning(timeStr + formatWithPrefix(symbol + formatHexCodes(message)));
         }
     }
     
@@ -339,11 +339,11 @@ public class ConsoleFormatter {
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + BRIGHT_RED + prefix + RESET + " " + RED + symbol + WHITE + message + RESET);
+            logger.severe(timeStr + RED + formatWithPrefix(symbol + formatHexCodes(message)) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + prefix + " " + symbol + message);
+            logger.severe(timeStr + formatWithPrefix(symbol + formatHexCodes(message)));
         }
     }
     
@@ -774,10 +774,10 @@ public class ConsoleFormatter {
     }
     
     /**
-     * Formatiert einen String mit dem konfigurierten Prefix
+     * Formatiert eine Nachricht mit dem Prefix
      * 
-     * @param message Die zu formatierende Nachricht
-     * @return Die Nachricht mit Prefix und optionalem Timestamp
+     * @param message Die Nachricht
+     * @return Die formatierte Nachricht
      */
     private String formatWithPrefix(String message) {
         StringBuilder result = new StringBuilder();
@@ -809,6 +809,11 @@ public class ConsoleFormatter {
      */
     private String formatHexCodes(String input) {
         if (input == null) return "";
+        
+        // Wenn Farben deaktiviert sind, entferne alle Farbcodes
+        if (!useColors) {
+            return input.replaceAll("&[0-9a-fklmnor]", "");
+        }
         
         // Farbcode-Map
         java.util.Map<Character, String> colorMap = new java.util.HashMap<>();
@@ -880,12 +885,12 @@ public class ConsoleFormatter {
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.info(timeStr + BRIGHT_CYAN + prefix + RESET + " " + categoryStr + 
-                     categoryColor + categoryIcon + WHITE + message + RESET);
+                     categoryColor + categoryIcon + WHITE + formatHexCodes(message) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + categoryIcon + message);
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + categoryIcon + formatHexCodes(message));
         }
     }
     
@@ -905,12 +910,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.info(timeStr + BRIGHT_GREEN + prefix + RESET + " " + categoryStr + 
-                     GREEN + symbol + WHITE + message + RESET);
+                     GREEN + symbol + WHITE + formatHexCodes(message) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + message);
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
         }
     }
     
@@ -930,12 +935,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.warning(timeStr + BRIGHT_YELLOW + prefix + RESET + " " + categoryStr + 
-                       YELLOW + symbol + WHITE + message + RESET);
+                       YELLOW + symbol + WHITE + formatHexCodes(message) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + message);
+            logger.warning(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
         }
     }
     
@@ -955,12 +960,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.severe(timeStr + BRIGHT_RED + prefix + RESET + " " + categoryStr + 
-                      RED + symbol + WHITE + message + RESET);
+                      RED + symbol + WHITE + formatHexCodes(message) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + message);
+            logger.severe(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
         }
     }
     
@@ -980,13 +985,13 @@ public class ConsoleFormatter {
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + BRIGHT_PURPLE + prefix + " [DEBUG] " + RESET + categoryStr + 
-                     PURPLE + symbol + message + RESET);
+            logger.info(timeStr + BRIGHT_BLACK + prefix + RESET + " " + categoryStr + 
+                     BRIGHT_BLACK + symbol + WHITE + formatHexCodes(message) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [DEBUG] [" + categoryPrefix + "] " + symbol + message);
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
         }
     }
     
