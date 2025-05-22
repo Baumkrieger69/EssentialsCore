@@ -803,17 +803,23 @@ public class ConsoleFormatter {
     
     /**
      * Konvertiert Minecraft-Style Farbcodes (&a, &b, etc.) in ANSI-Farbcodes
+     * oder entfernt sie, wenn Farben deaktiviert sind
      * 
      * @param input Der Text mit Minecraft-Farbcodes
-     * @return Der Text mit ANSI-Farbcodes
+     * @return Der Text mit ANSI-Farbcodes oder ohne Farbcodes
      */
     private String formatHexCodes(String input) {
         if (input == null) return "";
         
         // Wenn Farben deaktiviert sind, entferne alle Farbcodes
         if (!useColors) {
-            return input.replaceAll("&[0-9a-fklmnor]", "");
+            return input.replaceAll("&[0-9a-fklmnor]", "")
+                       .replaceAll("§[0-9a-fklmnor]", "")
+                       .replaceAll("#[a-fA-F0-9]{6}", "");
         }
+        
+        // Ersetze zuerst alle §-Codes mit &-Codes für einheitliche Verarbeitung
+        input = input.replace('§', '&');
         
         // Farbcode-Map
         java.util.Map<Character, String> colorMap = new java.util.HashMap<>();
@@ -864,7 +870,9 @@ public class ConsoleFormatter {
         }
         
         // Stelle sicher, dass der Text mit Reset endet
-        result.append(RESET);
+        if (!result.toString().endsWith(RESET)) {
+            result.append(RESET);
+        }
         
         return result.toString();
     }

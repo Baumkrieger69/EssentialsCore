@@ -278,36 +278,35 @@ public class ApiCore extends JavaPlugin implements Listener {
     }
 
     /**
-     * Konvertiert hexadezimale Farbcodes im Format #RRGGBB in ChatColor-Objekte mit Caching
+     * Formatiert einen String mit Hex-Farbcodes
+     * 
+     * @param message Die zu formatierende Nachricht
+     * @return Die formatierte Nachricht
      */
     public String formatHex(String message) {
         if (message == null) return "";
-
-        // Check cache first for frequently used messages
-        String cached = formattedMessageCache.get(message);
-        if (cached != null) {
-            return cached;
-        }
-
-        if (configManager != null) {
-            return configManager.formatHexMessage(message, formattedMessageCache);
-        }
         
-        // Fallback, falls der ConfigManager noch nicht initialisiert ist
+        // Zuerst Hex-Farben ersetzen (z.B. #RRGGBB)
         Matcher matcher = HEX_PATTERN.matcher(message);
-        StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
-
-        while (matcher.find()) {
-            String group = matcher.group(0);
-            matcher.appendReplacement(buffer, ChatColor.of(group).toString());
-        }
-
-        String result = ChatColor.translateAlternateColorCodes('&', matcher.appendTail(buffer).toString());
+        StringBuffer buffer = new StringBuffer(message.length() + 32);
         
-        // Cache result if it's a reasonable size
-        if (message.length() < 128) {
-            formattedMessageCache.put(message, result);
+        while (matcher.find()) {
+            String hex = matcher.group();
+            
+            // Konvertiere #RRGGBB zu §x§r§r§g§g§b§b
+            char[] chars = hex.substring(1).toCharArray();
+            StringBuilder builder = new StringBuilder("§x");
+            for (char c : chars) {
+                builder.append("§").append(c);
+            }
+            
+            matcher.appendReplacement(buffer, builder.toString());
         }
+        matcher.appendTail(buffer);
+        
+        // Dann die & Farbcodes ersetzen
+        String result = buffer.toString();
+        result = ChatColor.translateAlternateColorCodes('&', result);
         
         return result;
     }
@@ -331,10 +330,11 @@ public class ApiCore extends JavaPlugin implements Listener {
             boolean useUnicodeSymbols = getConfig().getBoolean("console.use-unicode-symbols", true);
             String stylePreset = getConfig().getString("console.style-preset", "default");
             
-            // Konsolen-Formatter initialisieren
+            // Konsolen-Formatter initialisieren mit formatiertem Präfix
+            String prefix = formatHex(getConfig().getString("console.prefixes.core", "&8[&b&lApiCore&8]"));
             console = new ConsoleFormatter(
                 getLogger(),
-                getConfig().getString("console.prefixes.core", "&8[&b&lApiCore&8]"),
+                prefix,
                 useColors, showTimestamps, useUnicodeSymbols, stylePreset
             );
             

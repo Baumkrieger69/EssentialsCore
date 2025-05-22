@@ -28,9 +28,25 @@ import org.bukkit.entity.Player;
  */
 public class CommandManager {
     private final ApiCore apiCore;
+    private ConsoleFormatter console;
     
     public CommandManager(ApiCore apiCore) {
         this.apiCore = apiCore;
+        
+        // Erweiterte Konsolen-Formatter Konfiguration
+        boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
+        boolean showTimestamps = apiCore.getConfig().getBoolean("console.show-timestamps", false);
+        boolean useUnicodeSymbols = apiCore.getConfig().getBoolean("console.use-unicode-symbols", true);
+        String stylePreset = apiCore.getConfig().getString("console.style-preset", "default");
+        
+        // Verwende den ApiCore.formatHex für die korrekte Formatierung des Präfixes
+        String prefix = apiCore.formatHex(apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&6&lCommandManager&8]"));
+        
+        this.console = new ConsoleFormatter(
+            apiCore.getLogger(),
+            prefix,
+            useColors, showTimestamps, useUnicodeSymbols, stylePreset
+        );
     }
     
     /**
