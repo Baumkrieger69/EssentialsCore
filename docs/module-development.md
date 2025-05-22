@@ -348,110 +348,59 @@ console.dataSection("Abschnitt", "Key1", "Value1", "Key2", "Value2");
 
 ## API-Imports und Funktionen
 
-### Kernkomponenten
+### Alle verfügbaren API-Imports
 
 ```java
-// Hauptinterface für alle Module - sollte von jedem Modul implementiert werden
-import com.essentialscore.api.Module;
+// Core API-Komponenten
+import com.essentialscore.api.Module;                  // Hauptinterface für alle Module
+import com.essentialscore.api.ModuleAPI;               // API für Zugriff auf Core-Funktionen
+import com.essentialscore.api.BaseModule;              // Abstrakte Basisimplementierung von Module
+import com.essentialscore.api.ModuleEventListener;     // Interface für modulübergreifende Events
+import com.essentialscore.api.ModuleClassHelper;       // Hilfsklasse für API-Zugriff
+import com.essentialscore.api.SimpleCommand;           // Einfache Befehlsimplementierung
+import com.essentialscore.api.CommandDefinition;       // Interface für Befehlsdefinitionen
 
-// ModuleAPI ist die Haupt-API für Zugriff auf Funktionen des Cores
-import com.essentialscore.api.ModuleAPI;
+// Implementierungsklassen
+import com.essentialscore.api.impl.CoreModuleAPI;      // Konkrete Implementierung des ModuleAPI-Interfaces
+import com.essentialscore.api.impl.ModuleAdapter;      // Adapter für Module zur Kompatibilität
 
-// BaseModule ist eine Basisimplementierung von Module
-import com.essentialscore.api.BaseModule;
+// Konfiguration
+import com.essentialscore.api.config.Configuration;    // Interface für Konfigurationszugriff
+import com.essentialscore.api.config.ConfigurationManager; // Manager für Konfigurationsdateien
 
-// ModuleEventListener für Event-Handling zwischen Modulen
-import com.essentialscore.api.ModuleEventListener;
+// Events
+import com.essentialscore.api.event.EventHandler;      // Annotation für Event-Handler
+import com.essentialscore.api.event.Listener;          // Annotation für Event-Listener-Klassen
 
-// Utility-Klasse, die alle verfügbaren API-Klassen auflistet
-import com.essentialscore.api.ModuleClassHelper;
-```
+// Befehle
+import com.essentialscore.api.command.Command;         // Annotation für Befehle
+import com.essentialscore.api.command.CommandContext;  // Kontext für Befehlsausführung
 
-### Befehle
+// Utility-Klassen
+import com.essentialscore.api.util.StringUtils;        // String-Hilfsfunktionen
+import com.essentialscore.api.util.FileUtils;          // Datei-Hilfsfunktionen
+import com.essentialscore.api.util.LogUtils;           // Logging-Hilfsfunktionen
 
-```java
-// Interface für die Befehlsdefinition
-import com.essentialscore.api.CommandDefinition;
-
-// Einfache Implementierung für Befehle mit Tab-Completion
-import com.essentialscore.api.SimpleCommand;
-```
-
-### Implementierungsklassen
-```java
-// Konkrete Implementierung des ModuleAPI-Interfaces
-import com.essentialscore.api.impl.CoreModuleAPI;
-
-// Adapter für Module zur Kompatibilität mit älteren Systemen
-import com.essentialscore.api.impl.ModuleAdapter;
+// Konsolen-Formatierung
+import com.essentialscore.api.console.ConsoleFormatter; // Interface für Konsolenformatierung
 ```
 
 ### Funktionsübersicht
 
 | Import | Beschreibung | Hauptmethoden |
 |--------|--------------|---------------|
-| `Module` | Basisinterface für alle Module | `init()`, `onDisable()` |
+| `Module` | Basisinterface für alle Module | `init()`, `onEnable()`, `onDisable()` |
 | `ModuleAPI` | Hauptschnittstelle zum Core | `getPlugin()`, `registerCommands()`, `runAsync()` |
 | `BaseModule` | Abstrakte Basisimplementierung | Implementiert Module-Interface mit nützlichen Hilfsmethoden |
 | `ModuleEventListener` | Interface für modulübergreifende Events | `onModuleEvent()` |
 | `CommandDefinition` | Interface für Befehlsdefinitionen | `getName()`, `getAliases()`, `getTabCompletionOptions()` |
 | `SimpleCommand` | Einfache Befehlsimplementierung | `execute()`, `tabComplete()` |
 | `ModuleClassHelper` | Hilfsklasse für API-Zugriff | `getAvailableInterfaces()`, `getAvailableClasses()` |
-
-### Typische Nutzungsmuster
-
-#### Erstellen eines Moduls
-```java
-import com.essentialscore.api.Module;
-import com.essentialscore.api.ModuleAPI;
-import org.bukkit.configuration.file.FileConfiguration;
-
-public class MeinModul implements Module {
-    private ModuleAPI api;
-    private FileConfiguration config;
-
-    @Override
-    public void init(ModuleAPI api, FileConfiguration config) {
-        this.api = api;
-        this.config = config;
-        
-        // Modul-Initialisierung
-        api.logInfo("Modul wurde initialisiert");
-    }
-
-    @Override
-    public void onDisable() {
-        // Aufräumarbeiten beim Deaktivieren
-        api.logInfo("Modul wurde deaktiviert");
-    }
-}
-```
-
-#### Verwenden der BaseModule-Klasse
-```java
-import com.essentialscore.api.BaseModule;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-
-public class MeinErweiterteModul extends BaseModule implements Listener {
-    @Override
-    public void onEnable() {
-        // Wird nach init() aufgerufen
-        getServer().getPluginManager().registerEvents(this, getPlugin());
-        
-        // API-Methoden verwenden
-        sendFormattedMessage(getServer().getConsoleSender(), "&aModul erfolgreich aktiviert!");
-    }
-    
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        sendFormattedMessage(player, "&aWillkommen, &6" + player.getName() + "&a!");
-    }
-}
-```
+| `Configuration` | Interface für Konfigurationszugriff | `get()`, `set()`, `save()`, `reload()` |
+| `ConfigurationManager` | Manager für Konfigurationsdateien | `loadConfiguration()`, `saveConfiguration()` |
+| `Command` | Annotation für Befehle | `name`, `permission`, `description`, `usage` |
+| `CommandContext` | Kontext für Befehlsausführung | `getSender()`, `getArgs()`, `hasPermission()` |
+| `ConsoleFormatter` | Interface für Konsolenformatierung | `info()`, `success()`, `warning()`, `error()` |
 
 ## Best Practices
 
