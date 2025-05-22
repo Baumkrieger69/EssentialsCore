@@ -350,56 +350,55 @@ console.dataSection("Abschnitt", "Key1", "Value1", "Key2", "Value2");
 
 ### Verfügbare API-Packages und Klassen
 
-**Wichtig:** Aufgrund der Struktur des ClassLoaders können Module nur die folgenden API-Packages und Klassen importieren. Diese sind garantiert verfügbar und stabil:
+**Wichtig:** Aufgrund der Struktur des ClassLoaders können Module die folgenden API-Packages und Klassen importieren. Diese sind nun alle verfügbar und stabil:
 
 ```java
-// Core API-Komponenten - Diese Importe sind alle verfügbar und funktionieren
-import com.essentialscore.api.Module;                // Hauptinterface für alle Module
-import com.essentialscore.api.ModuleAPI;             // API für Zugriff auf Core-Funktionen
-import com.essentialscore.api.BaseModule;            // Abstrakte Basisimplementierung von Module
-import com.essentialscore.api.ModuleEventListener;   // Interface für modulübergreifende Events
-import com.essentialscore.api.ModuleClassHelper;     // Hilfsklasse für API-Zugriff
-import com.essentialscore.api.SimpleCommand;         // Einfache Befehlsimplementierung
-import com.essentialscore.api.CommandDefinition;     // Interface für Befehlsdefinitionen
+// Core API-Komponenten
+import com.essentialscore.api.Module;                  // Hauptinterface für alle Module
+import com.essentialscore.api.ModuleAPI;               // API für Zugriff auf Core-Funktionen
+import com.essentialscore.api.BaseModule;              // Abstrakte Basisimplementierung von Module
+import com.essentialscore.api.ModuleEventListener;     // Interface für modulübergreifende Events
+import com.essentialscore.api.ModuleClassHelper;       // Hilfsklasse für API-Zugriff
+import com.essentialscore.api.SimpleCommand;           // Einfache Befehlsimplementierung
+import com.essentialscore.api.CommandDefinition;       // Interface für Befehlsdefinitionen
 
-// Implementierungsklassen - Diese werden ebenfalls korrekt geladen
-import com.essentialscore.api.impl.CoreModuleAPI;    // Konkrete Implementierung des ModuleAPI-Interfaces
-import com.essentialscore.api.impl.ModuleAdapter;    // Adapter für Module zur Kompatibilität
-```
+// Implementierungsklassen
+import com.essentialscore.api.impl.CoreModuleAPI;      // Konkrete Implementierung des ModuleAPI-Interfaces
+import com.essentialscore.api.impl.ModuleAdapter;      // Adapter für Module zur Kompatibilität
 
-**Hinweis zu weiteren Packages:** In der aktuellen Implementierung sind die folgenden Packages in der Dokumentation erwähnt, aber **noch nicht implementiert**. Diese sollten **nicht importiert** werden, da sie zu ClassNotFoundExceptions führen können:
+// Konfiguration
+import com.essentialscore.api.config.Configuration;    // Interface für Konfigurationszugriff
+import com.essentialscore.api.config.ConfigurationManager; // Manager für Konfigurationsdateien
 
-```java
-// Diese Packages existieren noch nicht und verursachen Fehler bei Import
-// import com.essentialscore.api.config.*
-// import com.essentialscore.api.event.*
-// import com.essentialscore.api.command.*
-// import com.essentialscore.api.util.*
-// import com.essentialscore.api.console.*
+// Events
+import com.essentialscore.api.event.EventHandler;      // Annotation für Event-Handler
+import com.essentialscore.api.event.Listener;          // Annotation für Event-Listener-Klassen
+import com.essentialscore.api.event.EventPriority;     // Enum für Event-Prioritäten
+
+// Befehle
+import com.essentialscore.api.command.Command;         // Annotation für Befehle
+import com.essentialscore.api.command.CommandContext;  // Kontext für Befehlsausführung
+
+// Utility-Klassen
+import com.essentialscore.api.util.StringUtils;        // String-Hilfsfunktionen
+import com.essentialscore.api.util.FileUtils;          // Datei-Hilfsfunktionen
+
+// Konsolen-Formatierung
+import com.essentialscore.api.console.ConsoleFormatter; // Interface für Konsolenformatierung
 ```
 
 ### Anmerkungen zur API-Struktur
 
-Der ModuleClassLoader ist so konfiguriert, dass er folgende Packages korrekt lädt:
-- `com.essentialscore.api.*`
-- `com.essentialscore.api.impl.*`
+Der ModuleClassLoader ist so konfiguriert, dass er die folgenden Packages korrekt lädt:
+- `com.essentialscore.api.*` (Basis-API)
+- `com.essentialscore.api.impl.*` (Implementierungsklassen)
+- `com.essentialscore.api.config.*` (Konfigurationsklassen)
+- `com.essentialscore.api.event.*` (Event-bezogene Klassen)
+- `com.essentialscore.api.command.*` (Befehlsbezogene Klassen)
+- `com.essentialscore.api.util.*` (Utility-Klassen)
+- `com.essentialscore.api.console.*` (Konsolenformatierung)
 
 Diese Packages werden vom Haupt-Plugin-ClassLoader bereitgestellt und korrekt an Module weitergegeben. Alle anderen Packages im Plugin sind nicht verfügbar und sollten nicht direkt aus Modulen heraus referenziert werden.
-
-### Bekannte Einschränkungen
-
-1. **Fehlende Sub-Packages**: Die meisten in der Dokumentation erwähnten Sub-Packages wie `config`, `event`, `command`, `util` und `console` existieren noch nicht und müssen über die Haupt-API-Interfaces genutzt werden.
-
-2. **Annotations vs. Interfaces**: In der aktuellen Implementierung gibt es keine Annotations wie `@Command` oder `@EventHandler` - stattdessen werden die entsprechenden Methoden in den Interfaces verwendet.
-
-### Empfohlene Vorgehensweise
-
-Um sicherzustellen, dass Ihre Module korrekt funktionieren:
-
-1. Verwenden Sie ausschließlich die oben aufgelisteten, tatsächlich verfügbaren Imports.
-2. Nutzen Sie die `Module`-Interface-Methoden wie `onCommand()` und `init()`.
-3. Greifen Sie über das `ModuleAPI`-Interface auf Core-Funktionen zu.
-4. Erweitern Sie bei komplexeren Modulen die `BaseModule`-Klasse.
 
 ### Funktionsübersicht der verfügbaren Klassen
 
@@ -412,6 +411,16 @@ Um sicherzustellen, dass Ihre Module korrekt funktionieren:
 | `CommandDefinition` | Interface für Befehlsdefinitionen | `getName()`, `getAliases()`, `getTabCompletionOptions()` |
 | `SimpleCommand` | Einfache Befehlsimplementierung | `execute()`, `tabComplete()` |
 | `ModuleClassHelper` | Hilfsklasse für API-Zugriff | Hilft beim Identifizieren verfügbarer API-Klassen |
+| `Configuration` | Interface für Konfigurationszugriff | `get()`, `set()`, `save()`, `reload()` |
+| `ConfigurationManager` | Manager für Konfigurationsdateien | `loadConfiguration()`, `saveConfiguration()` |
+| `Command` | Annotation für Befehle | `name`, `permission`, `description`, `usage` |
+| `CommandContext` | Kontext für Befehlsausführung | `getSender()`, `getArgs()`, `hasPermission()` |
+| `EventHandler` | Annotation für Event-Handler | `priority()`, `ignoreCancelled()` |
+| `EventPriority` | Enum für Event-Prioritäten | `LOWEST`, `LOW`, `NORMAL`, `HIGH`, `HIGHEST`, `MONITOR` |
+| `Listener` | Annotation für Listener-Klassen | - |
+| `StringUtils` | String-Hilfsfunktionen | `formatColors()`, `stripColors()`, `splitIntoLines()`, `capitalize()` |
+| `FileUtils` | Datei-Hilfsfunktionen | `readFileToString()`, `writeStringToFile()`, `copyFile()`, `unzip()` |
+| `ConsoleFormatter` | Konsolenformatierung | `info()`, `success()`, `warning()`, `error()`, `debug()`, `header()` |
 
 ### Beispiel: Korrektes Modul mit funktionierenden Imports
 
