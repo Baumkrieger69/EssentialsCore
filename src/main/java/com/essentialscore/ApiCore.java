@@ -330,11 +330,12 @@ public class ApiCore extends JavaPlugin implements Listener {
             boolean useUnicodeSymbols = getConfig().getBoolean("console.use-unicode-symbols", true);
             String stylePreset = getConfig().getString("console.style-preset", "default");
             
-            // Konsolen-Formatter initialisieren mit formatiertem Präfix
-            String prefix = formatHex(getConfig().getString("console.prefixes.core", "&8[&b&lApiCore&8]"));
+            // Konsolen-Formatter initialisieren mit bereits bereinigtem Präfix
+            // Hier verwenden wir nicht formatHex, um Minecraft-Farbcodes zu vermeiden
+            String rawPrefix = getConfig().getString("console.prefixes.core", "&8[&b&lApiCore&8]");
             console = new ConsoleFormatter(
                 getLogger(),
-                prefix,
+                rawPrefix,
                 useColors, showTimestamps, useUnicodeSymbols, stylePreset
             );
             

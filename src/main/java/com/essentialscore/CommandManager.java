@@ -39,12 +39,11 @@ public class CommandManager {
         boolean useUnicodeSymbols = apiCore.getConfig().getBoolean("console.use-unicode-symbols", true);
         String stylePreset = apiCore.getConfig().getString("console.style-preset", "default");
         
-        // Verwende den ApiCore.formatHex für die korrekte Formatierung des Präfixes
-        String prefix = apiCore.formatHex(apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&6&lCommandManager&8]"));
-        
-        this.console = new ConsoleFormatter(
+        // Konsolen-Formatter initialisieren mit Rohpräfix (ohne Formatierung)
+        String rawPrefix = apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&6&lCommandManager&8]");
+        console = new ConsoleFormatter(
             apiCore.getLogger(),
-            prefix,
+            rawPrefix,
             useColors, showTimestamps, useUnicodeSymbols, stylePreset
         );
     }

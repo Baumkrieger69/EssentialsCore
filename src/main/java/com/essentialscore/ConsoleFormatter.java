@@ -280,19 +280,39 @@ public class ConsoleFormatter {
     }
     
     /**
+     * Entfernt alle Minecraft-Farbcodes aus einem String
+     * Diese Methode wird verwendet, um sicherzustellen, dass keine Farbcodes in der Konsole angezeigt werden
+     * 
+     * @param input Der Text mit Minecraft-Farbcodes
+     * @return Der Text ohne Minecraft-Farbcodes
+     */
+    private String stripMinecraftColors(String input) {
+        if (input == null) return "";
+        
+        // Entferne alle § und & Farbcodes
+        return input.replaceAll("§[0-9a-fklmnorx]", "")
+                   .replaceAll("§x§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]", "")
+                   .replaceAll("&[0-9a-fklmnorx]", "")
+                   .replaceAll("#[a-fA-F0-9]{6}", "");
+    }
+    
+    /**
      * Gibt eine Info-Nachricht aus
      * 
      * @param message Die Nachricht
      */
     public void info(String message) {
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
-            logger.info(timeStr + CYAN + formatWithPrefix(formatHexCodes(message)) + RESET);
+            logger.info(timeStr + CYAN + formatWithPrefix(cleanMessage) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
-            logger.info(timeStr + formatWithPrefix(formatHexCodes(message)));
+            logger.info(timeStr + formatWithPrefix(cleanMessage));
         }
     }
     
@@ -302,14 +322,17 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void success(String message) {
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + GREEN + formatWithPrefix(symbol + formatHexCodes(message)) + RESET);
+            logger.info(timeStr + GREEN + formatWithPrefix(symbol + cleanMessage) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + formatWithPrefix(symbol + formatHexCodes(message)));
+            logger.info(timeStr + formatWithPrefix(symbol + cleanMessage));
         }
     }
     
@@ -319,14 +342,17 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void warning(String message) {
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + YELLOW + formatWithPrefix(symbol + formatHexCodes(message)) + RESET);
+            logger.warning(timeStr + YELLOW + formatWithPrefix(symbol + cleanMessage) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + formatWithPrefix(symbol + formatHexCodes(message)));
+            logger.warning(timeStr + formatWithPrefix(symbol + cleanMessage));
         }
     }
     
@@ -336,14 +362,17 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void error(String message) {
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + RED + formatWithPrefix(symbol + formatHexCodes(message)) + RESET);
+            logger.severe(timeStr + RED + formatWithPrefix(symbol + cleanMessage) + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + formatWithPrefix(symbol + formatHexCodes(message)));
+            logger.severe(timeStr + formatWithPrefix(symbol + cleanMessage));
         }
     }
     
@@ -790,9 +819,9 @@ public class ConsoleFormatter {
         
         // Prefix hinzufügen
         if (prefix != null && !prefix.isEmpty()) {
-            // Ersetze & mit ANSI-Farbcodes
-            String formattedPrefix = formatHexCodes(prefix);
-            result.append(formattedPrefix).append(" ");
+            // Stelle sicher, dass der Präfix keine Minecraft-Farbcodes enthält
+            String cleanPrefix = stripMinecraftColors(prefix);
+            result.append(cleanPrefix).append(" ");
         }
         
         // Nachricht hinzufügen
@@ -886,6 +915,9 @@ public class ConsoleFormatter {
     public void categoryInfo(MessageCategory category, String message) {
         if (!isCategoryEnabled(category)) return;
         
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -893,12 +925,12 @@ public class ConsoleFormatter {
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.info(timeStr + BRIGHT_CYAN + prefix + RESET + " " + categoryStr + 
-                     categoryColor + categoryIcon + WHITE + formatHexCodes(message) + RESET);
+                     categoryColor + categoryIcon + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + categoryIcon + formatHexCodes(message));
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + categoryIcon + cleanMessage);
         }
     }
     
@@ -911,6 +943,9 @@ public class ConsoleFormatter {
     public void categorySuccess(MessageCategory category, String message) {
         if (!isCategoryEnabled(category)) return;
         
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -918,12 +953,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.info(timeStr + BRIGHT_GREEN + prefix + RESET + " " + categoryStr + 
-                     GREEN + symbol + WHITE + formatHexCodes(message) + RESET);
+                     GREEN + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
         }
     }
     
@@ -936,6 +971,9 @@ public class ConsoleFormatter {
     public void categoryWarning(MessageCategory category, String message) {
         if (!isCategoryEnabled(category)) return;
         
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -943,12 +981,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.warning(timeStr + BRIGHT_YELLOW + prefix + RESET + " " + categoryStr + 
-                       YELLOW + symbol + WHITE + formatHexCodes(message) + RESET);
+                       YELLOW + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
+            logger.warning(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
         }
     }
     
@@ -961,6 +999,9 @@ public class ConsoleFormatter {
     public void categoryError(MessageCategory category, String message) {
         if (!isCategoryEnabled(category)) return;
         
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -968,12 +1009,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.severe(timeStr + BRIGHT_RED + prefix + RESET + " " + categoryStr + 
-                      RED + symbol + WHITE + formatHexCodes(message) + RESET);
+                      RED + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
+            logger.severe(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
         }
     }
     
@@ -987,6 +1028,9 @@ public class ConsoleFormatter {
     public void categoryDebug(MessageCategory category, String message, boolean isDebugMode) {
         if (!isDebugMode || !isCategoryEnabled(category)) return;
         
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
         if (useColors) {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -994,12 +1038,12 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
             logger.info(timeStr + BRIGHT_BLACK + prefix + RESET + " " + categoryStr + 
-                     BRIGHT_BLACK + symbol + WHITE + formatHexCodes(message) + RESET);
+                     BRIGHT_BLACK + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + formatHexCodes(message));
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
         }
     }
     
