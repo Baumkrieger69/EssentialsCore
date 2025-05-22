@@ -32,22 +32,6 @@ java {
     withJavadocJar()
 }
 
-// Configure toolchain repositories to download Java if needed
-toolchainManagement {
-    jvm {
-        javaRepositories {
-            repository('adoptium') {
-                url = uri('https://packages.adoptium.net/artifactory/jdk')
-                credentials {
-                    // No credentials needed for Adoptium
-                    username = ''
-                    password = ''
-                }
-            }
-        }
-    }
-}
-
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release.set(21)
