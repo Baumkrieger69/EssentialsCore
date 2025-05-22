@@ -1,17 +1,6 @@
 rootProject.name = 'EssentialsCore'
 
 // Configure toolchain repositories to download Java if needed
-toolchainManagement {
-    jvm {
-        javaRepositories {
-            repository('adoptium') {
-                url = uri('https://packages.adoptium.net/artifactory/jdk')
-                credentials {
-                    // No credentials needed for Adoptium
-                    username = ''
-                    password = ''
-                }
-            }
-        }
-    }
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }
