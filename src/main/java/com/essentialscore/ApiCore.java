@@ -380,6 +380,9 @@ public class ApiCore extends JavaPlugin implements Listener {
             if (debugMode) {
                 console.categoryDebug(ConsoleFormatter.MessageCategory.SYSTEM, "Debug-Modus ist aktiviert", true);
             }
+            
+            // Export API packages
+            exportApiPackages();
         } catch (Exception e) {
             getLogger().severe("Fehler beim Starten des Plugins: " + e.getMessage());
             e.printStackTrace();
@@ -1224,6 +1227,39 @@ public class ApiCore extends JavaPlugin implements Listener {
      */
     public ModuleAPI getModuleAPI(String moduleName) {
         return moduleAPIs.computeIfAbsent(moduleName, k -> new CoreModuleAPI(this, k));
+    }
+
+    /**
+     * This method ensures all API packages are properly exported to modules.
+     * It will be called during plugin initialization to make all API classes accessible.
+     */
+    private void exportApiPackages() {
+        // Log that we're exporting API packages
+        getLogger().info("Exporting API packages for modules...");
+        
+        // Pre-load all API classes to ensure they're available from the plugin classloader
+        try {
+            // Core API interfaces
+            Class.forName("com.essentialscore.api.Module");
+            Class.forName("com.essentialscore.api.ModuleAPI");
+            Class.forName("com.essentialscore.api.ModuleEventListener");
+            Class.forName("com.essentialscore.api.CommandDefinition");
+            Class.forName("com.essentialscore.api.BaseModule");
+            Class.forName("com.essentialscore.api.ModuleClassHelper");
+            
+            // Implementation classes
+            Class.forName("com.essentialscore.api.impl.CoreModuleAPI");
+            Class.forName("com.essentialscore.api.impl.ModuleAdapter");
+            Class.forName("com.essentialscore.api.SimpleCommand");
+            
+            // Explicitly call the helper to ensure all classes are loaded
+            com.essentialscore.api.ModuleClassHelper.ensureApiClassesLoaded();
+            
+            getLogger().info("Successfully exported API packages for modules");
+        } catch (ClassNotFoundException e) {
+            getLogger().severe("Failed to export API packages: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
         

@@ -1719,15 +1719,42 @@ public class ModuleManager {
      */
     private static class ModuleClassLoader extends URLClassLoader {
         private final String moduleName;
+        private final ClassLoader pluginClassLoader;
+        private static final Set<String> API_PACKAGES = new HashSet<>(Arrays.asList(
+            "com.essentialscore.api.",
+            "com.essentialscore.api.impl."
+        ));
         
         public ModuleClassLoader(String moduleName, URL[] urls, ClassLoader parent) {
             super(urls, parent);
             this.moduleName = moduleName;
+            this.pluginClassLoader = parent;
         }
         
         @Override
         public String toString() {
             return "ModuleClassLoader{" + moduleName + "}";
+        }
+        
+        /**
+         * Override the loadClass method to prioritize API packages from parent
+         */
+        @Override
+        public Class<?> loadClass(String name) throws ClassNotFoundException {
+            // Always delegate API packages to parent classloader first
+            for (String apiPackage : API_PACKAGES) {
+                if (name.startsWith(apiPackage)) {
+                    try {
+                        // Try to load from plugin classloader first
+                        return pluginClassLoader.loadClass(name);
+                    } catch (ClassNotFoundException e) {
+                        // Fall back to normal loading if not found in parent
+                    }
+                }
+            }
+            
+            // For all other classes, follow normal class loading
+            return super.loadClass(name);
         }
     }
 
