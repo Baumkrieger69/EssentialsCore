@@ -348,59 +348,145 @@ console.dataSection("Abschnitt", "Key1", "Value1", "Key2", "Value2");
 
 ## API-Imports und Funktionen
 
-### Alle verfügbaren API-Imports
+### Verfügbare API-Packages und Klassen
+
+**Wichtig:** Aufgrund der Struktur des ClassLoaders können Module nur die folgenden API-Packages und Klassen importieren. Diese sind garantiert verfügbar und stabil:
 
 ```java
-// Core API-Komponenten
-import com.essentialscore.api.Module;                  // Hauptinterface für alle Module
-import com.essentialscore.api.ModuleAPI;               // API für Zugriff auf Core-Funktionen
-import com.essentialscore.api.BaseModule;              // Abstrakte Basisimplementierung von Module
-import com.essentialscore.api.ModuleEventListener;     // Interface für modulübergreifende Events
-import com.essentialscore.api.ModuleClassHelper;       // Hilfsklasse für API-Zugriff
-import com.essentialscore.api.SimpleCommand;           // Einfache Befehlsimplementierung
-import com.essentialscore.api.CommandDefinition;       // Interface für Befehlsdefinitionen
+// Core API-Komponenten - Diese Importe sind alle verfügbar und funktionieren
+import com.essentialscore.api.Module;                // Hauptinterface für alle Module
+import com.essentialscore.api.ModuleAPI;             // API für Zugriff auf Core-Funktionen
+import com.essentialscore.api.BaseModule;            // Abstrakte Basisimplementierung von Module
+import com.essentialscore.api.ModuleEventListener;   // Interface für modulübergreifende Events
+import com.essentialscore.api.ModuleClassHelper;     // Hilfsklasse für API-Zugriff
+import com.essentialscore.api.SimpleCommand;         // Einfache Befehlsimplementierung
+import com.essentialscore.api.CommandDefinition;     // Interface für Befehlsdefinitionen
 
-// Implementierungsklassen
-import com.essentialscore.api.impl.CoreModuleAPI;      // Konkrete Implementierung des ModuleAPI-Interfaces
-import com.essentialscore.api.impl.ModuleAdapter;      // Adapter für Module zur Kompatibilität
-
-// Konfiguration
-import com.essentialscore.api.config.Configuration;    // Interface für Konfigurationszugriff
-import com.essentialscore.api.config.ConfigurationManager; // Manager für Konfigurationsdateien
-
-// Events
-import com.essentialscore.api.event.EventHandler;      // Annotation für Event-Handler
-import com.essentialscore.api.event.Listener;          // Annotation für Event-Listener-Klassen
-
-// Befehle
-import com.essentialscore.api.command.Command;         // Annotation für Befehle
-import com.essentialscore.api.command.CommandContext;  // Kontext für Befehlsausführung
-
-// Utility-Klassen
-import com.essentialscore.api.util.StringUtils;        // String-Hilfsfunktionen
-import com.essentialscore.api.util.FileUtils;          // Datei-Hilfsfunktionen
-import com.essentialscore.api.util.LogUtils;           // Logging-Hilfsfunktionen
-
-// Konsolen-Formatierung
-import com.essentialscore.api.console.ConsoleFormatter; // Interface für Konsolenformatierung
+// Implementierungsklassen - Diese werden ebenfalls korrekt geladen
+import com.essentialscore.api.impl.CoreModuleAPI;    // Konkrete Implementierung des ModuleAPI-Interfaces
+import com.essentialscore.api.impl.ModuleAdapter;    // Adapter für Module zur Kompatibilität
 ```
 
-### Funktionsübersicht
+**Hinweis zu weiteren Packages:** In der aktuellen Implementierung sind die folgenden Packages in der Dokumentation erwähnt, aber **noch nicht implementiert**. Diese sollten **nicht importiert** werden, da sie zu ClassNotFoundExceptions führen können:
+
+```java
+// Diese Packages existieren noch nicht und verursachen Fehler bei Import
+// import com.essentialscore.api.config.*
+// import com.essentialscore.api.event.*
+// import com.essentialscore.api.command.*
+// import com.essentialscore.api.util.*
+// import com.essentialscore.api.console.*
+```
+
+### Anmerkungen zur API-Struktur
+
+Der ModuleClassLoader ist so konfiguriert, dass er folgende Packages korrekt lädt:
+- `com.essentialscore.api.*`
+- `com.essentialscore.api.impl.*`
+
+Diese Packages werden vom Haupt-Plugin-ClassLoader bereitgestellt und korrekt an Module weitergegeben. Alle anderen Packages im Plugin sind nicht verfügbar und sollten nicht direkt aus Modulen heraus referenziert werden.
+
+### Bekannte Einschränkungen
+
+1. **Fehlende Sub-Packages**: Die meisten in der Dokumentation erwähnten Sub-Packages wie `config`, `event`, `command`, `util` und `console` existieren noch nicht und müssen über die Haupt-API-Interfaces genutzt werden.
+
+2. **Annotations vs. Interfaces**: In der aktuellen Implementierung gibt es keine Annotations wie `@Command` oder `@EventHandler` - stattdessen werden die entsprechenden Methoden in den Interfaces verwendet.
+
+### Empfohlene Vorgehensweise
+
+Um sicherzustellen, dass Ihre Module korrekt funktionieren:
+
+1. Verwenden Sie ausschließlich die oben aufgelisteten, tatsächlich verfügbaren Imports.
+2. Nutzen Sie die `Module`-Interface-Methoden wie `onCommand()` und `init()`.
+3. Greifen Sie über das `ModuleAPI`-Interface auf Core-Funktionen zu.
+4. Erweitern Sie bei komplexeren Modulen die `BaseModule`-Klasse.
+
+### Funktionsübersicht der verfügbaren Klassen
 
 | Import | Beschreibung | Hauptmethoden |
 |--------|--------------|---------------|
-| `Module` | Basisinterface für alle Module | `init()`, `onEnable()`, `onDisable()` |
-| `ModuleAPI` | Hauptschnittstelle zum Core | `getPlugin()`, `registerCommands()`, `runAsync()` |
+| `Module` | Basisinterface für alle Module | `init()`, `onEnable()`, `onDisable()`, `onCommand()`, `onTabComplete()` |
+| `ModuleAPI` | Hauptschnittstelle zum Core | `getPlugin()`, `registerCommands()`, `runAsync()`, `scheduleTask()`, `logInfo()` |
 | `BaseModule` | Abstrakte Basisimplementierung | Implementiert Module-Interface mit nützlichen Hilfsmethoden |
 | `ModuleEventListener` | Interface für modulübergreifende Events | `onModuleEvent()` |
 | `CommandDefinition` | Interface für Befehlsdefinitionen | `getName()`, `getAliases()`, `getTabCompletionOptions()` |
 | `SimpleCommand` | Einfache Befehlsimplementierung | `execute()`, `tabComplete()` |
-| `ModuleClassHelper` | Hilfsklasse für API-Zugriff | `getAvailableInterfaces()`, `getAvailableClasses()` |
-| `Configuration` | Interface für Konfigurationszugriff | `get()`, `set()`, `save()`, `reload()` |
-| `ConfigurationManager` | Manager für Konfigurationsdateien | `loadConfiguration()`, `saveConfiguration()` |
-| `Command` | Annotation für Befehle | `name`, `permission`, `description`, `usage` |
-| `CommandContext` | Kontext für Befehlsausführung | `getSender()`, `getArgs()`, `hasPermission()` |
-| `ConsoleFormatter` | Interface für Konsolenformatierung | `info()`, `success()`, `warning()`, `error()` |
+| `ModuleClassHelper` | Hilfsklasse für API-Zugriff | Hilft beim Identifizieren verfügbarer API-Klassen |
+
+### Beispiel: Korrektes Modul mit funktionierenden Imports
+
+```java
+package com.meinplugin.module;
+
+import com.essentialscore.api.Module;
+import com.essentialscore.api.ModuleAPI;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
+
+import java.util.List;
+import java.util.Arrays;
+
+public class MeinModul implements Module {
+    private ModuleAPI api;
+    private FileConfiguration config;
+    private String name = "MeinModul";
+    private String version = "1.0.0";
+    private String description = "Ein Beispielmodul";
+
+    @Override
+    public void init(ModuleAPI api, FileConfiguration config) {
+        this.api = api;
+        this.config = config;
+        api.logInfo("Modul " + name + " wurde initialisiert");
+    }
+
+    @Override
+    public void onDisable() {
+        api.logInfo("Modul " + name + " wurde deaktiviert");
+    }
+    
+    @Override
+    public boolean onCommand(String commandName, CommandSender sender, String[] args) {
+        if (commandName.equalsIgnoreCase("meinbefehl")) {
+            sender.sendMessage("Befehl ausgeführt!");
+            return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public List<String> onTabComplete(String commandName, CommandSender sender, String[] args) {
+        if (commandName.equalsIgnoreCase("meinbefehl") && args.length == 1) {
+            return Arrays.asList("option1", "option2", "option3");
+        }
+        return null;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String getVersion() {
+        return version;
+    }
+
+    @Override
+    public String getDescription() {
+        return description;
+    }
+}
+```
+
+### Empfohlene Praxis für Module
+
+1. Implementieren Sie das `Module`-Interface oder erweitern Sie `BaseModule`
+2. Nutzen Sie die Methoden von `ModuleAPI` für alle Interaktionen mit dem Core
+3. Registrieren Sie Befehle über `ModuleAPI.registerCommands()`
+4. Verarbeiten Sie Befehle in der `onCommand()`-Methode
+5. Führen Sie asynchrone Aufgaben mit `ModuleAPI.runAsync()` aus
 
 ## Best Practices
 
