@@ -215,7 +215,7 @@ public class ConsoleFormatter {
         SYSTEM(BRIGHT_CYAN, "SYS", "⚡"),
         CONFIG(BRIGHT_BLUE, "CFG", "⚙"),
         MODULE(BRIGHT_GREEN, "MOD", "📦"),
-        PERFORMANCE(BRIGHT_YELLOW, "PERF", "⚡"),
+        PERFORMANCE(BRIGHT_YELLOW, "PERF", "📊"),
         SECURITY(BRIGHT_RED, "SEC", "🔒"),
         NETWORK(BRIGHT_PURPLE, "NET", "🌐"),
         DATABASE(BRIGHT_WHITE, "DB", "💾"),
@@ -423,17 +423,21 @@ public class ConsoleFormatter {
     public void header(String title) {
         if (useColors) {
             String line = "═".repeat(Math.max(20, title.length() + 4));
+            logger.info("");
             logger.info(BRIGHT_CYAN + "╔" + line + "╗" + RESET);
             logger.info(BRIGHT_CYAN + "║" + " ".repeat((line.length() - title.length()) / 2) + 
                      BRIGHT_WHITE + BOLD + title + RESET + BRIGHT_CYAN + 
                      " ".repeat((line.length() - title.length() + 1) / 2) + "║" + RESET);
             logger.info(BRIGHT_CYAN + "╚" + line + "╝" + RESET);
+            logger.info("");
         } else {
             String line = "=".repeat(Math.max(20, title.length() + 4));
+            logger.info("");
             logger.info(line);
             logger.info("|" + " ".repeat((line.length() - title.length()) / 2) + 
                      title + " ".repeat((line.length() - title.length() + 1) / 2) + "|");
             logger.info(line);
+            logger.info("");
         }
     }
     
@@ -444,9 +448,11 @@ public class ConsoleFormatter {
      */
     public void subHeader(String title) {
         if (useColors) {
+            logger.info("");
             logger.info(BRIGHT_CYAN + "◈ " + BRIGHT_WHITE + BOLD + title + RESET + 
                      BRIGHT_CYAN + " " + "─".repeat(Math.max(10, 30 - title.length())) + RESET);
         } else {
+            logger.info("");
             logger.info("-- " + title + " " + "-".repeat(Math.max(10, 30 - title.length())));
         }
     }
@@ -458,8 +464,10 @@ public class ConsoleFormatter {
      */
     public void section(String section) {
         if (useColors) {
+            logger.info("");
             logger.info(BRIGHT_BLUE + "► " + BOLD + BRIGHT_WHITE + section + RESET);
         } else {
+            logger.info("");
             logger.info("► " + section);
         }
     }
@@ -900,10 +908,10 @@ public class ConsoleFormatter {
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
             
             // Direktes Anwenden der ANSI-Farbcodes für die Kategorie
-            String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
             
             // Formatierte Ausgabe mit ANSI-Farbcodes
-            logger.info(timeStr + prefix + " " + categoryStr + categoryColor + categoryIcon + WHITE + cleanMessage + RESET);
+            logger.info(timeStr + prefix + " " + categoryStr + categoryColor + BOLD + categoryIcon + RESET + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -931,9 +939,9 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
             
             // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
             
-            logger.info(timeStr + prefix + " " + categoryStr + GREEN + symbol + WHITE + cleanMessage + RESET);
+            logger.info(timeStr + prefix + " " + categoryStr + GREEN + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -961,9 +969,9 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
             
             // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
             
-            logger.warning(timeStr + prefix + " " + categoryStr + YELLOW + symbol + WHITE + cleanMessage + RESET);
+            logger.warning(timeStr + prefix + " " + categoryStr + YELLOW + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -991,9 +999,9 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
             
             // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
             
-            logger.severe(timeStr + prefix + " " + categoryStr + RED + symbol + WHITE + cleanMessage + RESET);
+            logger.severe(timeStr + prefix + " " + categoryStr + RED + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -1022,9 +1030,9 @@ public class ConsoleFormatter {
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
             
             // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
             
-            logger.info(timeStr + prefix + " " + categoryStr + BRIGHT_BLACK + symbol + WHITE + cleanMessage + RESET);
+            logger.info(timeStr + prefix + " " + categoryStr + BRIGHT_BLACK + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);

@@ -86,7 +86,7 @@ console:
       enabled: true
       prefix: "PERF"
       color: "BRIGHT_YELLOW"
-      icon: "⚡"
+      icon: "📊"
     
     security:
       enabled: true
