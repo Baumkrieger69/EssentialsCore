@@ -385,8 +385,10 @@ public class ApiCore extends JavaPlugin implements Listener {
             // Export API packages
             exportApiPackages();
         } catch (Exception e) {
-            getLogger().severe("Fehler beim Starten des Plugins: " + e.getMessage());
-            e.printStackTrace();
+            console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Fehler beim Starten des Plugins: " + e.getMessage());
+            if (debugMode) {
+                e.printStackTrace();
+            }
         }
     }
     
@@ -421,12 +423,20 @@ public class ApiCore extends JavaPlugin implements Listener {
         // CommandManager initialisieren
         commandManager = new CommandManager(this);
         
-        console.categorySuccess(ConsoleFormatter.MessageCategory.SYSTEM, "Alle Module erfolgreich initialisiert");
+        console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Alle Module erfolgreich initialisiert");
         
         // Module laden, falls aktiviert
         if (getConfig().getBoolean("general.auto-load-modules", true)) {
             console.subHeader("MODULE LADEN");
-            moduleManager.loadModulesWithDependencyResolution();
+            try {
+                moduleManager.loadModulesWithDependencyResolution();
+                console.categorySuccess(ConsoleFormatter.MessageCategory.SYSTEM, "Alle Module erfolgreich initialisiert");
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Fehler beim Starten des Plugins: " + e.getMessage());
+                if (debugMode) {
+                    e.printStackTrace();
+                }
+            }
             
             // Ressourcen extrahieren, falls konfiguriert
             if (getConfig().getBoolean("general.extract-module-resources", true)) {
@@ -585,7 +595,7 @@ public class ApiCore extends JavaPlugin implements Listener {
                 setupFileLogging();
             }
         } catch (IllegalArgumentException e) {
-            console.warning("Ungültiges Log-Level: " + logLevel + ", verwende INFO");
+            console.categoryWarning(ConsoleFormatter.MessageCategory.CONFIG, "Ungültiges Log-Level: " + logLevel + ", verwende INFO");
             getLogger().setLevel(java.util.logging.Level.INFO);
         }
     }
@@ -615,10 +625,10 @@ public class ApiCore extends JavaPlugin implements Listener {
             getLogger().addHandler(fileHandler);
             
             if (debugMode) {
-                console.debug("File-Logging konfiguriert: " + logDir.getAbsolutePath() + "/apicore.log", true);
+                console.categoryDebug(ConsoleFormatter.MessageCategory.CONFIG, "File-Logging konfiguriert: " + logDir.getAbsolutePath() + "/apicore.log", true);
             }
         } catch (Exception e) {
-            console.warning("Konnte File-Logging nicht konfigurieren: " + e.getMessage());
+            console.categoryWarning(ConsoleFormatter.MessageCategory.CONFIG, "Konnte File-Logging nicht konfigurieren: " + e.getMessage());
         }
     }
     
@@ -1234,7 +1244,7 @@ public class ApiCore extends JavaPlugin implements Listener {
      */
     private void exportApiPackages() {
         // Log that we're exporting API packages
-        getLogger().info("Exporting API packages for modules...");
+        console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Exportiere API-Packages für Module...");
         
         // Pre-load all API classes to ensure they're available from the plugin classloader
         try {
@@ -1254,9 +1264,9 @@ public class ApiCore extends JavaPlugin implements Listener {
             // Explicitly call the helper to ensure all classes are loaded
             com.essentialscore.api.ModuleClassHelper.ensureApiClassesLoaded();
             
-            getLogger().info("Successfully exported API packages for modules");
+            console.categorySuccess(ConsoleFormatter.MessageCategory.SYSTEM, "API-Packages für Module erfolgreich exportiert");
         } catch (ClassNotFoundException e) {
-            getLogger().severe("Failed to export API packages: " + e.getMessage());
+            console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Fehler beim Exportieren der API-Packages: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -1275,7 +1285,7 @@ public class ApiCore extends JavaPlugin implements Listener {
             // Ressourcen nach dem Neuladen extrahieren, falls konfiguriert
             if (getConfig().getBoolean("general.extract-module-resources", true)) {
                 getServer().getScheduler().runTaskAsynchronously(this, () -> {
-                    console.info("Extrahiere Modul-Ressourcen nach Reload...");
+                    console.categoryInfo(ConsoleFormatter.MessageCategory.RESOURCE, "Extrahiere Modul-Ressourcen nach Reload...");
                     extractModuleResources();
                 });
             }
@@ -1286,9 +1296,9 @@ public class ApiCore extends JavaPlugin implements Listener {
             permissionExactCache.clear();
             
             // Stelle sicher, dass alle Module korrekt registriert sind
-            console.info("Module wurden neu geladen. Anzahl: " + loadedModules.size());
+            console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Module wurden neu geladen. Anzahl: " + loadedModules.size());
         } else {
-            console.error("ModuleManager ist nicht initialisiert!");
+            console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "ModuleManager ist nicht initialisiert!");
         }
     }
 }
