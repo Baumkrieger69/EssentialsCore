@@ -1,50 +1,62 @@
-##################################
-#   EssentialsCore Configuration   #
-##################################
+###############################################################################
+#                        EssentialsCore Configuration                         #
+###############################################################################
+# Version 1.0.12
 
-general:
-  # Debug-Modus aktiviert detaillierte Logs
-  debug-mode: false
-  
-  # Nachrichtenprefix für Plugin-Meldungen
-  message-prefix: "&8[&b&lApiCore&8] &7"
-  
-  # Module automatisch laden
-  auto-load-modules: true
-  
-  # Ressourcen extrahieren
-  extract-module-resources: true
-  
-  # Automatisches Extrahieren bei Modulinitialisierung
-  auto-extract-resources: true
-  
-  # Erweiterte Features aktivieren
-  enable-advanced-features: true
+#---------------------------------
+# Core Settings
+#---------------------------------
+core:
+  # Debug mode enables detailed logs
+  debug: false
+  # Plugin message prefix
+  prefix: "&8[&b&lApiCore&8] &7"
+  # Automatically extract module resources
+  extract-resources: true
 
-# Konsolenausgabe-Einstellungen
+#---------------------------------
+# Module System
+#---------------------------------
+modules:
+  # Automatically load modules on startup
+  auto-load: true
+  # Auto-check for new modules periodically
+  auto-check: true
+  # Check interval in seconds
+  check-interval: 30
+  # Load mode: STARTUP_ONLY, ON_DEMAND, PERIODICALLY
+  load-mode: "STARTUP_ONLY"
+  # Watch for module file changes (hot reload)
+  hot-reload: true
+  # Watcher check interval in seconds
+  watcher-interval: 5
+  # Timeout for module loading in milliseconds
+  module-load-timeout: 30000
+  # Ignore failed dependencies
+  ignore-failed-dependencies: true
+  # Extract module resources
+  extract-resources: true
+  # Force specific modules to load synchronously (list)
+  force-sync-modules: []
+
+#---------------------------------
+# Console Output
+#---------------------------------
 console:
-  # Farbige Konsolenausgabe aktivieren
-  use-colors: true
-  
-  # Zeitstempel in Konsolenausgaben anzeigen
-  show-timestamps: false
-  
-  # Unicode-Symbole für Nachrichtentypen verwenden
-  use-unicode-symbols: true
-  
-  # Stil-Preset für die Konsolenausgabe (default, minimal, fancy)
-  style-preset: "default"
-  
-  # Animation beim Start anzeigen
-  show-startup-animation: true
-  
-  # Detaillierungsgrad der Konsolenausgabe (verbose, normal, minimal)
+  # Enable colored console output
+  colors: true
+  # Show timestamps in console output
+  timestamps: false
+  # Use Unicode symbols for message types
+  unicode-symbols: true
+  # Style preset: default, minimal, or fancy
+  style: "default"
+  # Show startup animation
+  startup-animation: true
+  # Verbosity level: verbose, normal, minimal
   verbosity: "normal"
   
-  # Farbschema (classic, modern, dark, light)
-  color-scheme: "modern"
-  
-  # Komponenten-Prefixe
+  # Component prefixes
   prefixes:
     core: "&8[&b&lApiCore&8]"
     module-manager: "&8[&d&lModuleManager&8]"
@@ -55,323 +67,185 @@ console:
     command-manager: "&8[&e&lCommandManager&8]"
     config-manager: "&8[&9&lConfigManager&8]"
     performance-monitor: "&8[&2&lPerformance&8]"
-    module: "&8[&a&lModul&8]"
-    error: "&8[&c&lFehler&8]"
   
-  # Nachrichtenkategorien konfigurieren
+  # Message categories
   categories:
-    # Alle Kategorien aktivieren/deaktivieren
     enable-all: true
-    
-    # Einstellungen für jede Kategorie
-    system:
-      enabled: true
-      prefix: "SYS"
-      color: "BRIGHT_CYAN"
-      icon: "⚡"
-    
-    config:
-      enabled: true
-      prefix: "CFG"
-      color: "BRIGHT_BLUE"
-      icon: "⚙"
-    
-    module:
-      enabled: true
-      prefix: "MOD"
-      color: "BRIGHT_GREEN"
-      icon: "📦"
-    
-    performance:
-      enabled: true
-      prefix: "PERF"
-      color: "BRIGHT_YELLOW"
-      icon: "📊"
-    
-    security:
-      enabled: true
-      prefix: "SEC"
-      color: "BRIGHT_RED"
-      icon: "🔒"
-    
-    network:
-      enabled: true
-      prefix: "NET"
-      color: "BRIGHT_PURPLE"
-      icon: "🌐"
-    
-    database:
-      enabled: true
-      prefix: "DB"
-      color: "BRIGHT_WHITE"
-      icon: "💾"
-    
-    user:
-      enabled: true
-      prefix: "USER"
-      color: "BLUE"
-      icon: "👤"
-    
-    thread:
-      enabled: true
-      prefix: "THREAD"
-      color: "YELLOW"
-      icon: "🧵"
-    
-    resource:
-      enabled: true
-      prefix: "RES"
-      color: "GREEN"
-      icon: "📄"
+    system:    { enabled: true, prefix: "SYS",    color: "BRIGHT_CYAN",   icon: "⚡" }
+    config:    { enabled: true, prefix: "CFG",    color: "BRIGHT_BLUE",   icon: "⚙" }
+    module:    { enabled: true, prefix: "MOD",    color: "BRIGHT_GREEN",  icon: "📦" }
+    performance:{ enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
+    security:  { enabled: true, prefix: "SEC",    color: "BRIGHT_RED",    icon: "🔒" }
+    network:   { enabled: true, prefix: "NET",    color: "BRIGHT_PURPLE", icon: "🌐" }
+    database:  { enabled: true, prefix: "DB",     color: "BRIGHT_WHITE",  icon: "💾" }
+    user:      { enabled: true, prefix: "USER",   color: "BLUE",          icon: "👤" }
+    thread:    { enabled: true, prefix: "THREAD", color: "YELLOW",        icon: "🧵" }
+    resource:  { enabled: true, prefix: "RES",    color: "GREEN",         icon: "📄" }
 
-# Leistungsoptimierungen
+#---------------------------------
+# Performance Optimizations
+#---------------------------------
 performance:
-  # Thread-Pool-Größe (Default: Anzahl der CPU-Kerne)
-  thread-pool-size: 4
+  # Enable performance monitoring
+  enable-monitoring: true
   
-  # Thread-Pool-Typ (CACHED, FIXED, WORK_STEALING, SCHEDULED, ADVANCED)
-  thread-pool-type: "CACHED"
-  
-  # Threads mit hoher Priorität erstellen
-  high-priority-threads: false
-  
-  # Für Mehrkernsysteme optimieren
-  optimize-cores: true
-  
-  # Thread-Speicherverwaltung beim Start optimieren
-  optimize-thread-memory: true
-  
-  # Maximaler Speicher für Modulladung (in MB)
-  max-module-memory: 256
-  
-  # Deadlock-Erkennung aktivieren
-  thread-monitoring: true
-  
-  # Methoden-Cache-Größen
-  cache-size:
-    methods: 500
-    reflection: 200
-    
-  # MethodHandles für Reflektion verwenden (bessere Performance)
-  use-method-handles: true
-  
-  # Off-Heap-Cache-Größe in MB (0 = deaktiviert)
-  off-heap-cache-size: 64
-  
-  # Puffer-Größe für I/O-Operationen
-  io:
-    buffer-size: 8192
-    
-  # Performance-Monitoring
-  monitoring:
-    enabled: true
-    # Intervall in Sekunden für das Sammeln von Daten
-    interval-seconds: 60
-    # Intervall in Minuten für das Loggen in Dateien
-    log-interval-minutes: 10
-    # Maximale Anzahl von Log-Dateien
-    max-log-files: 10
-    # CPU-Nutzung überwachen
-    monitor-cpu: true
-    # Speichernutzung überwachen
-    monitor-memory: true
-    # Thread-Nutzung überwachen
-    monitor-threads: true
-    # Datenbankverbindungen überwachen
-    monitor-database: false
-    # Netzwerkaktivität überwachen
-    monitor-network: false
-    # Warnschwelle für hohe CPU-Last (%)
-    cpu-warning-threshold: 80
-    # Warnschwelle für hohe Speichernutzung (%)
-    memory-warning-threshold: 85
-    # Datei-basiertes Logging aktivieren
-    log-to-file: true
-    # Automatische Rotation der Logdateien aktivieren
-    log-rotation: true
-  
-  # Deadlock-Erkennung und -Behebung
-  deadlock:
-    # Deadlock-Erkennung aktivieren
-    detection-enabled: true
-    # Überprüfungsintervall in Sekunden
-    check-interval-seconds: 60
-    # Auto-Recovery-Versuche aktivieren (Thread-Interruption versuchen)
-    auto-recovery: true
-    # Maximale Anzahl von Wiederherstellungsversuchen
-    max-recovery-attempts: 3
-    # Detaillierte Deadlock-Informationen loggen
-    detailed-logging: true
-  
-  # Speicheroptimierungen
-  memory:
-    # Optimierungsstufe (low, medium, high)
-    optimization-level: "medium"
-    # Harte Referenzen minimieren
-    minimize-hard-references: true
-    # Speicher-Schwellenwerte für Garbage Collection Anregung
-    gc-threshold: 80
-    # Maximale Cache-Größe in MB
-    max-cache-size: 128
-    # Speicher-Komprimierung für große Datenstrukturen
-    compress-large-data: false
-    # Inaktiven Cache automatisch leeren
-    auto-flush-cache: true
-    # Inaktivitätszeit vor Cache-Leerung (in Minuten)
-    cache-flush-minutes: 30
-  
-  # Erweiterte Thread-Pool Einstellungen
-  advanced-thread-pool:
-    # Erweiterten Thread-Pool aktivieren
-    enabled: true
-    # Thread-Pool überwachen
+  # Thread pool configuration
+  threads:
+    # Thread pool size (Default: processor count)
+    pool-size: 4
+    # Thread pool type: CACHED, FIXED, WORK_STEALING, SCHEDULED, ADVANCED
+    pool-type: "CACHED"
+    # Create high priority threads
+    high-priority: false
+    # Optimize for multiple cores
+    optimize-cores: true
+    # Optimize thread memory on startup
+    optimize-memory: true
+    # Enable thread monitoring
     monitoring: true
-    # Minimale Thread-Anzahl
-    core-pool-size: 2
-    # Maximale Thread-Anzahl
-    max-pool-size: 8
-    # Thread-Inaktivitätszeit in Sekunden
-    keep-alive-seconds: 60
-    # Vorwärmen des Thread-Pools beim Start
+  
+  # Memory optimizations
+  memory:
+    # Optimization level: low, medium, high
+    level: "medium"
+    # Maximum module memory in MB
+    max-module-memory: 256
+    # Minimize hard references
+    minimize-references: true
+    # GC threshold percentage
+    gc-threshold: 80
+    # Maximum cache size in MB
+    max-cache-size: 128
+    # Compress large data structures
+    compress-large-data: false
+    # Auto-flush inactive cache
+    auto-flush: true
+    # Flush after minutes of inactivity
+    flush-after-minutes: 30
+  
+  # Cache settings
+  cache:
+    # Method cache size
+    methods: 500
+    # Reflection cache size
+    reflection: 200
+    # Use method handles (better performance)
+    use-method-handles: true
+    # Off-heap cache size in MB (0 = disabled)
+    off-heap-size: 64
+  
+  # I/O operations
+  io:
+    # Buffer size for I/O operations
+    buffer-size: 8192
+  
+  # Advanced thread pool settings
+  advanced-pool:
+    # Enable advanced thread pool
+    enabled: true
+    # Monitor thread pool
+    monitoring: true
+    # Minimum thread count
+    min-threads: 2
+    # Maximum thread count
+    max-threads: 8
+    # Thread idle timeout in seconds
+    idle-timeout: 60
+    # Pre-warm thread pool
     warm-up: true
-    # Task-Priorisierung aktivieren
+    # Enable task prioritization
     prioritization: true
-    # Warteschlangengröße
+    # Queue size
     queue-size: 1000
   
-  # Benchmarking
-  benchmark:
-    # Automatisches Benchmarking aktivieren
-    auto-benchmark: false
-    # Benchmarking-Intervall in Stunden (0 = nur beim Start)
-    interval-hours: 0
-    # Ausführliche Benchmark-Ergebnisse
-    verbose-results: false
-    # Zu testende Komponenten
-    components:
-      thread-pool: true
-      cache: true
-      module-loading: true
-      io-operations: true
-    # Benchmark-Ergebnisse speichern
-    save-results: true
-
-# BloomFilter für Set-Operationen
-bloom-filter:
-  # BloomFilter für häufig geprüfte Sets aktivieren
-  enabled: true
-  # Falsch-Positiv-Rate (niedrigere Werte = mehr Speicherverbrauch, höhere Genauigkeit)
-  false-positive-rate: 0.01
-  # Cache-Größe für BloomFilter
-  cache-size: 100
-
-# Ressourcen-Verwaltung
-resources:
-  # Puffer-Größe für Ressourcenzugriff
-  buffer-size: 8192
-  
-  # Ressourcen überschreiben, wenn sie bereits existieren
-  overwrite-existing: false
-  
-  # Sicherungen erstellen, wenn Ressourcen überschrieben werden
-  backup-on-overwrite: true
-  
-  # Integrität der extrahierten Dateien überprüfen
-  verify-integrity: false
-  
-  # Cache für Ressourcenzugriff aktivieren
-  enable-cache: true
-  
-  # Cache-Timeout in Minuten
-  cache-timeout-minutes: 5
-  
-  # Häufige Ressourcendatei-Endungen
-  common-extensions:
-    - yml
-    - yaml
-    - json
-    - properties
-    - txt
-    - md
-    - sql
-    - html
-    - css
-    - js
-    - png
-    - jpg
-    - jpeg
-    - gif
-    - svg
-    - ttf
-    - otf
-    - woff
-    - woff2
-    - eot
-  
-  # Pfadmuster für Ressourcenerkennung
-  path-patterns:
-    - "resources/.*"
-    - "assets/.*"
-    - "data/.*"
-    - "templates/.*"
-    - "lang/.*"
-    - "i18n/.*"
-    - "locales/.*"
-    - "config/.*"
-  
-  # Extraktions-Modus (AUTO, SELECTIVE, NONE)
-  extraction-mode: "AUTO"
-  
-  # Zusätzliche zu extrahierende Unterverzeichnisse
-  extract-subdirectories:
-    - "lang/"
-    - "i18n/"
-    - "sounds/"
-    - "textures/"
-  
-  # Zu ignorierende Muster
-  ignore-patterns:
-    - "*.class"
-    - "*.java"
-    - "META-INF/*"
-    - "LICENSE"
-    - "*.jar"
-    - "*.zip"
-  
-  # Module mit selbstverwalteten Ressourcen
-  self-managed: false
-  self-managed-modules: []
-
-# Modul-Konfiguration
-modules:
-  # Abhängigkeitsauflösung aktivieren
-  resolve-dependencies: true
-  
-  # Modulcache aktivieren
-  enable-cache: true
-  
-  # Nur signierte Module laden
-  require-signed: false
-  
-  # Auto-Update von Modulen aktivieren
-  auto-update: false
-  
-  # Zeitlimit für Modulladevorgang in Sekunden
-  load-timeout: 10
-  
-  # Modul-Überwachung aktivieren
-  module-watching:
-    # Überwachung aktivieren
+  # Module performance tracking
+  module-tracking:
+    # Enable module performance tracking
     enabled: true
-    # Überwachungsintervall in Sekunden
-    watch-interval-seconds: 30
-    # Automatisch neu laden bei Änderungen
-    auto-reload: false
-    # Zu überwachende Dateitypen
-    watch-file-types:
-      - yml
-      - yaml
-      - properties
-      - json
-    # Ressourcenänderungen überwachen
-    watch-resources: true
+    # CPU warning threshold percentage
+    cpu-warning-threshold: 20
+    # CPU critical threshold percentage
+    cpu-critical-threshold: 40
+    # Memory warning threshold MB
+    memory-warning-threshold: 25
+    # Memory critical threshold MB
+    memory-critical-threshold: 50
+    # Execution time warning threshold ms
+    execution-warning-threshold: 100
+    # Execution time critical threshold ms
+    execution-critical-threshold: 250
+  
+  # Deadlock detection and resolution
+  deadlock:
+    # Enable deadlock detection
+    enabled: true
+    # Check interval in seconds
+    check-interval: 60
+    # Enable automatic recovery attempts
+    auto-recovery: true
+    # Maximum recovery attempts
+    max-recovery-attempts: 3
+    # Log detailed deadlock information
+    detailed-logging: true
+  
+  # Performance monitoring
+  monitoring:
+    # Data collection interval in seconds
+    interval: 60
+    # Log interval in minutes
+    log-interval: 10
+    # Maximum log files
+    max-log-files: 10
+    # Features to monitor
+    features:
+      cpu: true
+      memory: true
+      threads: true
+      database: false
+      network: false
+    # Warning thresholds
+    thresholds:
+      cpu: 80
+      memory: 85
+    # Log to file
+    log-to-file: true
+    # Enable log rotation
+    log-rotation: true
+
+#---------------------------------
+# Security Settings
+#---------------------------------
+security:
+  # Enable sandbox for module execution
+  enable-sandbox: true
+  # Sandbox security level: low, medium, high
+  sandbox-level: "medium"
+  # Trusted modules that bypass sandbox
+  trusted-modules: []
+  # Block dangerous reflection
+  block-dangerous-reflection: true
+  # Limited file system access
+  limited-filesystem-access: true
+  # Block system commands
+  block-system-commands: true
+  # Maximum allowed threads per module
+  max-threads-per-module: 5
+
+#---------------------------------
+# Command System
+#---------------------------------
+commands:
+  # Reload commands after changes
+  auto-reload: true
+  # Default permission node prefix
+  permission-prefix: "apicore"
+  # Respect Bukkit permissions
+  respect-bukkit-permissions: true
+  # Default command tab completions
+  default-completions: true
+  # Log command executions
+  log-executions: false
+  # Maximum arguments per command
+  max-args: 64
+  # Disabled API Core commands
+  disabled: []
