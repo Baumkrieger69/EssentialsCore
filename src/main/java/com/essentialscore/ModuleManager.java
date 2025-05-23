@@ -74,7 +74,7 @@ public class ModuleManager {
         String stylePreset = apiCore.getConfig().getString("console.style-preset", "default");
         
         // Konsolen-Formatter initialisieren mit Rohpräfix (ohne Formatierung)
-        String rawPrefix = apiCore.getConfig().getString("console.prefixes.module-manager", "&8[&d&lModuleManager&8]");
+        String rawPrefix = apiCore.getConfig().getString("console.prefixes.module-manager", "&8[&5&lModuleManager&8]");
         console = new ConsoleFormatter(
             apiCore.getLogger(),
             rawPrefix,

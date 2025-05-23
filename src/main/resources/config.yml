@@ -47,7 +47,7 @@ console:
   # Komponenten-Prefixe
   prefixes:
     core: "&8[&b&lApiCore&8]"
-    module-manager: "&8[&d&lModuleManager&8]"
+    module-manager: "&8[&5&lModuleManager&8]"
     file-manager: "&8[&6&lFileManager&8]"
     thread-manager: "&8[&a&lThreadManager&8]"
     resource-manager: "&8[&3&lResourceManager&8]"
