@@ -272,7 +272,8 @@ public class ConsoleFormatter {
                             boolean showTimestamp, boolean useUnicodeSymbols, 
                             String stylePreset) {
         this.logger = logger;
-        this.prefix = prefix;
+        // Process prefix to convert Minecraft color codes to ANSI codes
+        this.prefix = useColors ? formatHexCodes(prefix) : stripMinecraftColors(prefix);
         this.useColors = useColors;
         this.showTimestamp = showTimestamp;
         this.useUnicodeSymbols = useUnicodeSymbols;
@@ -803,9 +804,9 @@ public class ConsoleFormatter {
     }
     
     /**
-     * Formatiert eine Nachricht mit dem Prefix
+     * Formatiert eine Nachricht mit dem Präfix
      * 
-     * @param message Die Nachricht
+     * @param message Die zu formatierende Nachricht
      * @return Die formatierte Nachricht
      */
     private String formatWithPrefix(String message) {
@@ -817,11 +818,9 @@ public class ConsoleFormatter {
             result.append(BRIGHT_BLACK).append("[").append(timestamp).append("] ").append(RESET);
         }
         
-        // Prefix hinzufügen
+        // Prefix hinzufügen - bereits formatiert, keine weitere Verarbeitung nötig
         if (prefix != null && !prefix.isEmpty()) {
-            // Stelle sicher, dass der Präfix keine Minecraft-Farbcodes enthält
-            String cleanPrefix = stripMinecraftColors(prefix);
-            result.append(cleanPrefix).append(" ");
+            result.append(prefix).append(" ");
         }
         
         // Nachricht hinzufügen
@@ -842,8 +841,8 @@ public class ConsoleFormatter {
         
         // Wenn Farben deaktiviert sind, entferne alle Farbcodes
         if (!useColors) {
-            return input.replaceAll("&[0-9a-fklmnor]", "")
-                       .replaceAll("§[0-9a-fklmnor]", "")
+            return input.replaceAll("&[0-9a-fklmnorx]", "")
+                       .replaceAll("§[0-9a-fklmnorx]", "")
                        .replaceAll("#[a-fA-F0-9]{6}", "");
         }
         
@@ -871,6 +870,9 @@ public class ConsoleFormatter {
         colorMap.put('r', RESET);
         colorMap.put('l', BOLD);
         colorMap.put('n', UNDERLINE);
+        colorMap.put('o', ITALIC);
+        colorMap.put('k', BLINK);
+        colorMap.put('m', UNDERLINE);
         
         StringBuilder result = new StringBuilder();
         boolean skipNext = false;
@@ -924,7 +926,7 @@ public class ConsoleFormatter {
             String categoryColor = getCategoryColor(category);
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + BRIGHT_CYAN + prefix + RESET + " " + categoryStr + 
+            logger.info(timeStr + prefix + " " + categoryStr + 
                      categoryColor + categoryIcon + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
@@ -952,7 +954,7 @@ public class ConsoleFormatter {
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + BRIGHT_GREEN + prefix + RESET + " " + categoryStr + 
+            logger.info(timeStr + prefix + " " + categoryStr + 
                      GREEN + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
@@ -980,7 +982,7 @@ public class ConsoleFormatter {
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.warning(timeStr + BRIGHT_YELLOW + prefix + RESET + " " + categoryStr + 
+            logger.warning(timeStr + prefix + " " + categoryStr + 
                        YELLOW + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
@@ -1008,7 +1010,7 @@ public class ConsoleFormatter {
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.severe(timeStr + BRIGHT_RED + prefix + RESET + " " + categoryStr + 
+            logger.severe(timeStr + prefix + " " + categoryStr + 
                       RED + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
@@ -1037,7 +1039,7 @@ public class ConsoleFormatter {
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + BRIGHT_BLACK + prefix + RESET + " " + categoryStr + 
+            logger.info(timeStr + prefix + " " + categoryStr + 
                      BRIGHT_BLACK + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
