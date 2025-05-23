@@ -847,65 +847,38 @@ public class ConsoleFormatter {
         }
         
         // Ersetze zuerst alle §-Codes mit &-Codes für einheitliche Verarbeitung
-        input = input.replace('§', '&');
+        String result = input.replace('§', '&');
         
-        // Farbcode-Map
-        java.util.Map<Character, String> colorMap = new java.util.HashMap<>();
-        colorMap.put('0', BLACK);
-        colorMap.put('1', BLUE);
-        colorMap.put('2', GREEN);
-        colorMap.put('3', CYAN);
-        colorMap.put('4', RED);
-        colorMap.put('5', PURPLE);
-        colorMap.put('6', YELLOW);
-        colorMap.put('7', WHITE);
-        colorMap.put('8', BRIGHT_BLACK);
-        colorMap.put('9', BRIGHT_BLUE);
-        colorMap.put('a', BRIGHT_GREEN);
-        colorMap.put('b', BRIGHT_CYAN);
-        colorMap.put('c', BRIGHT_RED);
-        colorMap.put('d', BRIGHT_PURPLE);
-        colorMap.put('e', BRIGHT_YELLOW);
-        colorMap.put('f', BRIGHT_WHITE);
-        colorMap.put('r', RESET);
-        colorMap.put('l', BOLD);
-        colorMap.put('n', UNDERLINE);
-        colorMap.put('o', ITALIC);
-        colorMap.put('k', BLINK);
-        colorMap.put('m', UNDERLINE);
-        
-        StringBuilder result = new StringBuilder();
-        boolean skipNext = false;
-        
-        for (int i = 0; i < input.length(); i++) {
-            if (skipNext) {
-                skipNext = false;
-                continue;
-            }
-            
-            char current = input.charAt(i);
-            
-            if (current == '&' && i + 1 < input.length()) {
-                char colorCode = Character.toLowerCase(input.charAt(i + 1));
-                String ansiCode = colorMap.get(colorCode);
-                
-                if (ansiCode != null) {
-                    result.append(ansiCode);
-                    skipNext = true;
-                } else {
-                    result.append(current);
-                }
-            } else {
-                result.append(current);
-            }
-        }
+        // Ersetze alle Minecraft-Farbcodes mit ANSI-Farbcodes
+        result = result.replaceAll("&0", BLACK)
+                      .replaceAll("&1", BLUE)
+                      .replaceAll("&2", GREEN)
+                      .replaceAll("&3", CYAN)
+                      .replaceAll("&4", RED)
+                      .replaceAll("&5", PURPLE)
+                      .replaceAll("&6", YELLOW)
+                      .replaceAll("&7", WHITE)
+                      .replaceAll("&8", BRIGHT_BLACK)
+                      .replaceAll("&9", BRIGHT_BLUE)
+                      .replaceAll("&a", BRIGHT_GREEN)
+                      .replaceAll("&b", BRIGHT_CYAN)
+                      .replaceAll("&c", BRIGHT_RED)
+                      .replaceAll("&d", BRIGHT_PURPLE)
+                      .replaceAll("&e", BRIGHT_YELLOW)
+                      .replaceAll("&f", BRIGHT_WHITE)
+                      .replaceAll("&l", BOLD)
+                      .replaceAll("&n", UNDERLINE)
+                      .replaceAll("&o", ITALIC)
+                      .replaceAll("&k", BLINK)
+                      .replaceAll("&m", UNDERLINE)
+                      .replaceAll("&r", RESET);
         
         // Stelle sicher, dass der Text mit Reset endet
-        if (!result.toString().endsWith(RESET)) {
-            result.append(RESET);
+        if (!result.endsWith(RESET)) {
+            result += RESET;
         }
         
-        return result.toString();
+        return result;
     }
     
     /**
@@ -925,9 +898,12 @@ public class ConsoleFormatter {
             String categoryPrefix = getCategoryPrefix(category);
             String categoryColor = getCategoryColor(category);
             String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes für die Kategorie
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + prefix + " " + categoryStr + 
-                     categoryColor + categoryIcon + WHITE + cleanMessage + RESET);
+            
+            // Formatierte Ausgabe mit ANSI-Farbcodes
+            logger.info(timeStr + prefix + " " + categoryStr + categoryColor + categoryIcon + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -953,9 +929,11 @@ public class ConsoleFormatter {
             String categoryPrefix = getCategoryPrefix(category);
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + prefix + " " + categoryStr + 
-                     GREEN + symbol + WHITE + cleanMessage + RESET);
+            
+            logger.info(timeStr + prefix + " " + categoryStr + GREEN + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -981,9 +959,11 @@ public class ConsoleFormatter {
             String categoryPrefix = getCategoryPrefix(category);
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.warning(timeStr + prefix + " " + categoryStr + 
-                       YELLOW + symbol + WHITE + cleanMessage + RESET);
+            
+            logger.warning(timeStr + prefix + " " + categoryStr + YELLOW + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -1009,9 +989,11 @@ public class ConsoleFormatter {
             String categoryPrefix = getCategoryPrefix(category);
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.severe(timeStr + prefix + " " + categoryStr + 
-                      RED + symbol + WHITE + cleanMessage + RESET);
+            
+            logger.severe(timeStr + prefix + " " + categoryStr + RED + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
@@ -1038,9 +1020,11 @@ public class ConsoleFormatter {
             String categoryPrefix = getCategoryPrefix(category);
             String categoryColor = getCategoryColor(category);
             String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
             String categoryStr = "[" + categoryColor + categoryPrefix + RESET + "] ";
-            logger.info(timeStr + prefix + " " + categoryStr + 
-                     BRIGHT_BLACK + symbol + WHITE + cleanMessage + RESET);
+            
+            logger.info(timeStr + prefix + " " + categoryStr + BRIGHT_BLACK + symbol + WHITE + cleanMessage + RESET);
         } else {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String categoryPrefix = getCategoryPrefix(category);
