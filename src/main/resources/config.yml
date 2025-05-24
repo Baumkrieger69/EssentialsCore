@@ -74,7 +74,11 @@ console:
     system:    { enabled: true, prefix: "SYS",    color: "BRIGHT_CYAN",   icon: "⚡" }
     config:    { enabled: true, prefix: "CFG",    color: "BRIGHT_BLUE",   icon: "⚙" }
     module:    { enabled: true, prefix: "MOD",    color: "BRIGHT_GREEN",  icon: "📦" }
-    performance:{ enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
+    performance: 
+      enabled: true
+      prefix: "PERF"
+      color: "BRIGHT_YELLOW"
+      icon: "📊"
     security:  { enabled: true, prefix: "SEC",    color: "BRIGHT_RED",    icon: "🔒" }
     network:   { enabled: true, prefix: "NET",    color: "BRIGHT_PURPLE", icon: "🌐" }
     database:  { enabled: true, prefix: "DB",     color: "BRIGHT_WHITE",  icon: "💾" }
