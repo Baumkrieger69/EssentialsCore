@@ -5,57 +5,93 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Map;
 
 /**
- * Main interface for EssentialsCore modules.
- * All modules should implement this interface to be properly loaded by the core.
+ * Hauptschnittstelle für Module des ApiCore
+ * Jedes Modul sollte dieses Interface implementieren, um mit dem ApiCore zu funktionieren.
  */
 public interface Module {
+    
     /**
-     * Called when the module is initialized
+     * Wird beim Laden des Moduls aufgerufen
      * 
-     * @param api The module API instance for interacting with the core
-     * @param config The module's configuration file
+     * @param moduleAPI Die API für dieses Modul
+     * @param config Die Konfiguration des Moduls
      */
-    void init(ModuleAPI api, FileConfiguration config);
+    void init(ModuleAPI moduleAPI, FileConfiguration config);
     
     /**
-     * Called when the module is enabled or re-enabled after a reload
-     * This is called after init() and can be used to start tasks or register listeners
+     * Wird beim Aktivieren des Moduls aufgerufen (nach der Initialisierung)
      */
-    default void onEnable() {}
+    default void onEnable() {
+        // Standardmäßig keine Aktion notwendig
+    }
     
     /**
-     * Called when the module is disabled
+     * Wird beim Deaktivieren des Moduls aufgerufen
      */
     void onDisable();
     
     /**
-     * Called when a player joins the server
+     * Wird aufgerufen, wenn ein Befehl dieses Moduls ausgeführt wird
      * 
-     * @param player The player who joined
+     * @param command Das verwendete Kommando
+     * @param sender Der Absender des Befehls
+     * @param args Die Argumente des Befehls
+     * @return true, wenn der Befehl erfolgreich ausgeführt wurde
      */
-    default void onPlayerJoin(Player player) {}
+    default boolean onCommand(String command, CommandSender sender, String[] args) {
+        return false;
+    }
     
     /**
-     * Called when a command registered by this module is executed
+     * Wird aufgerufen, wenn eine Tab-Vervollständigung für einen Befehl dieses Moduls angefordert wird
      * 
-     * @param commandName The name of the command
-     * @param sender The command sender
-     * @param args The command arguments
-     * @return true if the command was handled, false otherwise
+     * @param command Das verwendete Kommando
+     * @param sender Der Absender des Befehls
+     * @param args Die aktuellen Argumente des Befehls
+     * @return Liste möglicher Vervollständigungen oder null
      */
-    default boolean onCommand(String commandName, CommandSender sender, String[] args) { return true; }
+    default List<String> onTabComplete(String command, CommandSender sender, String[] args) {
+        return null;
+    }
     
     /**
-     * Called when tab completion is requested for a command registered by this module
+     * Wird aufgerufen, wenn ein Spieler dem Server beitritt
      * 
-     * @param commandName The name of the command
-     * @param sender The command sender
-     * @param args The command arguments
-     * @return A list of tab completion options, or null for default behavior
+     * @param player Der Spieler, der dem Server beigetreten ist
      */
-    default List<String> onTabComplete(String commandName, CommandSender sender, String[] args) { return null; }
+    default void onPlayerJoin(Player player) {
+        // Standardmäßig keine Aktion notwendig
+    }
+    
+    /**
+     * Wird aufgerufen, wenn das Modul neu geladen werden soll
+     * 
+     * @return true, wenn das Neuladen erfolgreich war
+     */
+    default boolean onReload() {
+        return true;
+    }
+    
+    /**
+     * Wird aufgerufen, um den Status des Moduls abzurufen
+     * 
+     * @return Eine Map mit Statusinformationen
+     */
+    default Map<String, Object> getStatus() {
+        return new java.util.HashMap<>();
+    }
+    
+    /**
+     * Wird aufgerufen, um die Berechtigungen des Moduls zu registrieren
+     * 
+     * @param api Die ModuleAPI-Instanz
+     */
+    default void registerPermissions(ModuleAPI api) {
+        // Standardmäßig keine Aktion notwendig
+    }
     
     /**
      * Gets the name of the module

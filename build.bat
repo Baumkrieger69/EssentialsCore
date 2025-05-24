@@ -3,7 +3,6 @@ echo Building EssentialsCore v1.0.12...
 
 :: Create build directories
 echo Creating build directories...
-mkdir build 2>nul
 mkdir build\classes 2>nul
 mkdir build\libs 2>nul
 
@@ -27,10 +26,15 @@ if %ERRORLEVEL% neq 0 (
 echo Checking resources...
 dir build\classes
 
+:: Create manifest file
+echo Creating manifest file...
+echo Manifest-Version: 1.0 > build\classes\MANIFEST.MF
+echo Main-Class: com.essentialscore.ApiCore >> build\classes\MANIFEST.MF
+
 :: Create JAR file
 echo Creating JAR file...
 cd build\classes
-jar cf ..\libs\EssentialsCore-1.0.12.jar *
+jar cfm ..\libs\EssentialsCore-1.0.12.jar MANIFEST.MF *
 if %ERRORLEVEL% neq 0 (
   echo Failed to create JAR file.
   cd ..\..
@@ -40,7 +44,7 @@ cd ..\..
 
 :: Check if JAR was created
 echo Checking JAR file...
-dir build\libs
+dir build\libs\*1.0.12*.jar
 
 echo Build completed!
 echo JAR file created at: build\libs\EssentialsCore-1.0.12.jar 

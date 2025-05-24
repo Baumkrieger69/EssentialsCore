@@ -34,6 +34,50 @@ public class DynamicCommand extends Command implements TabCompleter {
     // Präkompilierte RegEx für häufige Befehlsmuster
     private static final Pattern COMMAND_ARGS_PATTERN = Pattern.compile("\"([^\"]*)\"|([^\\s]+)");
     
+    // Command executor implementation
+    private org.bukkit.command.CommandExecutor executor;
+    private org.bukkit.command.TabCompleter customTabCompleter;
+    
+    /**
+     * Sets the executor for this command
+     * 
+     * @param executor The executor to use
+     * @return This command instance for method chaining
+     */
+    public DynamicCommand setExecutor(org.bukkit.command.CommandExecutor executor) {
+        this.executor = executor;
+        return this;
+    }
+    
+    /**
+     * Gets the current executor
+     * 
+     * @return The current executor or null if none is set
+     */
+    public org.bukkit.command.CommandExecutor getExecutor() {
+        return executor;
+    }
+    
+    /**
+     * Sets the tab completer for this command
+     * 
+     * @param tabCompleter The tab completer to use
+     * @return This command instance for method chaining
+     */
+    public DynamicCommand setTabCompleter(org.bukkit.command.TabCompleter tabCompleter) {
+        this.customTabCompleter = tabCompleter;
+        return this;
+    }
+    
+    /**
+     * Gets the custom tab completer
+     * 
+     * @return The custom tab completer or null if none is set
+     */
+    public org.bukkit.command.TabCompleter getCustomTabCompleter() {
+        return customTabCompleter;
+    }
+    
     // Optimierte Command-Instance-Erstellung
     public DynamicCommand(String name, String description, String usageMessage, List<String> aliases, 
                           String moduleName, String permission, ApiCore apiCore) {
@@ -73,6 +117,11 @@ public class DynamicCommand extends Command implements TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        // Check if we have a custom tab completer
+        if (customTabCompleter != null) {
+            return customTabCompleter.onTabComplete(sender, command, alias, args);
+        }
+        
         // Schnellprüfung für wesentliche Bedingungen
         ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
         if (moduleInfo == null || !hasPermission(sender)) {
@@ -161,6 +210,18 @@ public class DynamicCommand extends Command implements TabCompleter {
         long startTime = System.nanoTime();
         
         try {
+            // Check if the command is deactivated
+            if (apiCore.getCommandManager().isCommandDeactivated(getName())) {
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cDieser Befehl wurde deaktiviert!"));
+                return true;
+            }
+            
+            // Use the executor if it's set
+            if (executor != null) {
+                return executor.onCommand(sender, this, commandLabel, args);
+            }
+            
+            // Otherwise, use the module-based execution
             if (moduleName != null && !moduleName.equalsIgnoreCase("apicore")) {
                 ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
                 if (moduleInfo != null && moduleInfo.getInstance() != null) {

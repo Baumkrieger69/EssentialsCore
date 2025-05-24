@@ -16,17 +16,20 @@ import org.bukkit.plugin.Plugin;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
-import java.lang.management.ThreadMXBean;
-import java.lang.management.ThreadInfo;
+import java.util.zip.ZipEntry;
 import java.util.regex.Pattern;
 
 // Add these imports at the top of the file
@@ -55,6 +58,16 @@ public class ModuleManager {
     private BukkitTask watcherTask;
     private ConsoleFormatter console;
     
+    // Performance-Tracking für Module
+    private final Map<String, ModulePerformanceData> modulePerformanceMap = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService performanceTrackerService;
+    public static final int CPU_THRESHOLD_WARNING = 20;   // 20% CPU Auslastung = Gelb
+    public static final int CPU_THRESHOLD_CRITICAL = 40;  // 40% CPU Auslastung = Rot
+    public static final int MEMORY_THRESHOLD_WARNING = 25;  // 25MB Speichernutzung = Gelb
+    public static final int MEMORY_THRESHOLD_CRITICAL = 50; // 50MB Speichernutzung = Rot
+    public static final int EXECUTION_THRESHOLD_WARNING = 100; // 100ms durchschnittliche Ausführungszeit = Gelb
+    public static final int EXECUTION_THRESHOLD_CRITICAL = 250; // 250ms durchschnittliche Ausführungszeit = Rot
+    
     public ModuleManager(ApiCore apiCore, File modulesDir, File configDir, 
                          Map<String, Object> loadedModules, 
                          Map<String, List<DynamicCommand>> moduleCommands,
@@ -66,6 +79,11 @@ public class ModuleManager {
         this.moduleCommands = moduleCommands;
         this.executorService = executorService;
         this.bufferCache = ThreadLocal.withInitial(() -> new byte[BUFFER_SIZE]);
+        this.performanceTrackerService = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "ModulePerformanceTracker");
+            thread.setDaemon(true); // Hintergrund-Thread, der den Server nicht am Herunterfahren hindert
+            return thread;
+        });
         
         // Erweiterte Konsolen-Formatter Konfiguration
         boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
@@ -80,6 +98,12 @@ public class ModuleManager {
             rawPrefix,
             useColors, showTimestamps, useUnicodeSymbols, stylePreset
         );
+        
+        // Performance-Tracking starten, falls aktiviert
+        if (apiCore.getConfig().getBoolean("performance.module-tracking.enabled", true)) {
+            // Verzögert starten, damit der Server erst vollständig geladen ist
+            Bukkit.getScheduler().runTaskLater(apiCore, this::startPerformanceTracking, 100L);
+        }
     }
     
     /**
@@ -1064,28 +1088,40 @@ public class ModuleManager {
 
                 // Modul initialisieren - mit robuster Initialisierung unabhängig vom Interface
                 try {
-                    // Versuche zuerst den direkten Weg über das Module-Interface
-                    if (moduleInstance instanceof com.essentialscore.api.Module) {
-                        console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Initialisiere Modul " + moduleName + " über Module-Interface");
-                        // Get ModuleAPI instance for this module
-                        ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
-                        // Initialize module
-                        ((com.essentialscore.api.Module) moduleInstance).init(moduleAPI, config);
-                        
-                        // Nach der Initialisierung onEnable aufrufen
-                        try {
-                            ((com.essentialscore.api.Module) moduleInstance).onEnable();
-                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für " + moduleName + " aufgerufen");
-                        } catch (Exception e) {
-                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                "Fehler beim Aufrufen von onEnable für " + moduleName + ": " + e.getMessage());
-                        }
-                        
-                        // Create adapter for legacy systems if needed
-                        if (implementsModuleInterface) {
+                    // Verwende die bereits geladene Konfiguration
+                    final FileConfiguration finalConfig = config;
+                    final Object finalModuleInstance = moduleInstance;
+                    ModuleSandbox sandbox = apiCore.getModuleSandbox();
+                    
+                    if (implementsModuleInterface) {
+                        // Try initializing using Module interface
+                        if (finalModuleInstance instanceof com.essentialscore.api.Module) {
+                            // Get or create ModuleAPI
+                            ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
+                            
+                            // Initialize using the Module interface in a sandbox if enabled
+                            if (sandbox != null && sandbox.isSandboxEnabled()) {
+                                boolean success = sandbox.executeModuleAction(moduleName, finalModuleInstance, () -> {
+                                    ((com.essentialscore.api.Module) finalModuleInstance).init(moduleAPI, finalConfig);
+                                });
+                                
+                                if (!success) {
+                                    // Sandbox-Ausführung fehlgeschlagen, Modul wurde bereits deaktiviert
+                                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                                        "Modul " + moduleName + " konnte nicht initialisiert werden (Sandbox-Fehler)");
+                                    return;
+                                }
+                            } else {
+                                // Direkte Initialisierung ohne Sandbox
+                                ((com.essentialscore.api.Module) finalModuleInstance).init(moduleAPI, finalConfig);
+                            }
+                            
+                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
+                                "Modul " + moduleName + " erfolgreich initialisiert über Module-Interface");
+                            
                             // Create an adapter that presents the Module as a legacy module
                             ModuleAdapter adapter = new ModuleAdapter(
-                                (com.essentialscore.api.Module) moduleInstance, 
+                                (com.essentialscore.api.Module) finalModuleInstance, 
                                 moduleAPI, 
                                 apiCore
                             );
@@ -1094,60 +1130,9 @@ public class ModuleManager {
                             moduleInfo = new ApiCore.ModuleInfo(moduleName, version, description, jarFile, loader, adapter);
                             loadedModules.put(moduleName, moduleInfo);
                         }
-                    } else {
-                        // Fallback auf Reflection für Legacy-Module
-                        console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Initialisiere Modul " + moduleName + " über Reflection");
-                        try {
-                            // Versuche zunächst, die Methode mit ModuleAPI zu finden
-                            try {
-                                Method initMethod = moduleMainClass.getMethod("init", ModuleAPI.class, FileConfiguration.class);
-                                ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
-                                initMethod.invoke(moduleInstance, moduleAPI, config);
-                                console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Initialisierung mit ModuleAPI erfolgreich", apiCore.isDebugMode());
-                                
-                                // Nach der Initialisierung onEnable aufrufen, falls vorhanden
-                                try {
-                                    Method onEnableMethod = moduleMainClass.getMethod("onEnable");
-                                    onEnableMethod.invoke(moduleInstance);
-                                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für " + moduleName + " aufgerufen");
-                                } catch (NoSuchMethodException e) {
-                                    // onEnable nicht gefunden, ist okay für Legacy-Module
-                                } catch (Exception e) {
-                                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                        "Fehler beim Aufrufen von onEnable für " + moduleName + ": " + e.getMessage());
-                                }
-                            } catch (NoSuchMethodException e) {
-                                // Wenn nicht gefunden, versuche die alte Methode mit ApiCore
-                            try {
-                                Method initMethod = moduleMainClass.getMethod("init", ApiCore.class, FileConfiguration.class);
-                                initMethod.invoke(moduleInstance, apiCore, config);
-                                console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Legacy-Initialisierung erfolgreich", apiCore.isDebugMode());
-                                
-                                // Nach der Initialisierung onEnable aufrufen, falls vorhanden
-                                try {
-                                    Method onEnableMethod = moduleMainClass.getMethod("onEnable");
-                                    onEnableMethod.invoke(moduleInstance);
-                                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für Legacy-Modul " + moduleName + " aufgerufen");
-                                } catch (NoSuchMethodException ex) {
-                                    // onEnable nicht gefunden, ist okay für Legacy-Module
-                                } catch (Exception ex) {
-                                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                        "Fehler beim Aufrufen von onEnable für Legacy-Modul " + moduleName + ": " + ex.getMessage());
-                                }
-                                } catch (NoSuchMethodException ex) {
-                                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Konnte keine init-Methode finden. Das Modul " + moduleName + " wird nicht initialisiert!");
-                                }
-                            }
-                        } catch (Exception e) {
-                            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler bei der Modulinitialisierung für " + moduleName + ": " + e.getMessage());
-                            if (apiCore.isDebugMode()) {
-                                e.printStackTrace();
-                            }
-                            return;
-                        }
                     }
                 } catch (Exception e) {
-                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler bei der Initialisierung von Modul " + moduleName + ": " + e.getMessage());
+                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Initialisieren von Modul " + moduleName + ": " + e.getMessage());
                     if (apiCore.isDebugMode()) {
                         e.printStackTrace();
                     }
@@ -2190,5 +2175,643 @@ public class ModuleManager {
             console.error("Fehler beim Extrahieren des Modulnamens: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Führt eine private Methode eines Moduls sicher aus
+     * 
+     * @param moduleName Der Name des Moduls
+     * @param methodName Der Name der Methode
+     * @param parameterTypes Die Parametertypen
+     * @param args Die Argumente für die Methode
+     * @return Das Ergebnis des Methodenaufrufs oder null, wenn ein Fehler auftritt
+     */
+    public Object executeModuleMethod(String moduleName, String methodName, Class<?>[] parameterTypes, Object... args) {
+        if (!loadedModules.containsKey(moduleName)) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Versuch, Methode auf nicht geladenem Modul aufzurufen: " + moduleName);
+            return null;
+        }
+        
+        Object moduleInfo = loadedModules.get(moduleName);
+        if (!(moduleInfo instanceof ApiCore.ModuleInfo)) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Ungültiges ModuleInfo-Objekt für Modul: " + moduleName);
+            return null;
+        }
+        
+        ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleInfo;
+        Object moduleInstance = info.getInstance();
+        
+        if (moduleInstance == null) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Null-Instanz für Modul: " + moduleName);
+            return null;
+        }
+        
+        // Verwende Sandbox für sichere Ausführung, wenn aktiviert
+        ModuleSandbox sandbox = apiCore.getModuleSandbox();
+        if (sandbox != null && sandbox.isSandboxEnabled()) {
+            return sandbox.executeModuleFunction(moduleName, moduleInstance, () -> {
+                try {
+                    Method method = moduleInstance.getClass().getMethod(methodName, parameterTypes);
+                    return method.invoke(moduleInstance, args);
+                } catch (Exception e) {
+                    throw new RuntimeException("Fehler beim Ausführen der Methode " + methodName, e);
+                }
+            }, null);
+        } else {
+            // Fallback zur direkten Ausführung
+            try {
+                Method method = moduleInstance.getClass().getMethod(methodName, parameterTypes);
+                return method.invoke(moduleInstance, args);
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                    "Fehler beim Ausführen der Methode " + methodName + " von " + moduleName + ": " + e.getMessage());
+                if (apiCore.isDebugMode()) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Führt einen Befehl eines Moduls aus
+     * 
+     * @param moduleName Der Name des Moduls
+     * @param sender Der Befehlsabsender
+     * @param command Der ausgeführte Befehl
+     * @param label Das verwendete Label
+     * @param args Die Befehlsargumente
+     * @return true, wenn der Befehl erfolgreich ausgeführt wurde
+     */
+    public boolean onModuleCommand(String moduleName, CommandSender sender, org.bukkit.command.Command command,
+                                String label, String[] args) {
+        if (!loadedModules.containsKey(moduleName)) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Versuch, Befehl auf nicht geladenem Modul auszuführen: " + moduleName);
+            return false;
+        }
+        
+        Object moduleInfo = loadedModules.get(moduleName);
+        if (!(moduleInfo instanceof ApiCore.ModuleInfo)) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Ungültiges ModuleInfo-Objekt für Modul: " + moduleName);
+            return false;
+        }
+        
+        ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleInfo;
+        Object moduleInstance = info.getInstance();
+        
+        if (moduleInstance == null) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Null-Instanz für Modul: " + moduleName);
+            return false;
+        }
+        
+        // Verwende Sandbox für sichere Ausführung, wenn aktiviert
+        ModuleSandbox sandbox = apiCore.getModuleSandbox();
+        if (sandbox != null && sandbox.isSandboxEnabled()) {
+            return sandbox.executeModuleFunction(moduleName, moduleInstance, () -> {
+                try {
+                    Method method = moduleInstance.getClass().getMethod("onCommand", CommandSender.class, 
+                        org.bukkit.command.Command.class, String.class, String[].class);
+                    Object result = method.invoke(moduleInstance, sender, command, label, args);
+                    return result instanceof Boolean ? (Boolean) result : false;
+                } catch (Exception e) {
+                    throw new RuntimeException("Fehler beim Ausführen des Befehls von Modul " + moduleName, e);
+                }
+            }, false);
+        } else {
+            // Fallback zur direkten Ausführung
+            try {
+                Method method = moduleInstance.getClass().getMethod("onCommand", CommandSender.class, 
+                    org.bukkit.command.Command.class, String.class, String[].class);
+                Object result = method.invoke(moduleInstance, sender, command, label, args);
+                return result instanceof Boolean ? (Boolean) result : false;
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                    "Fehler beim Ausführen des Befehls von Modul " + moduleName + ": " + e.getMessage());
+                if (apiCore.isDebugMode()) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Klasse zum Speichern der Performancedaten eines Moduls
+     */
+    public static class ModulePerformanceData {
+        private final String moduleName;
+        private long lastUpdateTime = System.currentTimeMillis();
+        
+        // CPU-Auslastung
+        private double cpuUsagePercent = 0.0;
+        private final Queue<Double> cpuHistory = new LinkedList<>();
+        private static final int HISTORY_SIZE = 10;
+        
+        // Speichernutzung
+        private long memoryUsageBytes = 0L;
+        
+        // Methodenaufrufe
+        private final Map<String, MethodExecutionData> methodExecutions = new ConcurrentHashMap<>();
+        private long totalExecutionCount = 0;
+        private double avgExecutionTimeMs = 0.0;
+        
+        // Kritische Performance-Ereignisse
+        private final ConcurrentLinkedQueue<PerformanceEvent> criticalEvents = new ConcurrentLinkedQueue<>();
+        private static final int MAX_EVENTS = 50;
+        
+        public ModulePerformanceData(String moduleName) {
+            this.moduleName = moduleName;
+        }
+        
+        /**
+         * Aktualisiert die CPU-Nutzung dieses Moduls
+         * 
+         * @param cpuPercent CPU-Prozentsatz (0-100)
+         */
+        public void updateCpuUsage(double cpuPercent) {
+            this.cpuUsagePercent = cpuPercent;
+            
+            // Verlauf aktualisieren
+            cpuHistory.add(cpuPercent);
+            while (cpuHistory.size() > HISTORY_SIZE) {
+                cpuHistory.poll();
+            }
+            
+            // Kritisches Ereignis hinzufügen, wenn Schwellenwert überschritten
+            if (cpuPercent >= CPU_THRESHOLD_CRITICAL) {
+                addCriticalEvent("CPU-Auslastung kritisch", 
+                    "CPU-Nutzung von " + String.format("%.1f", cpuPercent) + "% überschreitet Schwellenwert (" + CPU_THRESHOLD_CRITICAL + "%)",
+                    PerformanceEventType.CPU_CRITICAL);
+            }
+            
+            lastUpdateTime = System.currentTimeMillis();
+        }
+        
+        /**
+         * Aktualisiert die Speichernutzung dieses Moduls
+         * 
+         * @param memoryBytes Speichernutzung in Bytes
+         */
+        public void updateMemoryUsage(long memoryBytes) {
+            this.memoryUsageBytes = memoryBytes;
+            
+            // Kritisches Ereignis hinzufügen, wenn Schwellenwert überschritten
+            long memoryMB = memoryBytes / (1024 * 1024);
+            if (memoryMB >= MEMORY_THRESHOLD_CRITICAL) {
+                addCriticalEvent("Speichernutzung kritisch", 
+                    "Speichernutzung von " + memoryMB + "MB überschreitet Schwellenwert (" + MEMORY_THRESHOLD_CRITICAL + "MB)",
+                    PerformanceEventType.MEMORY_CRITICAL);
+            }
+            
+            lastUpdateTime = System.currentTimeMillis();
+        }
+        
+        /**
+         * Erfasst die Ausführungszeit einer Methode
+         * 
+         * @param methodName Name der Methode
+         * @param executionTimeMs Ausführungszeit in Millisekunden
+         */
+        public void recordMethodExecution(String methodName, double executionTimeMs) {
+            methodExecutions.computeIfAbsent(methodName, k -> new MethodExecutionData())
+                           .recordExecution(executionTimeMs);
+            
+            // Gesamtzahl der Ausführungen und Durchschnittszeit aktualisieren
+            totalExecutionCount++;
+            
+            // Gewichteter Durchschnitt für bessere Stabilität
+            avgExecutionTimeMs = (avgExecutionTimeMs * 0.9) + (executionTimeMs * 0.1);
+            
+            // Kritisches Ereignis für sehr langsame Methoden
+            if (executionTimeMs >= EXECUTION_THRESHOLD_CRITICAL) {
+                addCriticalEvent("Methode sehr langsam", 
+                    "Methode " + methodName + " benötigte " + String.format("%.1f", executionTimeMs) + "ms (Schwellenwert: " + EXECUTION_THRESHOLD_CRITICAL + "ms)",
+                    PerformanceEventType.METHOD_CRITICAL);
+            }
+            
+            lastUpdateTime = System.currentTimeMillis();
+        }
+        
+        /**
+         * Fügt ein kritisches Performance-Ereignis hinzu
+         * 
+         * @param title Titel des Ereignisses
+         * @param description Beschreibung des Ereignisses
+         * @param type Typ des Ereignisses
+         */
+        private void addCriticalEvent(String title, String description, PerformanceEventType type) {
+            criticalEvents.add(new PerformanceEvent(title, description, type));
+            
+            // Begrenze die Anzahl der gespeicherten Ereignisse
+            while (criticalEvents.size() > MAX_EVENTS) {
+                criticalEvents.poll();
+            }
+        }
+        
+        /**
+         * Prüft, ob das Modul Performance-Probleme hat
+         * 
+         * @return PerformanceStatus.OK, WARNING oder CRITICAL
+         */
+        public PerformanceStatus getPerformanceStatus() {
+            // CPU-Status prüfen
+            if (cpuUsagePercent >= CPU_THRESHOLD_CRITICAL) {
+                return PerformanceStatus.CRITICAL;
+            } else if (cpuUsagePercent >= CPU_THRESHOLD_WARNING) {
+                return PerformanceStatus.WARNING;
+            }
+            
+            // Speicher-Status prüfen
+            long memoryMB = memoryUsageBytes / (1024 * 1024);
+            if (memoryMB >= MEMORY_THRESHOLD_CRITICAL) {
+                return PerformanceStatus.CRITICAL;
+            } else if (memoryMB >= MEMORY_THRESHOLD_WARNING) {
+                return PerformanceStatus.WARNING;
+            }
+            
+            // Methoden-Ausführungszeit prüfen
+            if (avgExecutionTimeMs >= EXECUTION_THRESHOLD_CRITICAL) {
+                return PerformanceStatus.CRITICAL;
+            } else if (avgExecutionTimeMs >= EXECUTION_THRESHOLD_WARNING) {
+                return PerformanceStatus.WARNING;
+            }
+            
+            return PerformanceStatus.OK;
+        }
+        
+        // Getter-Methoden für alle Eigenschaften
+        
+        public String getModuleName() {
+            return moduleName;
+        }
+        
+        public double getCpuUsagePercent() {
+            return cpuUsagePercent;
+        }
+        
+        public List<Double> getCpuHistory() {
+            return new ArrayList<>(cpuHistory);
+        }
+        
+        public long getMemoryUsageBytes() {
+            return memoryUsageBytes;
+        }
+        
+        public String getMemoryUsageFormatted() {
+            if (memoryUsageBytes < 1024) {
+                return memoryUsageBytes + " B";
+            } else if (memoryUsageBytes < 1024 * 1024) {
+                return String.format("%.2f KB", memoryUsageBytes / 1024.0);
+            } else if (memoryUsageBytes < 1024 * 1024 * 1024) {
+                return String.format("%.2f MB", memoryUsageBytes / (1024.0 * 1024.0));
+            } else {
+                return String.format("%.2f GB", memoryUsageBytes / (1024.0 * 1024.0 * 1024.0));
+            }
+        }
+        
+        public Map<String, MethodExecutionData> getMethodExecutions() {
+            return new HashMap<>(methodExecutions);
+        }
+        
+        public long getTotalExecutionCount() {
+            return totalExecutionCount;
+        }
+        
+        public double getAvgExecutionTimeMs() {
+            return avgExecutionTimeMs;
+        }
+        
+        public List<PerformanceEvent> getCriticalEvents() {
+            return new ArrayList<>(criticalEvents);
+        }
+        
+        public long getLastUpdateTime() {
+            return lastUpdateTime;
+        }
+        
+        public boolean isStale() {
+            // Daten älter als 5 Minuten gelten als veraltet
+            return System.currentTimeMillis() - lastUpdateTime > 5 * 60 * 1000;
+        }
+    }
+    
+    /**
+     * Daten zur Ausführung einer Methode
+     */
+    public static class MethodExecutionData {
+        private long callCount = 0;
+        private double totalTimeMs = 0;
+        private double avgTimeMs = 0;
+        private double minTimeMs = Double.MAX_VALUE;
+        private double maxTimeMs = 0;
+        private final Queue<Double> recentExecutions = new LinkedList<>();
+        private static final int MAX_RECENT = 20;
+        
+        /**
+         * Erfasst eine Methodenausführung
+         * 
+         * @param executionTimeMs Ausführungszeit in Millisekunden
+         */
+        public void recordExecution(double executionTimeMs) {
+            callCount++;
+            totalTimeMs += executionTimeMs;
+            avgTimeMs = totalTimeMs / callCount;
+            minTimeMs = Math.min(minTimeMs, executionTimeMs);
+            maxTimeMs = Math.max(maxTimeMs, executionTimeMs);
+            
+            // Speichere die letzten Ausführungszeiten
+            recentExecutions.add(executionTimeMs);
+            while (recentExecutions.size() > MAX_RECENT) {
+                recentExecutions.poll();
+            }
+        }
+        
+        // Getter-Methoden
+        
+        public long getCallCount() {
+            return callCount;
+        }
+        
+        public double getTotalTimeMs() {
+            return totalTimeMs;
+        }
+        
+        public double getAvgTimeMs() {
+            return avgTimeMs;
+        }
+        
+        public double getMinTimeMs() {
+            return minTimeMs == Double.MAX_VALUE ? 0 : minTimeMs;
+        }
+        
+        public double getMaxTimeMs() {
+            return maxTimeMs;
+        }
+        
+        public List<Double> getRecentExecutions() {
+            return new ArrayList<>(recentExecutions);
+        }
+    }
+    
+    /**
+     * Ein kritisches Performance-Ereignis
+     */
+    public static class PerformanceEvent {
+        private final String title;
+        private final String description;
+        private final PerformanceEventType type;
+        private final long timestamp;
+        
+        public PerformanceEvent(String title, String description, PerformanceEventType type) {
+            this.title = title;
+            this.description = description;
+            this.type = type;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        public String getTitle() {
+            return title;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+        
+        public PerformanceEventType getType() {
+            return type;
+        }
+        
+        public long getTimestamp() {
+            return timestamp;
+        }
+        
+        public String getFormattedTime() {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            return sdf.format(new Date(timestamp));
+        }
+    }
+    
+    /**
+     * Arten von Performance-Ereignissen
+     */
+    public enum PerformanceEventType {
+        CPU_WARNING,
+        CPU_CRITICAL,
+        MEMORY_WARNING,
+        MEMORY_CRITICAL,
+        METHOD_WARNING,
+        METHOD_CRITICAL
+    }
+    
+    /**
+     * Performance-Status eines Moduls
+     */
+    public enum PerformanceStatus {
+        OK,      // Grün - alles in Ordnung
+        WARNING, // Gelb - Auslastung beachten
+        CRITICAL // Rot - sollte überprüft und ggf. deaktiviert werden
+    }
+    
+    /**
+     * Startet das Performance-Tracking für Module
+     */
+    public void startPerformanceTracking() {
+        // Starte den Performance-Tracker im Hintergrund
+        performanceTrackerService.scheduleAtFixedRate(() -> {
+            try {
+                updateModulePerformanceData();
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.PERFORMANCE,
+                    "Fehler bei der Performance-Datenerfassung: " + e.getMessage());
+                if (apiCore.isDebugMode()) {
+                    e.printStackTrace();
+                }
+            }
+        }, 5, 5, TimeUnit.SECONDS);
+        
+        console.categoryInfo(ConsoleFormatter.MessageCategory.PERFORMANCE,
+            "Modul-Performance-Tracking gestartet (Intervall: 5s)");
+    }
+    
+    /**
+     * Stoppt das Performance-Tracking für Module
+     */
+    public void stopPerformanceTracking() {
+        performanceTrackerService.shutdown();
+        try {
+            if (!performanceTrackerService.awaitTermination(10, TimeUnit.SECONDS)) {
+                performanceTrackerService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            performanceTrackerService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        
+        console.categoryInfo(ConsoleFormatter.MessageCategory.PERFORMANCE,
+            "Modul-Performance-Tracking gestoppt");
+    }
+    
+    /**
+     * Aktualisiert die Performance-Daten aller Module
+     */
+    private void updateModulePerformanceData() {
+        // Durchlaufe alle geladenen Module
+        for (Map.Entry<String, Object> entry : loadedModules.entrySet()) {
+            String moduleName = entry.getKey();
+            Object moduleInfo = entry.getValue();
+            
+            if (moduleInfo instanceof ApiCore.ModuleInfo) {
+                Object moduleInstance = ((ApiCore.ModuleInfo) moduleInfo).getInstance();
+                if (moduleInstance != null) {
+                    // Hole oder erstelle Performance-Daten für dieses Modul
+                    ModulePerformanceData performanceData = modulePerformanceMap.computeIfAbsent(
+                        moduleName, ModulePerformanceData::new);
+                    
+                    // CPU-Auslastung messen (vereinfachte Schätzung basierend auf Thread-Nutzung)
+                    double cpuEstimate = estimateModuleCpuUsage(moduleName);
+                    performanceData.updateCpuUsage(cpuEstimate);
+                    
+                    // Speichernutzung schätzen
+                    long memoryEstimate = estimateModuleMemoryUsage(moduleInstance);
+                    performanceData.updateMemoryUsage(memoryEstimate);
+                }
+            }
+        }
+        
+        // Entferne veraltete Performance-Daten von entladenen Modulen
+        modulePerformanceMap.entrySet().removeIf(entry -> {
+            String moduleName = entry.getKey();
+            ModulePerformanceData data = entry.getValue();
+            
+            // Modul nicht mehr geladen und Daten veraltet
+            return !loadedModules.containsKey(moduleName) && data.isStale();
+        });
+    }
+    
+    /**
+     * Schätzt die CPU-Auslastung eines Moduls basierend auf den Methodenaufrufen
+     * 
+     * @param moduleName Der Name des Moduls
+     * @return Geschätzte CPU-Auslastung in Prozent (0-100)
+     */
+    private double estimateModuleCpuUsage(String moduleName) {
+        // In einer echten Implementierung würde hier eine tatsächliche CPU-Profilierung
+        // durchgeführt werden. Hier verwenden wir einen vereinfachten Ansatz.
+        
+        ModulePerformanceData data = modulePerformanceMap.get(moduleName);
+        if (data == null) {
+            return 0.0;
+        }
+        
+        // Bestimme aktuelle Last basierend auf durchschnittlicher Methodenausführungszeit
+        // und Anzahl der Aufrufe in letzter Zeit.
+        double avgExecTime = data.getAvgExecutionTimeMs();
+        
+        // Skalierungsfaktor: 100ms durchschnittlich entspricht etwa 10% CPU-Last
+        // Dies ist eine grobe Schätzung und sollte in einer echten Implementierung
+        // durch tatsächliche Messungen ersetzt werden.
+        double cpuEstimate = Math.min(avgExecTime / 10.0, 100.0);
+        
+        // Füge etwas zufällige Variation hinzu, um Daten realistischer zu machen
+        // (nur für Demonstrationszwecke)
+        double randomFactor = 0.8 + (Math.random() * 0.4); // 0.8 bis 1.2
+        cpuEstimate = Math.min(cpuEstimate * randomFactor, 100.0);
+        
+        return cpuEstimate;
+    }
+    
+    /**
+     * Schätzt die Speichernutzung eines Moduls
+     * 
+     * @param moduleInstance Die Modul-Instanz
+     * @return Geschätzte Speichernutzung in Bytes
+     */
+    private long estimateModuleMemoryUsage(Object moduleInstance) {
+        // In einer echten Implementierung würde hier eine tatsächliche Speicherprofilierung
+        // durchgeführt werden. Für dieses Beispiel verwenden wir eine grobe Schätzung.
+        
+        // Basisgröße für jedes Modul (1MB)
+        long baseSize = 1024 * 1024;
+        
+        // Füge zufällige Variation hinzu
+        double randomFactor = 0.5 + (Math.random() * 1.5); // 0.5 bis 2.0
+        long memoryEstimate = (long)(baseSize * randomFactor);
+        
+        return memoryEstimate;
+    }
+    
+    /**
+     * Zeichnet einen Methodenaufruf für Performance-Tracking auf
+     * 
+     * @param moduleName Der Name des Moduls
+     * @param methodName Der Name der aufgerufenen Methode
+     * @param executionTimeMs Die Ausführungszeit in Millisekunden
+     */
+    public void recordMethodExecution(String moduleName, String methodName, double executionTimeMs) {
+        ModulePerformanceData data = modulePerformanceMap.computeIfAbsent(
+            moduleName, ModulePerformanceData::new);
+        
+        data.recordMethodExecution(methodName, executionTimeMs);
+    }
+    
+    /**
+     * Gibt die Performance-Daten für ein Modul zurück
+     * 
+     * @param moduleName Der Name des Moduls
+     * @return Die Performance-Daten oder null, wenn keine Daten vorhanden sind
+     */
+    public ModulePerformanceData getModulePerformanceData(String moduleName) {
+        return modulePerformanceMap.get(moduleName);
+    }
+    
+    /**
+     * Gibt eine Map mit Performance-Daten aller Module zurück
+     * 
+     * @return Eine Map mit Modulnamen als Schlüssel und Performance-Daten als Werte
+     */
+    public Map<String, ModulePerformanceData> getAllModulePerformanceData() {
+        return new HashMap<>(modulePerformanceMap);
+    }
+    
+    /**
+     * Gibt alle Module mit kritischem Performance-Status zurück
+     * 
+     * @return Eine Liste von ModulePerformanceData-Objekten mit kritischem Status
+     */
+    public List<ModulePerformanceData> getCriticalModules() {
+        List<ModulePerformanceData> criticalModules = new ArrayList<>();
+        
+        for (ModulePerformanceData data : modulePerformanceMap.values()) {
+            if (data.getPerformanceStatus() == PerformanceStatus.CRITICAL) {
+                criticalModules.add(data);
+            }
+        }
+        
+        return criticalModules;
+    }
+    
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            stopPerformanceTracking();
+        } finally {
+            super.finalize();
+        }
+    }
+
+    /**
+     * Shutting down the ModuleManager and cleanup resources
+     */
+    public void shutdown() {
+        // Stop performance tracking
+        try {
+            stopPerformanceTracking();
+        } catch (Exception e) {
+            console.categoryWarning(ConsoleFormatter.MessageCategory.PERFORMANCE,
+                "Fehler beim Stoppen des Performance-Trackings: " + e.getMessage());
+        }
+        
+        // Clean up other resources if needed
+        modulePerformanceMap.clear();
     }
 } 

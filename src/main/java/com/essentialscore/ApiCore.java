@@ -89,6 +89,7 @@ public class ApiCore extends JavaPlugin implements Listener {
     private PerformanceBenchmark performanceBenchmark;
     private ModuleFileManager moduleFileManager;
     private ModuleResourceManager resourceManager; // Neue Instanzvariable für verbesserten Ressourcenmanager
+    private ModuleSandbox moduleSandbox; // Neue Instanzvariable für Modul-Sandbox
     private ConsoleFormatter console;
     
     // Thread-safe shared data with optimized initial capacity
@@ -404,24 +405,38 @@ public class ApiCore extends JavaPlugin implements Listener {
      * Initialisiert die Module des Plugins
      */
     private void initializeModules() {
-        // Thread-Manager initialisieren
-        threadManager = new ThreadManager(this);
-        executorService = threadManager.getExecutorService();
-        console.categoryInfo(ConsoleFormatter.MessageCategory.THREAD, "Thread-Manager initialisiert");
+        // Initialize modules directory if it doesn't exist
+        modulesDir.mkdirs();
         
-        // Manager initialisieren
+        // Initialize managers
         configManager = new ConfigManager(this);
+        threadManager = new ThreadManager(this);
         permissionManager = new PermissionManager(this);
+        commandManager = new CommandManager(this);
+        
+        // Initialize performance monitoring if enabled
+        if (getConfig().getBoolean("performance.enable-monitoring", true)) {
+            performanceMonitor = new PerformanceMonitor(this);
+            performanceBenchmark = new PerformanceBenchmark(this);
+        }
+        
+        // Initialize module file manager
         moduleFileManager = new ModuleFileManager(this);
         resourceManager = new ModuleResourceManager(this);
         
-        // ModuleManager initialisieren
-        moduleManager = new ModuleManager(this, modulesDir, configDir, 
-            (Map<String, Object>)(Map<String, ?>)loadedModules, 
-            moduleCommands, executorService);
+        // Register commands
+        registerCommands();
         
-        // CommandManager initialisieren
-        commandManager = new CommandManager(this);
+        // Register the command deactivation command
+        commandManager.registerCommandDeactivationCommand();
+        
+        // Initialize sandbox if enabled
+        if (getConfig().getBoolean("security.enable-sandbox", true)) {
+            moduleSandbox = new ModuleSandbox(this);
+            console.categoryInfo(ConsoleFormatter.MessageCategory.SECURITY, 
+                "Modul-Sandbox initialisiert mit Sicherheitsstufe: " + 
+                getConfig().getString("security.sandbox-level", "medium"));
+        }
         
         console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Alle Module erfolgreich initialisiert");
         
@@ -462,9 +477,60 @@ public class ApiCore extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        console.subHeader("DEAKTIVIERUNG VON APICORE");
-        // Code für die Deaktivierung hier einfügen
-        console.categorySuccess(ConsoleFormatter.MessageCategory.SYSTEM, "EssentialsCore wurde deaktiviert");
+        console.header("ESSENTIALS CORE " + getDescription().getVersion());
+        console.info("Plugin wird deaktiviert...");
+        
+        try {
+            // Cleanup performance resources
+            Object bossBarObj = getSharedData("performanceBossBar");
+            if (bossBarObj instanceof com.essentialscore.util.ModulePerformanceBossBar) {
+                try {
+                    ((com.essentialscore.util.ModulePerformanceBossBar) bossBarObj).stop();
+                    console.categoryInfo(ConsoleFormatter.MessageCategory.PERFORMANCE, "ModulePerformanceBossBar wurde gestoppt");
+                } catch (Exception e) {
+                    console.warning("Fehler beim Stoppen der ModulePerformanceBossBar: " + e.getMessage());
+                }
+            }
+            
+            // Alle geladenen Module deaktivieren
+            if (moduleManager != null) {
+                // Manuelle Deaktivierung aller Module
+                for (String moduleName : new ArrayList<>(loadedModules.keySet())) {
+                    disableModule(moduleName);
+                }
+                
+                // ModuleManager shutdown
+                moduleManager.shutdown();
+            }
+            
+            // Sandbox herunterfahren
+            if (moduleSandbox != null) {
+                moduleSandbox.shutdown();
+            }
+            
+            // PerformanceMonitor beenden (falls aktiv)
+            if (performanceMonitor != null && performanceMonitor instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) performanceMonitor).close();
+                } catch (Exception e) {
+                    console.warning("Fehler beim Schließen des PerformanceMonitors: " + e.getMessage());
+                }
+            }
+            
+            // ThreadManager herunterfahren (stoppt alle Threads)
+            if (threadManager != null) {
+                threadManager.shutdown();
+            }
+            
+            // Cache leeren
+            methodCache.clear();
+            methodHandleCache.clear();
+            
+            console.success("Plugin erfolgreich deaktiviert");
+        } catch (Exception e) {
+            console.error("Fehler beim Deaktivieren des Plugins: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -1229,6 +1295,15 @@ public class ApiCore extends JavaPlugin implements Listener {
     }
 
     /**
+     * Gibt die ModuleSandbox zurück
+     * 
+     * @return ModuleSandbox-Instanz
+     */
+    public ModuleSandbox getModuleSandbox() {
+        return moduleSandbox;
+    }
+
+    /**
      * Gets the ModuleAPI for a specific module
      * 
      * @param moduleName The name of the module
@@ -1300,6 +1375,15 @@ public class ApiCore extends JavaPlugin implements Listener {
         } else {
             console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "ModuleManager ist nicht initialisiert!");
         }
+    }
+
+    /**
+     * Gibt den CommandManager zurück
+     * 
+     * @return Die CommandManager-Instanz
+     */
+    public CommandManager getCommandManager() {
+        return commandManager;
     }
 }
         

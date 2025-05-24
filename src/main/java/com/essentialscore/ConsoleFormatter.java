@@ -85,6 +85,8 @@ public class ConsoleFormatter {
     private boolean categoriesEnabledGlobal = true;
     private final Map<MessageCategory, CategoryConfig> categoryConfigs = new EnumMap<>(MessageCategory.class);
     
+    private final Map<MessageCategory, CategoryStyle> categoryStyles = new EnumMap<>(MessageCategory.class);
+    
     /**
      * Konfiguration für eine Nachrichtenkategorie
      */
@@ -269,234 +271,355 @@ public class ConsoleFormatter {
      * @param stylePreset Das zu verwendende Stil-Preset
      */
     public ConsoleFormatter(Logger logger, String prefix, boolean useColors, 
-                            boolean showTimestamp, boolean useUnicodeSymbols, 
-                            String stylePreset) {
+                          boolean showTimestamp, boolean useUnicodeSymbols, String stylePreset) {
         this.logger = logger;
-        // Process prefix to convert Minecraft color codes to ANSI codes
-        this.prefix = useColors ? formatHexCodes(prefix) : stripMinecraftColors(prefix);
+        this.prefix = colorizePrefix(prefix);
         this.useColors = useColors;
         this.showTimestamp = showTimestamp;
         this.useUnicodeSymbols = useUnicodeSymbols;
         this.stylePreset = stylePreset;
+        
+        initializeCategoryStyles();
     }
     
     /**
-     * Entfernt alle Minecraft-Farbcodes aus einem String
-     * Diese Methode wird verwendet, um sicherzustellen, dass keine Farbcodes in der Konsole angezeigt werden
-     * 
-     * @param input Der Text mit Minecraft-Farbcodes
-     * @return Der Text ohne Minecraft-Farbcodes
+     * Initialisiert die Stile für die verschiedenen Nachrichtenkategorien
      */
-    private String stripMinecraftColors(String input) {
-        if (input == null) return "";
-        
-        // Entferne alle § und & Farbcodes
-        return input.replaceAll("§[0-9a-fklmnorx]", "")
-                   .replaceAll("§x§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]", "")
-                   .replaceAll("&[0-9a-fklmnorx]", "")
-                   .replaceAll("#[a-fA-F0-9]{6}", "");
-    }
-    
-    /**
-     * Gibt eine Info-Nachricht aus
-     * 
-     * @param message Die Nachricht
-     */
-    public void info(String message) {
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
-            logger.info(timeStr + CYAN + formatWithPrefix(cleanMessage) + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
-            logger.info(timeStr + formatWithPrefix(cleanMessage));
+    private void initializeCategoryStyles() {
+        for (MessageCategory category : MessageCategory.values()) {
+            CategoryStyle style = new CategoryStyle(
+                category.getColor(),
+                category.getCode(),
+                category.getIcon()
+            );
+            categoryStyles.put(category, style);
         }
     }
     
     /**
-     * Gibt eine Erfolgsnachricht aus
+     * Wandelt einen Rohpräfix in einen formatierten Präfix um
+     * Verarbeitet & Farbcodes ähnlich wie Bukkit/Spigot
      * 
-     * @param message Die Nachricht
+     * @param rawPrefix Das Roh-Präfix mit &-Farbcodes
+     * @return Das formatierte Präfix mit ANSI-Farbcodes
      */
-    public void success(String message) {
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + GREEN + formatWithPrefix(symbol + cleanMessage) + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + formatWithPrefix(symbol + cleanMessage));
+    private String colorizePrefix(String rawPrefix) {
+        if (rawPrefix == null) {
+            return "";
         }
+        
+        String result = rawPrefix;
+        
+        // Farbcodes ersetzen
+        result = result.replace("&0", BLACK)
+                       .replace("&1", BLUE)
+                       .replace("&2", GREEN)
+                       .replace("&3", CYAN)
+                       .replace("&4", RED)
+                       .replace("&5", PURPLE)
+                       .replace("&6", YELLOW)
+                       .replace("&7", WHITE)
+                       .replace("&8", BRIGHT_BLACK)
+                       .replace("&9", BRIGHT_BLUE)
+                       .replace("&a", BRIGHT_GREEN)
+                       .replace("&b", BRIGHT_CYAN)
+                       .replace("&c", BRIGHT_RED)
+                       .replace("&d", BRIGHT_PURPLE)
+                       .replace("&e", BRIGHT_YELLOW)
+                       .replace("&f", BRIGHT_WHITE)
+                       .replace("&l", BOLD)
+                       .replace("&n", UNDERLINE)
+                       .replace("&o", ITALIC)
+                       .replace("&r", RESET);
+        
+        // Sicherstellen, dass das Präfix mit einem Reset endet
+        if (!result.endsWith(RESET)) {
+            result += RESET;
+        }
+        
+        return result;
     }
     
     /**
-     * Gibt eine Warnmeldung aus
+     * Formatiert eine Nachricht mit dem Präfix
      * 
-     * @param message Die Nachricht
+     * @param message Die zu formatierende Nachricht
+     * @return Die formatierte Nachricht
      */
-    public void warning(String message) {
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
+    private String formatWithPrefix(String message) {
+        StringBuilder result = new StringBuilder();
         
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + YELLOW + formatWithPrefix(symbol + cleanMessage) + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + formatWithPrefix(symbol + cleanMessage));
+        // Zeitstempel hinzufügen, wenn aktiviert
+        if (showTimestamp) {
+            result.append(getTimeString()).append(" ");
         }
+        
+        // Präfix hinzufügen
+        result.append(prefix).append(" ").append(message);
+        
+        return result.toString();
     }
     
     /**
-     * Gibt eine Fehlermeldung aus
+     * Gibt den aktuellen Zeitstempel zurück
+     */
+    private String getTimeString() {
+        return BRIGHT_BLACK + "[" + LocalDateTime.now().format(TIME_FORMATTER) + "]" + RESET;
+    }
+    
+    /**
+     * Gibt eine Fehlerbenachrichtigung aus
      * 
      * @param message Die Nachricht
      */
     public void error(String message) {
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
         if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + RED + formatWithPrefix(symbol + cleanMessage) + RESET);
+            logger.severe(formatWithPrefix(RED + "FEHLER: " + message + RESET));
         } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + formatWithPrefix(symbol + cleanMessage));
+            logger.severe(formatWithPrefix("FEHLER: " + message));
         }
     }
     
     /**
-     * Gibt eine wichtige Nachricht hervorgehoben aus
+     * Gibt eine Warnungsbenachrichtigung aus
      * 
      * @param message Die Nachricht
      */
-    public void important(String message) {
+    public void warning(String message) {
         if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? IMPORTANT_SYMBOL + " " : "";
-            logger.info(timeStr + BRIGHT_YELLOW + prefix + RESET + " " + 
-                     BOLD + BG_YELLOW + BLACK + " " + symbol + message + " " + RESET);
+            logger.warning(formatWithPrefix(YELLOW + "WARNUNG: " + message + RESET));
         } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? IMPORTANT_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [" + symbol + "WICHTIG] " + message);
+            logger.warning(formatWithPrefix("WARNUNG: " + message));
         }
     }
     
     /**
-     * Gibt eine Debug-Nachricht aus (nur wenn Debug-Modus aktiviert)
+     * Gibt eine Informationsbenachrichtigung aus
      * 
      * @param message Die Nachricht
-     * @param isDebugMode Ob der Debug-Modus aktiviert ist
      */
-    public void debug(String message, boolean isDebugMode) {
-        if (!isDebugMode) return;
-        
+    public void info(String message) {
         if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
-            logger.info(timeStr + BRIGHT_PURPLE + prefix + " [DEBUG] " + RESET + PURPLE + symbol + message + RESET);
+            logger.info(formatWithPrefix(WHITE + message + RESET));
         } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [DEBUG] " + symbol + message);
+            logger.info(formatWithPrefix(message));
         }
     }
     
     /**
-     * Gibt eine Überschrift mit Trennlinien und Rahmen aus
+     * Gibt eine Erfolgsbenachrichtigung aus
+     * 
+     * @param message Die Nachricht
+     */
+    public void success(String message) {
+        if (useColors) {
+            String symbol = useUnicodeSymbols ? "✅ " : "";
+            logger.info(formatWithPrefix(GREEN + symbol + message + RESET));
+        } else {
+            logger.info(formatWithPrefix("[ERFOLG] " + message));
+        }
+    }
+    
+    /**
+     * Gibt eine Debug-Benachrichtigung aus
+     * 
+     * @param message Die Nachricht
+     * @param showDebug Ob die Nachricht angezeigt werden soll
+     */
+    public void debug(String message, boolean showDebug) {
+        if (!showDebug) {
+            return;
+        }
+        
+        if (useColors) {
+            logger.info(formatWithPrefix(BRIGHT_BLUE + "[DEBUG] " + BRIGHT_WHITE + message + RESET));
+        } else {
+            logger.info(formatWithPrefix("[DEBUG] " + message));
+        }
+    }
+    
+    /**
+     * Gibt eine Überschrift aus
      * 
      * @param title Der Titel
      */
     public void header(String title) {
         if (useColors) {
-            String line = "═".repeat(Math.max(20, title.length() + 4));
-            logger.info("");
-            logger.info(BRIGHT_CYAN + "╔" + line + "╗" + RESET);
-            logger.info(BRIGHT_CYAN + "║" + " ".repeat((line.length() - title.length()) / 2) + 
-                     BRIGHT_WHITE + BOLD + title + RESET + BRIGHT_CYAN + 
-                     " ".repeat((line.length() - title.length() + 1) / 2) + "║" + RESET);
-            logger.info(BRIGHT_CYAN + "╚" + line + "╝" + RESET);
-            logger.info("");
-        } else {
-            String line = "=".repeat(Math.max(20, title.length() + 4));
-            logger.info("");
+            String line = BRIGHT_CYAN + "═══════════════════════════════════════════" + RESET;
             logger.info(line);
-            logger.info("|" + " ".repeat((line.length() - title.length()) / 2) + 
-                     title + " ".repeat((line.length() - title.length() + 1) / 2) + "|");
+            logger.info(formatWithPrefix(BRIGHT_WHITE + BOLD + title + RESET));
             logger.info(line);
-            logger.info("");
-        }
-    }
-    
-    /**
-     * Gibt eine kleine Überschrift ohne Rahmen aus
-     * 
-     * @param title Der Titel
-     */
-    public void subHeader(String title) {
-        if (useColors) {
-            logger.info("");
-            logger.info(BRIGHT_CYAN + "◈ " + BRIGHT_WHITE + BOLD + title + RESET + 
-                     BRIGHT_CYAN + " " + "─".repeat(Math.max(10, 30 - title.length())) + RESET);
         } else {
-            logger.info("");
-            logger.info("-- " + title + " " + "-".repeat(Math.max(10, 30 - title.length())));
+            String line = "===============================================";
+            logger.info(line);
+            logger.info(formatWithPrefix(title));
+            logger.info(line);
         }
     }
     
     /**
-     * Gibt eine Abschnittsüberschrift aus
-     * 
-     * @param section Der Abschnittstitel
-     */
-    public void section(String section) {
-        if (useColors) {
-            logger.info("");
-            logger.info(BRIGHT_BLUE + "► " + BOLD + BRIGHT_WHITE + section + RESET);
-        } else {
-            logger.info("");
-            logger.info("► " + section);
-        }
-    }
-    
-    /**
-     * Gibt einen Listeneintrag mit Einrückung aus
-     * 
-     * @param key Der Schlüssel oder Name
-     * @param value Der Wert
-     */
-    public void listItem(String key, String value) {
-        if (useColors) {
-            logger.info("  " + BRIGHT_GREEN + "• " + BRIGHT_WHITE + key + RESET + ": " + WHITE + value + RESET);
-        } else {
-            logger.info("  • " + key + ": " + value);
-        }
-    }
-    
-    /**
-     * Gibt eine strukturierte Nachricht mit Key-Value-Paaren aus
+     * Gibt einen Sektionsheader aus
      * 
      * @param title Der Titel der Sektion
-     * @param data Key-Value-Paare als abwechselnde Strings (key1, value1, key2, value2, ...)
      */
-    public void dataSection(String title, String... data) {
-        section(title);
+    public void section(String title) {
+        if (useColors) {
+            logger.info(formatWithPrefix(CYAN + "» " + BRIGHT_WHITE + BOLD + title + RESET));
+        } else {
+            logger.info(formatWithPrefix(">> " + title));
+        }
+    }
+    
+    /**
+     * Gibt eine Nachricht einer bestimmten Kategorie aus
+     * 
+     * @param category Die Kategorie
+     * @param message Die Nachricht
+     */
+    public void categoryInfo(MessageCategory category, String message) {
+        CategoryStyle style = categoryStyles.get(category);
         
-        for (int i = 0; i < data.length - 1; i += 2) {
-            listItem(data[i], data[i + 1]);
+        if (useColors) {
+            String formattedCategory = "[" + style.color + style.code + RESET + "] ";
+            if (useUnicodeSymbols && !style.icon.isEmpty()) {
+                formattedCategory += style.icon + " ";
+            }
+            
+            logger.info(formatWithPrefix(formattedCategory + WHITE + message + RESET));
+        } else {
+            String formattedCategory = "[" + style.code + "] ";
+            logger.info(formatWithPrefix(formattedCategory + message));
+        }
+    }
+    
+    /**
+     * Gibt eine Erfolgsbenachrichtigung einer bestimmten Kategorie aus
+     * 
+     * @param category Die Kategorie
+     * @param message Die Nachricht
+     */
+    public void categorySuccess(MessageCategory category, String message) {
+        CategoryStyle style = categoryStyles.get(category);
+        
+        if (useColors) {
+            String formattedCategory = "[" + style.color + style.code + RESET + "] ";
+            String successIcon = useUnicodeSymbols ? "✓ " : "";
+            
+            logger.info(formatWithPrefix(formattedCategory + GREEN + successIcon + message + RESET));
+        } else {
+            String formattedCategory = "[" + style.code + "] ";
+            logger.info(formatWithPrefix(formattedCategory + "[ERFOLG] " + message));
+        }
+    }
+    
+    /**
+     * Gibt eine Warnung einer bestimmten Kategorie aus
+     * 
+     * @param category Die Kategorie
+     * @param message Die Nachricht
+     */
+    public void categoryWarning(MessageCategory category, String message) {
+        CategoryStyle style = categoryStyles.get(category);
+        
+        if (useColors) {
+            String formattedCategory = "[" + style.color + style.code + RESET + "] ";
+            String warningIcon = useUnicodeSymbols ? "⚠ " : "";
+            
+            logger.warning(formatWithPrefix(formattedCategory + YELLOW + warningIcon + message + RESET));
+        } else {
+            String formattedCategory = "[" + style.code + "] ";
+            logger.warning(formatWithPrefix(formattedCategory + "[WARNUNG] " + message));
+        }
+    }
+    
+    /**
+     * Gibt einen Fehler einer bestimmten Kategorie aus
+     * 
+     * @param category Die Kategorie
+     * @param message Die Nachricht
+     */
+    public void categoryError(MessageCategory category, String message) {
+        CategoryStyle style = categoryStyles.get(category);
+        
+        if (useColors) {
+            String formattedCategory = "[" + style.color + style.code + RESET + "] ";
+            String errorIcon = useUnicodeSymbols ? "✗ " : "";
+            
+            logger.severe(formatWithPrefix(formattedCategory + RED + errorIcon + message + RESET));
+        } else {
+            String formattedCategory = "[" + style.code + "] ";
+            logger.severe(formatWithPrefix(formattedCategory + "[FEHLER] " + message));
+        }
+    }
+    
+    /**
+     * Gibt einen Debug-Eintrag einer bestimmten Kategorie aus
+     * 
+     * @param category Die Kategorie
+     * @param message Die Nachricht
+     * @param showDebug Ob die Nachricht angezeigt werden soll
+     */
+    public void categoryDebug(MessageCategory category, String message, boolean showDebug) {
+        if (!showDebug) {
+            return;
+        }
+        
+        CategoryStyle style = categoryStyles.get(category);
+        
+        if (useColors) {
+            String formattedCategory = "[" + style.color + style.code + RESET + "] ";
+            
+            logger.info(formatWithPrefix(formattedCategory + BRIGHT_BLUE + "[DEBUG] " + 
+                                        BRIGHT_WHITE + message + RESET));
+        } else {
+            String formattedCategory = "[" + style.code + "] ";
+            logger.info(formatWithPrefix(formattedCategory + "[DEBUG] " + message));
+        }
+    }
+    
+    /**
+     * Zeigt eine Statusmeldung mit Farbkodierung basierend auf dem Status an
+     * 
+     * @param label Die Bezeichnung des Status
+     * @param message Die eigentliche Nachricht
+     * @param success Der Status (true = Erfolg, false = Fehler)
+     */
+    public void status(String label, String message, boolean success) {
+        String statusSymbol;
+        String statusColor;
+        
+        if (success) {
+            // Erfolgreicher Status
+            statusSymbol = useUnicodeSymbols ? "✓" : "+";
+            statusColor = GREEN;
+        } else {
+            // Fehlerhafter Status
+            statusSymbol = useUnicodeSymbols ? "✗" : "x";
+            statusColor = RED;
+        }
+        
+        if (useColors) {
+            logger.info(formatWithPrefix(CYAN + "[" + statusColor + statusSymbol + CYAN + "] " + 
+                                         WHITE + label + ": " + statusColor + message + RESET));
+        } else {
+            logger.info(formatWithPrefix("[" + (success ? "+" : "x") + "] " + 
+                                         label + ": " + message));
+        }
+    }
+    
+    /**
+     * Gibt eine Schrittbenachrichtigung aus
+     * 
+     * @param step Die Schrittnummer
+     * @param total Die Gesamtzahl der Schritte
+     * @param description Die Beschreibung
+     */
+    public void step(int step, int total, String description) {
+        if (useColors) {
+            logger.info(formatWithPrefix(BRIGHT_BLUE + "(" + step + "/" + total + ")" + 
+                                        RESET + " " + WHITE + description + RESET));
+        } else {
+            logger.info(formatWithPrefix("(" + step + "/" + total + ") " + description));
         }
     }
     
@@ -505,17 +628,6 @@ public class ConsoleFormatter {
      */
     public void blank() {
         logger.info("");
-    }
-    
-    /**
-     * Gibt eine horizontale Linie aus
-     */
-    public void line() {
-        if (useColors) {
-            logger.info(BRIGHT_BLACK + "──────────────────────────────────────────────────────" + RESET);
-        } else {
-            logger.info("--------------------------------------------------");
-        }
     }
     
     /**
@@ -530,578 +642,186 @@ public class ConsoleFormatter {
     }
     
     /**
-     * Gibt einen formatierten Fortschrittsbalken aus
+     * Gibt eine kleine Überschrift ohne Rahmen aus
      * 
-     * @param current Aktueller Wert
-     * @param max Maximaler Wert
-     * @param length Länge des Balkens
+     * @param title Der Titel
      */
-    public void progressBar(int current, int max, int length) {
-        int progressChars = (int) ((double) current / max * length);
-        StringBuilder bar = new StringBuilder("[");
-        
-        for (int i = 0; i < length; i++) {
-            if (i < progressChars) {
-                bar.append("█");
-            } else {
-                bar.append("░");
-            }
-        }
-        bar.append("]");
-        
-        double percentage = (double) current / max * 100;
-        
+    public void subHeader(String title) {
         if (useColors) {
-            logger.info(BRIGHT_CYAN + bar.toString() + RESET + " " + 
-                     BRIGHT_WHITE + String.format("%.1f%%", percentage) + RESET + " " +
-                     BRIGHT_BLACK + "(" + current + "/" + max + ")" + RESET);
+            logger.info("");
+            logger.info(BRIGHT_CYAN + "◈ " + BRIGHT_WHITE + BOLD + title + RESET);
         } else {
-            logger.info(bar.toString() + " " + String.format("%.1f%%", percentage) + 
-                     " (" + current + "/" + max + ")");
+            logger.info("");
+            logger.info("-- " + title);
         }
     }
     
     /**
-     * Gibt einen farbigen Fortschrittsbalken aus, dessen Farbe sich basierend auf dem Fortschritt ändert
-     * 
-     * @param current Aktueller Wert
-     * @param max Maximaler Wert
-     * @param length Länge des Balkens
-     * @param label Beschriftung für den Fortschrittsbalken
+     * Hilfsdatenklasse für die Stile der verschiedenen Nachrichtenkategorien
      */
-    public void colorProgressBar(int current, int max, int length, String label) {
-        int progressChars = (int) ((double) current / max * length);
-        double percentage = (double) current / max * 100;
+    private static class CategoryStyle {
+        final String color;
+        final String code;
+        final String icon;
+        
+        CategoryStyle(String color, String code, String icon) {
+            this.color = color;
+            this.code = code;
+            this.icon = icon;
+        }
+    }
+    
+    /**
+     * Zeigt einen farbigen Fortschrittsbalken in der Konsole an
+     * 
+     * @param current Der aktuelle Fortschritt
+     * @param total Die Gesamtmenge
+     * @param width Die Breite des Balkens
+     * @param label Die Beschriftung neben dem Balken
+     */
+    public void colorProgressBar(int current, int total, int width, String label) {
+        if (total <= 0) return;
+        
         StringBuilder bar = new StringBuilder();
+        int percent = (int) ((current * 100.0f) / total);
+        int completed = (int) ((current * width) / total);
         
-        // Balkenfarbe basierend auf Fortschritt
-        String barColor;
-        if (percentage < 30) {
-            barColor = RED;
-        } else if (percentage < 70) {
-            barColor = YELLOW;
-        } else {
-            barColor = GREEN;
-        }
+        bar.append("[");
         
         if (useColors) {
-            bar.append(BRIGHT_WHITE).append("[").append(RESET);
-            
-            for (int i = 0; i < length; i++) {
-                if (i < progressChars) {
-                    bar.append(barColor).append("█").append(RESET);
+            // Fortschrittsbalken mit Farbverlauf
+            for (int i = 0; i < width; i++) {
+                if (i < completed) {
+                    // Farbverlauf von Grün zu Cyan
+                    if (i < width / 3) bar.append(BRIGHT_GREEN + "█");
+                    else if (i < width * 2 / 3) bar.append(GREEN + "█");
+                    else bar.append(BRIGHT_CYAN + "█");
                 } else {
-                    bar.append(BRIGHT_BLACK).append("▒").append(RESET);
+                    bar.append(BRIGHT_BLACK + "░");
                 }
             }
-            
-            bar.append(BRIGHT_WHITE).append("]").append(RESET);
-            
-            logger.info(bar.toString() + " " + 
-                     BRIGHT_WHITE + String.format("%.1f%%", percentage) + RESET + " " +
-                     (label != null ? BRIGHT_BLACK + label + RESET : ""));
+            bar.append(RESET);
         } else {
-            bar.append("[");
-            
-            for (int i = 0; i < length; i++) {
-                if (i < progressChars) {
-                    bar.append("#");
-                } else {
-                    bar.append("-");
-                }
+            // Einfacher ASCII-Fortschrittsbalken ohne Farben
+            for (int i = 0; i < width; i++) {
+                if (i < completed) bar.append("#");
+                else bar.append("-");
             }
-            
-            bar.append("]");
-            
-            logger.info(bar.toString() + " " + String.format("%.1f%%", percentage) + 
-                     (label != null ? " " + label : ""));
-        }
-    }
-    
-    /**
-     * Gibt eine schrittweise Information aus
-     * 
-     * @param step Die Schrittnummer
-     * @param total Die Gesamtzahl der Schritte
-     * @param description Die Beschreibung
-     */
-    public void step(int step, int total, String description) {
-        if (useColors) {
-            logger.info(BRIGHT_BLUE + "(" + step + "/" + total + ")" + RESET + " " + WHITE + description + RESET);
-        } else {
-            logger.info("(" + step + "/" + total + ") " + description);
-        }
-    }
-    
-    /**
-     * Gibt einen formatierten Schritt mit Icon aus
-     * 
-     * @param step Die Schrittnummer
-     * @param total Die Gesamtzahl der Schritte
-     * @param description Die Beschreibung
-     * @param isSuccess Ob der Schritt erfolgreich war
-     */
-    public void richStep(int step, int total, String description, boolean isSuccess) {
-        String icon = isSuccess ? (useUnicodeSymbols ? "✓ " : "") : (useUnicodeSymbols ? "× " : "");
-        String color = isSuccess ? GREEN : RED;
-        String brightColor = isSuccess ? BRIGHT_GREEN : BRIGHT_RED;
-        
-        if (useColors) {
-            double percentage = (double) step / total * 100;
-            String progress = String.format("%.0f%%", percentage);
-            
-            logger.info(brightColor + "[" + step + "/" + total + "] " + progress + RESET + " " + 
-                     color + icon + WHITE + description + RESET);
-        } else {
-            logger.info("[" + step + "/" + total + "] " + icon + description);
-        }
-    }
-    
-    /**
-     * Zeigt eine Statusmeldung mit Farbkodierung basierend auf dem Status an
-     * 
-     * @param label Die Bezeichnung des Status
-     * @param message Die eigentliche Nachricht
-     * @param success Der Status (true = Erfolg, false = Fehler, null = neutral)
-     */
-    public void status(String label, String message, Boolean success) {
-        String statusSymbol;
-        String statusColor;
-        
-        if (success == null) {
-            // Neutraler Status
-            statusSymbol = useUnicodeSymbols ? "○" : "-";
-            statusColor = RESET;
-        } else if (success) {
-            // Erfolgreicher Status
-            statusSymbol = useUnicodeSymbols ? "✓" : "+";
-            statusColor = GREEN;
-        } else {
-            // Fehlerhafter Status
-            statusSymbol = useUnicodeSymbols ? "✗" : "x";
-            statusColor = RED;
         }
         
-        logger.info(formatWithPrefix(CYAN + "[" + statusColor + statusSymbol + CYAN + "] " + 
-                      WHITE + label + ": " + statusColor + message + RESET));
+        bar.append("] ").append(label);
+        
+        logger.info(bar.toString());
     }
     
     /**
-     * Gibt einen formatierten Block mit Text aus
+     * Zeigt einen Schritt mit Fortschrittsanzeige und Statusfarbe an
+     * 
+     * @param step Der aktuelle Schritt
+     * @param total Die Gesamtanzahl der Schritte
+     * @param description Die Beschreibung des Schritts
+     * @param success True, wenn erfolgreich, sonst false
+     */
+    public void richStep(int step, int total, String description, boolean success) {
+        if (!useColors) {
+            logger.info(String.format("(%d/%d) %s: %s", step, total, success ? "OK" : "FEHLER", description));
+            return;
+        }
+        
+        StringBuilder message = new StringBuilder();
+        
+        // Fortschrittszähler mit Farbe
+        message.append(BRIGHT_BLACK).append("(");
+        message.append(BRIGHT_CYAN).append(step);
+        message.append(BRIGHT_BLACK).append("/");
+        message.append(BRIGHT_WHITE).append(total);
+        message.append(BRIGHT_BLACK).append(") ");
+        
+        // Status-Symbol und Text
+        if (success) {
+            message.append(BRIGHT_GREEN).append(SUCCESS_SYMBOL).append(" ");
+            message.append(GREEN).append(description);
+        } else {
+            message.append(BRIGHT_RED).append(ERROR_SYMBOL).append(" ");
+            message.append(RED).append(description);
+        }
+        
+        message.append(RESET);
+        logger.info(message.toString());
+    }
+    
+    /**
+     * Zeigt einen formatierten Textblock mit Titel und Inhalt an
      * 
      * @param title Der Titel des Blocks
      * @param content Der Inhalt des Blocks
-     * @param isImportant Ob der Block wichtig ist
+     * @param success True, wenn erfolgreich, sonst false
      */
-    public void textBlock(String title, String content, boolean isImportant) {
-        if (useColors) {
-            String titleBg = isImportant ? BG_BRIGHT_YELLOW : BG_BRIGHT_BLUE;
-            String titleFg = isImportant ? BLACK : WHITE;
-            String contentBg = isImportant ? BG_BLACK : "";
-            String contentFg = isImportant ? BRIGHT_YELLOW : WHITE;
-            
-            logger.info(titleBg + " " + BOLD + titleFg + title + " " + RESET);
-            
-            if (content.contains("\n")) {
-                for (String line : content.split("\n")) {
-                    logger.info((contentBg.isEmpty() ? "" : contentBg + " ") + 
-                             contentFg + line + RESET);
-                }
-            } else {
-                logger.info((contentBg.isEmpty() ? "" : contentBg + " ") + 
-                         contentFg + content + RESET);
-            }
-        } else {
-            logger.info("--- " + title + " ---");
-            logger.info(content);
-        }
-    }
-    
-    /**
-     * Gibt eine Tabelle mit Spaltenüberschriften aus
-     * 
-     * @param headers Die Spaltenüberschriften
-     */
-    public void tableHeader(String... headers) {
-        if (useColors) {
-            StringBuilder sb = new StringBuilder();
-            for (String header : headers) {
-                sb.append(BRIGHT_WHITE).append(BOLD).append(header).append(RESET).append("\t");
-            }
-            logger.info(sb.toString());
-            
-            // Trennlinie
-            sb = new StringBuilder();
-            for (int i = 0; i < headers.length; i++) {
-                sb.append(BRIGHT_BLACK).append("───────────").append(RESET).append("\t");
-            }
-            logger.info(sb.toString());
-        } else {
-            StringBuilder sb = new StringBuilder();
-            for (String header : headers) {
-                sb.append(header).append("\t");
-            }
-            logger.info(sb.toString());
-            
-            // Trennlinie
-            sb = new StringBuilder();
-            for (int i = 0; i < headers.length; i++) {
-                sb.append("----------").append("\t");
-            }
-            logger.info(sb.toString());
-        }
-    }
-    
-    /**
-     * Gibt eine Tabellenzeile aus
-     * 
-     * @param cells Die Zelleninhalte
-     */
-    public void tableRow(String... cells) {
-        if (useColors) {
-            StringBuilder sb = new StringBuilder();
-            for (String cell : cells) {
-                sb.append(WHITE).append(cell).append(RESET).append("\t");
-            }
-            logger.info(sb.toString());
-        } else {
-            StringBuilder sb = new StringBuilder();
-            for (String cell : cells) {
-                sb.append(cell).append("\t");
-            }
-            logger.info(sb.toString());
-        }
-    }
-    
-    /**
-     * Gibt eine Box mit Text aus
-     * 
-     * @param text Der Text
-     * @param boxWidth Die Breite der Box
-     */
-    public void box(String text, int boxWidth) {
-        if (boxWidth < 10) boxWidth = 10;
-        if (useColors) {
-            String topLine = "╭" + "─".repeat(boxWidth - 2) + "╮";
-            String bottomLine = "╰" + "─".repeat(boxWidth - 2) + "╯";
-            String middle = text.length() > boxWidth - 4 
-                ? text.substring(0, boxWidth - 7) + "..." 
-                : text + " ".repeat(boxWidth - text.length() - 4);
-            
-            logger.info(BRIGHT_CYAN + topLine + RESET);
-            logger.info(BRIGHT_CYAN + "│ " + RESET + WHITE + middle + RESET + BRIGHT_CYAN + " │" + RESET);
-            logger.info(BRIGHT_CYAN + bottomLine + RESET);
-        } else {
-            String topLine = "+" + "-".repeat(boxWidth - 2) + "+";
-            String bottomLine = "+" + "-".repeat(boxWidth - 2) + "+";
-            String middle = text.length() > boxWidth - 4 
-                ? text.substring(0, boxWidth - 7) + "..." 
-                : text + " ".repeat(boxWidth - text.length() - 4);
-            
-            logger.info(topLine);
-            logger.info("| " + middle + " |");
-            logger.info(bottomLine);
-        }
-    }
-    
-    /**
-     * Gibt den aktuellen Zeitstempel zurück
-     */
-    private String getTimeString() {
-        return BRIGHT_BLACK + "[" + LocalDateTime.now().format(TIME_FORMATTER) + "]" + RESET;
-    }
-    
-    /**
-     * Formatiert eine Nachricht mit dem Präfix
-     * 
-     * @param message Die zu formatierende Nachricht
-     * @return Die formatierte Nachricht
-     */
-    private String formatWithPrefix(String message) {
-        StringBuilder result = new StringBuilder();
-        
-        // Timestamp hinzufügen, falls aktiviert
-        if (showTimestamp) {
-            String timestamp = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
-            result.append(BRIGHT_BLACK).append("[").append(timestamp).append("] ").append(RESET);
-        }
-        
-        // Prefix hinzufügen - bereits formatiert, keine weitere Verarbeitung nötig
-        if (prefix != null && !prefix.isEmpty()) {
-            result.append(prefix).append(" ");
-        }
-        
-        // Nachricht hinzufügen
-        result.append(message);
-        
-        return result.toString();
-    }
-    
-    /**
-     * Konvertiert Minecraft-Style Farbcodes (&a, &b, etc.) in ANSI-Farbcodes
-     * oder entfernt sie, wenn Farben deaktiviert sind
-     * 
-     * @param input Der Text mit Minecraft-Farbcodes
-     * @return Der Text mit ANSI-Farbcodes oder ohne Farbcodes
-     */
-    private String formatHexCodes(String input) {
-        if (input == null) return "";
-        
-        // Wenn Farben deaktiviert sind, entferne alle Farbcodes
+    public void textBlock(String title, String content, boolean success) {
         if (!useColors) {
-            return input.replaceAll("&[0-9a-fklmnorx]", "")
-                       .replaceAll("§[0-9a-fklmnorx]", "")
-                       .replaceAll("#[a-fA-F0-9]{6}", "");
+            logger.info("=== " + title + " ===");
+            logger.info(content);
+            logger.info("=================");
+            return;
         }
         
-        // Ersetze zuerst alle §-Codes mit &-Codes für einheitliche Verarbeitung
-        String result = input.replace('§', '&');
+        String bgColor = success ? BG_GREEN : BG_RED;
+        String titleColor = success ? BRIGHT_WHITE : BRIGHT_WHITE;
+        String contentColor = success ? BRIGHT_GREEN : BRIGHT_RED;
         
-        // Ersetze alle Minecraft-Farbcodes mit ANSI-Farbcodes
-        result = result.replaceAll("&0", BLACK)
-                      .replaceAll("&1", BLUE)
-                      .replaceAll("&2", GREEN)
-                      .replaceAll("&3", CYAN)
-                      .replaceAll("&4", RED)
-                      .replaceAll("&5", PURPLE)
-                      .replaceAll("&6", YELLOW)
-                      .replaceAll("&7", WHITE)
-                      .replaceAll("&8", BRIGHT_BLACK)
-                      .replaceAll("&9", BRIGHT_BLUE)
-                      .replaceAll("&a", BRIGHT_GREEN)
-                      .replaceAll("&b", BRIGHT_CYAN)
-                      .replaceAll("&c", BRIGHT_RED)
-                      .replaceAll("&d", BRIGHT_PURPLE)
-                      .replaceAll("&e", BRIGHT_YELLOW)
-                      .replaceAll("&f", BRIGHT_WHITE)
-                      .replaceAll("&l", BOLD)
-                      .replaceAll("&n", UNDERLINE)
-                      .replaceAll("&o", ITALIC)
-                      .replaceAll("&k", BLINK)
-                      .replaceAll("&m", UNDERLINE)
-                      .replaceAll("&r", RESET);
+        StringBuilder block = new StringBuilder();
         
-        // Stelle sicher, dass der Text mit Reset endet
-        if (!result.endsWith(RESET)) {
-            result += RESET;
+        // Kopfzeile
+        block.append(bgColor).append(" ");
+        block.append(titleColor).append(BOLD).append(title).append(" ");
+        block.append(RESET).append("\n");
+        
+        // Inhalt
+        for (String line : content.split("\n")) {
+            block.append(contentColor).append("  ").append(line).append(RESET).append("\n");
         }
         
-        return result;
+        logger.info(block.toString());
     }
     
     /**
-     * Gibt eine kategorisierte Info-Nachricht aus
-     * 
-     * @param category Die Nachrichtenkategorie
-     * @param message Die Nachricht
+     * Zeigt einen Listeneintrag an
+     *
+     * @param symbol Das Symbol für den Eintrag
+     * @param text Der Text des Eintrags
      */
-    public void categoryInfo(MessageCategory category, String message) {
-        if (!isCategoryEnabled(category)) return;
-        
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
+    public void listItem(String symbol, String text) {
         if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String categoryColor = getCategoryColor(category);
-            String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
-            
-            // Direktes Anwenden der ANSI-Farbcodes für die Kategorie
-            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
-            
-            // Formatierte Ausgabe mit ANSI-Farbcodes
-            logger.info(timeStr + prefix + " " + categoryStr + categoryColor + BOLD + categoryIcon + RESET + WHITE + cleanMessage + RESET);
+            logger.info(formatWithPrefix(BRIGHT_CYAN + symbol + " " + WHITE + text + RESET));
         } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + categoryIcon + cleanMessage);
+            logger.info(formatWithPrefix(symbol + " " + text));
         }
     }
     
     /**
-     * Gibt eine kategorisierte Erfolgsnachricht aus
+     * Zeigt einen einfachen Fortschrittsbalken an
      * 
-     * @param category Die Nachrichtenkategorie
-     * @param message Die Nachricht
+     * @param current Der aktuelle Fortschritt
+     * @param total Die Gesamtmenge
+     * @param width Die Breite des Balkens
      */
-    public void categorySuccess(MessageCategory category, String message) {
-        if (!isCategoryEnabled(category)) return;
+    public void progressBar(int current, int total, int width) {
+        if (total <= 0) return;
         
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
+        int completed = (int) ((current * width) / total);
+        StringBuilder bar = new StringBuilder("[");
         
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String categoryColor = getCategoryColor(category);
-            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            
-            // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
-            
-            logger.info(timeStr + prefix + " " + categoryStr + GREEN + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
-        }
-    }
-    
-    /**
-     * Gibt eine kategorisierte Warnmeldung aus
-     * 
-     * @param category Die Nachrichtenkategorie
-     * @param message Die Nachricht
-     */
-    public void categoryWarning(MessageCategory category, String message) {
-        if (!isCategoryEnabled(category)) return;
-        
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String categoryColor = getCategoryColor(category);
-            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            
-            // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
-            
-            logger.warning(timeStr + prefix + " " + categoryStr + YELLOW + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
-            logger.warning(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
-        }
-    }
-    
-    /**
-     * Gibt eine kategorisierte Fehlermeldung aus
-     * 
-     * @param category Die Nachrichtenkategorie
-     * @param message Die Nachricht
-     */
-    public void categoryError(MessageCategory category, String message) {
-        if (!isCategoryEnabled(category)) return;
-        
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String categoryColor = getCategoryColor(category);
-            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            
-            // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
-            
-            logger.severe(timeStr + prefix + " " + categoryStr + RED + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
-            logger.severe(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
-        }
-    }
-    
-    /**
-     * Gibt eine kategorisierte Debug-Nachricht aus (nur wenn Debug-Modus aktiviert)
-     * 
-     * @param category Die Nachrichtenkategorie
-     * @param message Die Nachricht
-     * @param isDebugMode Ob der Debug-Modus aktiviert ist
-     */
-    public void categoryDebug(MessageCategory category, String message, boolean isDebugMode) {
-        if (!isDebugMode || !isCategoryEnabled(category)) return;
-        
-        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
-        String cleanMessage = stripMinecraftColors(message);
-        
-        if (useColors) {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String categoryColor = getCategoryColor(category);
-            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
-            
-            // Direktes Anwenden der ANSI-Farbcodes
-            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
-            
-            logger.info(timeStr + prefix + " " + categoryStr + BRIGHT_BLACK + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
-        } else {
-            String timeStr = showTimestamp ? getTimeString() + " " : "";
-            String categoryPrefix = getCategoryPrefix(category);
-            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
-            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
-        }
-    }
-    
-    /**
-     * Gibt einen kategorisierten Tabellenheader aus
-     * 
-     * @param category Die Nachrichtenkategorie
-     * @param headers Die Tabellenspalten
-     */
-    public void categoryTableHeader(MessageCategory category, String... headers) {
-        if (useColors) {
-            String categoryStr = "[" + category.getColor() + category.getCode() + RESET + "] ";
-            String headerStr = BRIGHT_WHITE + BOLD;
-            for (int i = 0; i < headers.length; i++) {
-                if (i > 0) headerStr += " | ";
-                headerStr += headers[i];
+        for (int i = 0; i < width; i++) {
+            if (i < completed) {
+                bar.append("=");
+            } else if (i == completed) {
+                bar.append(">");
+            } else {
+                bar.append(" ");
             }
-            logger.info(CYAN + prefix + RESET + " " + categoryStr + headerStr + RESET);
-            
-            String dividerStr = "";
-            for (int i = 0; i < headers.length; i++) {
-                if (i > 0) dividerStr += "─┼─";
-                dividerStr += "─".repeat(headers[i].length());
-            }
-            logger.info(CYAN + prefix + RESET + " " + categoryStr + CYAN + dividerStr + RESET);
-        } else {
-            String headerStr = "";
-            for (int i = 0; i < headers.length; i++) {
-                if (i > 0) headerStr += " | ";
-                headerStr += headers[i];
-            }
-            logger.info(prefix + " [" + category.getCode() + "] " + headerStr);
-            
-            String dividerStr = "";
-            for (int i = 0; i < headers.length; i++) {
-                if (i > 0) dividerStr += "-+-";
-                dividerStr += "-".repeat(headers[i].length());
-            }
-            logger.info(prefix + " [" + category.getCode() + "] " + dividerStr);
         }
-    }
-    
-    /**
-     * Gibt eine kategorisierte Tabellenzeile aus
-     * 
-     * @param category Die Nachrichtenkategorie
-     * @param cells Die Tabellenzellen
-     */
-    public void categoryTableRow(MessageCategory category, String... cells) {
-        if (useColors) {
-            String categoryStr = "[" + category.getColor() + category.getCode() + RESET + "] ";
-            String rowStr = WHITE;
-            for (int i = 0; i < cells.length; i++) {
-                if (i > 0) rowStr += CYAN + " | " + WHITE;
-                rowStr += cells[i];
-            }
-            logger.info(CYAN + prefix + RESET + " " + categoryStr + rowStr + RESET);
-        } else {
-            String rowStr = "";
-            for (int i = 0; i < cells.length; i++) {
-                if (i > 0) rowStr += " | ";
-                rowStr += cells[i];
-            }
-            logger.info(prefix + " [" + category.getCode() + "] " + rowStr);
-        }
+        
+        bar.append("] ").append(current).append("/").append(total);
+        logger.info(formatWithPrefix(bar.toString()));
     }
 } 

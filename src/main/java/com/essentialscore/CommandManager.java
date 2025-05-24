@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collection;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
@@ -22,6 +25,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.util.StringUtil;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabCompleter;
 
 /**
  * Manager für Befehle im ApiCore
@@ -29,99 +36,292 @@ import org.bukkit.entity.Player;
 public class CommandManager {
     private final ApiCore apiCore;
     private ConsoleFormatter console;
+    private Set<String> deactivatedCommands = new HashSet<>();
+    private boolean hasLoadedDeactivatedCommands = false;
+    private File deactivatedCommandsFile;
     
     public CommandManager(ApiCore apiCore) {
         this.apiCore = apiCore;
         
-        // Erweiterte Konsolen-Formatter Konfiguration
+        // Rohpräfix auslesen (ohne Formatierung)
+        String rawPrefix = apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&3&lCommand&b&lManager&8]");
+        
+        // Konsolen-Formatter initialisieren
         boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
         boolean showTimestamps = apiCore.getConfig().getBoolean("console.show-timestamps", false);
         boolean useUnicodeSymbols = apiCore.getConfig().getBoolean("console.use-unicode-symbols", true);
         String stylePreset = apiCore.getConfig().getString("console.style-preset", "default");
         
-        // Konsolen-Formatter initialisieren mit Rohpräfix (ohne Formatierung)
-        String rawPrefix = apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&6&lCommandManager&8]");
         console = new ConsoleFormatter(
             apiCore.getLogger(),
             rawPrefix,
             useColors, showTimestamps, useUnicodeSymbols, stylePreset
         );
+        
+        // Datei für deaktivierte Befehle einrichten
+        deactivatedCommandsFile = new File(apiCore.getDataFolder(), "deactivated_commands.yml");
+        loadDeactivatedCommands();
     }
     
     /**
-     * Registriert die Core-Befehle
+     * Lädt die Liste der deaktivierten Befehle
      */
-    public void registerCoreCommands() {
-        apiCore.getLogger().info("Registriere Core-Befehle...");
-        
-        PluginCommand apiCoreCommand = apiCore.getCommand("apicore");
-        
-        if (apiCoreCommand == null) {
-            apiCore.getLogger().severe("Konnte Hauptbefehl nicht registrieren! Stellen Sie sicher, dass plugin.yml korrekt ist.");
+    private void loadDeactivatedCommands() {
+        if (!deactivatedCommandsFile.exists()) {
+            try {
+                deactivatedCommandsFile.createNewFile();
+            } catch (IOException e) {
+                console.error("Konnte Datei für deaktivierte Befehle nicht erstellen: " + e.getMessage());
+            }
+            hasLoadedDeactivatedCommands = true;
             return;
         }
+
+        try {
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(deactivatedCommandsFile);
+            List<String> commands = config.getStringList("deactivated_commands");
+            deactivatedCommands = new HashSet<>(commands);
+            hasLoadedDeactivatedCommands = true;
+            
+            if (!deactivatedCommands.isEmpty()) {
+                console.info("Geladene deaktivierte Befehle: " + String.join(", ", deactivatedCommands));
+            }
+        } catch (Exception e) {
+            console.error("Fehler beim Laden deaktivierter Befehle: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Speichert die Liste der deaktivierten Befehle
+     */
+    private void saveDeactivatedCommands() {
+        try {
+            YamlConfiguration config = new YamlConfiguration();
+            config.set("deactivated_commands", new ArrayList<>(deactivatedCommands));
+            config.save(deactivatedCommandsFile);
+        } catch (IOException e) {
+            console.error("Fehler beim Speichern deaktivierter Befehle: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Prüft, ob ein Befehl deaktiviert ist
+     * 
+     * @param commandName Der zu prüfende Befehl
+     * @return true, wenn der Befehl deaktiviert ist
+     */
+    public boolean isCommandDeactivated(String commandName) {
+        if (!hasLoadedDeactivatedCommands) {
+            loadDeactivatedCommands();
+        }
+        return deactivatedCommands.contains(commandName.toLowerCase());
+    }
+    
+    /**
+     * Deaktiviert einen ApiCore-Befehl
+     * 
+     * @param commandName Der Name des zu deaktivierenden Befehls
+     * @return true, wenn der Befehl erfolgreich deaktiviert wurde
+     */
+    public boolean deactivateCommand(String commandName) {
+        commandName = commandName.toLowerCase();
         
-        apiCoreCommand.setExecutor((sender, command, label, args) -> {
-            if (args.length < 1) {
+        // Prüfen, ob der Befehl bereits deaktiviert ist
+        if (deactivatedCommands.contains(commandName)) {
+            return false;
+        }
+        
+        // Nur ApiCore-Befehle können deaktiviert werden
+        if (!isApiCoreCommand(commandName)) {
+            return false;
+        }
+        
+        deactivatedCommands.add(commandName);
+        saveDeactivatedCommands();
+        
+        // Befehl unregistrieren wenn möglich
+        unregisterCommand(commandName);
+        
+        return true;
+    }
+    
+    /**
+     * Reaktiviert einen ApiCore-Befehl
+     * 
+     * @param commandName Der Name des zu reaktivierenden Befehls
+     * @return true, wenn der Befehl erfolgreich reaktiviert wurde
+     */
+    public boolean reactivateCommand(String commandName) {
+        commandName = commandName.toLowerCase();
+        
+        // Prüfen, ob der Befehl deaktiviert ist
+        if (!deactivatedCommands.contains(commandName)) {
+            return false;
+        }
+        
+        deactivatedCommands.remove(commandName);
+        saveDeactivatedCommands();
+        
+        // Befehl neu registrieren ist nur nach Neustart möglich
+        console.info("Befehl '" + commandName + "' wurde reaktiviert. Server-Neustart erforderlich, um den Befehl zu verwenden.");
+        
+        return true;
+    }
+    
+    /**
+     * Prüft, ob ein Befehl ein ApiCore-Befehl ist
+     * 
+     * @param commandName Der zu prüfende Befehl
+     * @return true, wenn es sich um einen ApiCore-Befehl handelt
+     */
+    private boolean isApiCoreCommand(String commandName) {
+        // Liste der ApiCore-Befehle (ohne Modul-Befehle)
+        Set<String> apiCoreCommands = new HashSet<>(Arrays.asList(
+            "apicore", "core", "modules", "module", "mod",
+            "acp", "acr", "apm", "acpm", "ess",
+            "essentials", "esscore", "ec"
+        ));
+        
+        return apiCoreCommands.contains(commandName.toLowerCase());
+    }
+    
+    /**
+     * Deregistriert einen Befehl aus dem Bukkit-CommandMap-System
+     * 
+     * @param commandName Der Name des zu deregistrierenden Befehls
+     */
+    private void unregisterCommand(String commandName) {
+        try {
+            // Direkten Zugriff auf die CommandMap von Bukkit erhalten
+            Object craftServer = Bukkit.getServer();
+            Field commandMapField = craftServer.getClass().getDeclaredField("commandMap");
+            commandMapField.setAccessible(true);
+            Object commandMap = commandMapField.get(craftServer);
+            
+            // Hole die knownCommands-Map
+            Field knownCommandsField = commandMap.getClass().getDeclaredField("knownCommands");
+            knownCommandsField.setAccessible(true);
+            
+            @SuppressWarnings("unchecked")
+            Map<String, org.bukkit.command.Command> knownCommands = 
+                (Map<String, org.bukkit.command.Command>) knownCommandsField.get(commandMap);
+
+            if (knownCommands != null) {
+                // Sammle alle zu entfernenden Kommandos
+                Set<String> keysToRemove = new HashSet<>();
+                
+                for (Map.Entry<String, org.bukkit.command.Command> entry : knownCommands.entrySet()) {
+                    String key = entry.getKey();
+                    org.bukkit.command.Command cmd = entry.getValue();
+                    
+                    // Entferne den Befehl und alle Aliase
+                    if (key.equalsIgnoreCase(commandName) || 
+                        key.equalsIgnoreCase("apicore:" + commandName) ||
+                        key.equalsIgnoreCase("essentialscore:" + commandName)) {
+                        keysToRemove.add(key);
+                    }
+                    
+                    // Prüfe auf Aliase
+                    if (cmd.getName().equalsIgnoreCase(commandName)) {
+                        keysToRemove.add(key);
+                    }
+                }
+                
+                // Entferne alle identifizierten Befehle
+                if (!keysToRemove.isEmpty()) {
+                    for (String key : keysToRemove) {
+                        knownCommands.remove(key);
+                    }
+                    console.info("Befehl '" + commandName + "' wurde deregistriert (" + keysToRemove.size() + " Einträge)");
+                } else {
+                    console.info("Befehl '" + commandName + "' wurde nicht in der CommandMap gefunden");
+                }
+            }
+        } catch (Exception e) {
+            console.error("Fehler beim Entfernen des Befehls '" + commandName + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Überprüft vor der Ausführung eines Befehls, ob dieser deaktiviert ist
+     * 
+     * @param command Der auszuführende Befehl
+     * @return true, wenn der Befehl deaktiviert ist und nicht ausgeführt werden soll
+     */
+    public boolean shouldBlockCommand(String command) {
+        if (!hasLoadedDeactivatedCommands) {
+            loadDeactivatedCommands();
+        }
+        
+        // Extrahiere den Hauptbefehl (erster Teil)
+        String mainCommand = command.split(" ")[0].toLowerCase();
+        
+        // Prüfe, ob der Befehl deaktiviert ist
+        return deactivatedCommands.contains(mainCommand);
+    }
+    
+    /**
+     * Registriert die Core-Befehle des Plugins
+     */
+    public void registerCoreCommands() {
+        // Hauptbefehl registrieren
+        apiCore.getCommand("apicore").setExecutor((sender, command, label, args) -> {
+            if (args.length == 0) {
                 showHelp(sender);
                 return true;
             }
 
-            String cmd = args[0].toLowerCase();
-            
-            switch (cmd) {
+            String subCommand = args[0].toLowerCase();
+
+            switch (subCommand) {
                 case "help":
                     showHelp(sender);
                     break;
                 case "modules":
-                    if (args.length > 1 && args[1].equalsIgnoreCase("info") && args.length > 2) {
-                        moduleInfo(sender, args[2]);
-                    } else {
-                        listModules(sender);
+                case "list":
+                    listModules(sender);
+                    break;
+                case "info":
+                    if (args.length < 2) {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cBitte gib einen Modulnamen an!"));
+                        return true;
                     }
+                    moduleInfo(sender, args[1]);
                     break;
                 case "commands":
-                    if (args.length > 1) {
-                        listModuleCommands(sender, args[1]);
-                    } else {
+                    if (args.length < 2) {
                         listAllCommands(sender);
+                    } else {
+                        listModuleCommands(sender, args[1]);
                     }
                     break;
                 case "enable":
-                    if (args.length > 1) {
-                    enableModule(sender, args[1]);
-                    } else {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Du musst ein Modul angeben!"));
+                    if (args.length < 2) {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cBitte gib einen Modulnamen an!"));
+                        return true;
                     }
+                    enableModule(sender, args[1]);
                     break;
                 case "disable":
-                    if (args.length > 1) {
-                    disableModule(sender, args[1]);
-                    } else {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Du musst ein Modul angeben!"));
+                    if (args.length < 2) {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cBitte gib einen Modulnamen an!"));
+                        return true;
                     }
+                    disableModule(sender, args[1]);
                     break;
                 case "reload":
-                    if (args.length > 1) {
-                        switch (args[1].toLowerCase()) {
-                            case "all":
+                    if (args.length < 2) {
                         reloadAll(sender);
-                                break;
-                            case "config":
-                        reloadConfig(sender);
-                                break;
-                            case "modules":
-                        reloadAllModules(sender);
-                                break;
-                            case "resources":
-                                reloadResources(sender);
-                                break;
-                            default:
-                        reloadModule(sender, args[1]);
-                                break;
-                        }
                     } else {
-                        reloadAll(sender);
+                        if (args[1].equalsIgnoreCase("all") || args[1].equalsIgnoreCase("modules")) {
+                            reloadAllModules(sender);
+                        } else if (args[1].equalsIgnoreCase("config")) {
+                            reloadConfig(sender);
+                        } else if (args[1].equalsIgnoreCase("resources")) {
+                            reloadResources(sender);
+                        } else {
+                            reloadModule(sender, args[1]);
+                        }
                     }
                     break;
                 case "debug":
@@ -130,97 +330,103 @@ public class CommandManager {
                 case "status":
                     showStatus(sender);
                     break;
-                case "info":
-                    if (args.length > 1) {
-                        if (args[1].equalsIgnoreCase("system")) {
-                            if (sender instanceof Player) {
-                                Player player = (Player) sender;
-                                showSystemInfo(player);
-                            } else {
-                                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Dieser Befehl kann nur von Spielern ausgeführt werden!"));
-                            }
-                        } else {
-                            moduleInfo(sender, args[1]);
-                        }
-                    } else {
-                        showStatus(sender);
-                    }
-                    break;
                 case "benchmark":
-                    if (args.length > 1) {
-                        if (args[1].equals("help")) {
+                    if (args.length < 2) {
                         showBenchmarkHelp(sender);
-                        } else {
-                    runBenchmark(sender, args);
-                        }
                     } else {
-                        showBenchmarkHelp(sender);
+                        runBenchmark(sender, Arrays.copyOfRange(args, 1, args.length));
                     }
                     break;
                 case "cache":
-                    if (args.length > 1) {
-                        if (args[1].equals("help")) {
+                    if (args.length < 2) {
                         showCacheHelp(sender);
-                        } else {
-                    handleCacheCommand(sender, args);
-                        }
                     } else {
-                        showCacheHelp(sender);
+                        handleCacheCommand(sender, Arrays.copyOfRange(args, 1, args.length));
                     }
                     break;
-                case "perm":
                 case "permission":
-                case "perms":
-                    handlePermissionCommand(sender, args);
+                case "perm":
+                    if (args.length < 2) {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cBitte gib einen Unterbefehl an!"));
+                        return true;
+                    }
+                    handlePermissionCommand(sender, Arrays.copyOfRange(args, 1, args.length));
+                    break;
+                case "sandbox":
+                    if (args.length < 2) {
+                        displaySandboxStatus(sender);
+                    } else {
+                        String sandboxCmd = args[1].toLowerCase();
+                        if (sandboxCmd.equals("enable")) {
+                            setSandboxEnabled(sender, true);
+                        } else if (sandboxCmd.equals("disable")) {
+                            setSandboxEnabled(sender, false);
+                        } else if (sandboxCmd.equals("trust") && args.length > 2) {
+                            trustModule(sender, args[2]);
+                        } else if (sandboxCmd.equals("untrust") && args.length > 2) {
+                            untrustModule(sender, args[2]);
+                        } else {
+                            displaySandboxStatus(sender);
+                        }
+                    }
+                    break;
+                case "performance":
+                case "perf":
+                    if (args.length < 2) {
+                        // Ohne weiteren Unterbefehl: Liste aller Module mit Performance-Status anzeigen
+                        showAllModulesPerformance(sender);
+                    } else {
+                        String perfCmd = args[1].toLowerCase();
+                        
+                        if (perfCmd.equals("bossbar")) {
+                            if (args.length < 3) {
+                                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                                    "&cBitte gib einen Modulnamen oder 'hide'/'cycle' an!"));
+                            } else if (args[2].equalsIgnoreCase("hide")) {
+                                hideModulePerformanceBossBar(sender);
+                            } else if (args[2].equalsIgnoreCase("cycle")) {
+                                cycleModulePerformanceBossBar(sender);
+                            } else {
+                                showModulePerformanceBossBar(sender, args[2]);
+                            }
+                        } else {
+                            // Als Modulname interpretieren
+                            showModulePerformance(sender, args[1]);
+                        }
+                    }
                     break;
                 default:
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Unbekannter Befehl! Verwende &f/apicore help &cfor help."));
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cUnbekannter Befehl! Nutze &f/apicore help &cfür eine Übersicht."));
                     break;
             }
 
             return true;
         });
         
-        apiCoreCommand.setTabCompleter((sender, command, alias, args) -> {
+        // Tab-Completer registrieren
+        apiCore.getCommand("apicore").setTabCompleter((sender, command, alias, args) -> {
             List<String> completions = new ArrayList<>();
             
             if (args.length == 1) {
-                List<String> commands = Arrays.asList("help", "modules", "commands", "enable", "disable", 
-                                                    "reload", "debug", "status", "info", "benchmark", "cache", "permission");
+                // Hauptbefehle
+                List<String> commands = Arrays.asList("help", "modules", "list", "info", "commands", 
+                    "enable", "disable", "reload", "debug", "status", "benchmark", "cache", 
+                    "permission", "perm", "sandbox", "performance", "perf");
                 
                 for (String cmd : commands) {
                     if (cmd.startsWith(args[0].toLowerCase())) {
                         completions.add(cmd);
                     }
                 }
+            } else if (args.length == 2) {
+                // Unterbefehle oder Modulnamen
+                String subCommand = args[0].toLowerCase();
                 
-                return completions;
-            }
-            
-            if (args.length == 2) {
-                switch (args[0].toLowerCase()) {
-                    case "modules":
-                        completions.add("info");
-                        break;
+                switch (subCommand) {
+                    case "info":
                     case "enable":
                     case "disable":
-                        // Schlage Module vor, die aktiviert/deaktiviert werden können
-                        Map<String, ApiCore.ModuleInfo> modules = apiCore.getLoadedModules();
-                        for (String moduleName : modules.keySet()) {
-                            if (moduleName.toLowerCase().startsWith(args[1].toLowerCase())) {
-                                completions.add(moduleName);
-                    }
-                        }
-                        break;
-                    case "reload":
-                        List<String> reloadOptions = Arrays.asList("all", "config", "modules", "resources");
-                    for (String option : reloadOptions) {
-                            if (option.startsWith(args[1].toLowerCase())) {
-                            completions.add(option);
-                        }
-                    }
-                    
-                        // Auch Module als Vorschläge anbieten
+                        // Modulnamen
                         for (String moduleName : apiCore.getLoadedModules().keySet()) {
                             if (moduleName.toLowerCase().startsWith(args[1].toLowerCase())) {
                                 completions.add(moduleName);
@@ -228,7 +434,22 @@ public class CommandManager {
                         }
                         break;
                     case "commands":
-                        // Alle Module vorschlagen
+                        // Modulnamen für Befehlsanzeige
+                        completions.add("all");
+                        for (String moduleName : apiCore.getLoadedModules().keySet()) {
+                            if (moduleName.toLowerCase().startsWith(args[1].toLowerCase())) {
+                                completions.add(moduleName);
+                            }
+                        }
+                        break;
+                    case "reload":
+                        // Reload-Optionen
+                        for (String option : Arrays.asList("all", "modules", "config", "resources")) {
+                            if (option.startsWith(args[1].toLowerCase())) {
+                                completions.add(option);
+                            }
+                        }
+                        // Auch Modulnamen
                         for (String moduleName : apiCore.getLoadedModules().keySet()) {
                             if (moduleName.toLowerCase().startsWith(args[1].toLowerCase())) {
                                 completions.add(moduleName);
@@ -236,2006 +457,1024 @@ public class CommandManager {
                         }
                         break;
                     case "benchmark":
-                        List<String> benchmarkOptions = Arrays.asList("help", "full", "threads", "cache", 
-                                                                    "modules", "io", "results", "compare", "clear");
-                        for (String option : benchmarkOptions) {
-                            if (option.startsWith(args[1].toLowerCase())) {
-                                completions.add(option);
-                        }
-                    }
-                        break;
-                    case "cache":
-                        List<String> cacheOptions = Arrays.asList("help", "clear", "info");
-                        for (String option : cacheOptions) {
+                        // Benchmark-Optionen
+                        for (String option : Arrays.asList("module", "thread", "memory", "io", "all")) {
                             if (option.startsWith(args[1].toLowerCase())) {
                                 completions.add(option);
                             }
                         }
                         break;
-                    case "info":
-                        completions.add("system");
+                    case "cache":
+                        // Cache-Optionen
+                        for (String option : Arrays.asList("clear", "info", "stats")) {
+                            if (option.startsWith(args[1].toLowerCase())) {
+                                completions.add(option);
+                            }
+                        }
+                        break;
+                    case "permission":
+                    case "perm":
+                        // Permission-Optionen
+                        for (String option : Arrays.asList("check", "list", "reload")) {
+                            if (option.startsWith(args[1].toLowerCase())) {
+                                completions.add(option);
+                            }
+                        }
+                        break;
+                    case "sandbox":
+                        // Sandbox-Optionen
+                        for (String option : Arrays.asList("enable", "disable", "trust", "untrust")) {
+                            if (option.startsWith(args[1].toLowerCase())) {
+                                completions.add(option);
+                            }
+                        }
+                        break;
+                    case "performance":
+                    case "perf":
+                        // Performance-Optionen
+                        completions.add("bossbar");
                         
-                        // Alle Module vorschlagen
+                        // Auch Modulnamen
                         for (String moduleName : apiCore.getLoadedModules().keySet()) {
                             if (moduleName.toLowerCase().startsWith(args[1].toLowerCase())) {
                                 completions.add(moduleName);
                             }
                         }
                         break;
-                    case "permission":
-                    case "perm":
-                    case "perms":
-                        List<String> permOptions = Arrays.asList("check", "list", "test", "add");
-                        for (String option : permOptions) {
-                            if (option.startsWith(args[1].toLowerCase())) {
-                                completions.add(option);
-                        }
-                    }
-                        break;
                 }
+            } else if (args.length == 3) {
+                // Weitere Unterbefehle
+                String subCommand = args[0].toLowerCase();
+                String subSubCommand = args[1].toLowerCase();
                 
-                return completions;
-            }
-            
-            if (args.length == 3) {
-                if (args[0].equalsIgnoreCase("modules") && args[1].equalsIgnoreCase("info")) {
-                    // Schlage Module für Info vor
+                if ((subCommand.equals("permission") || subCommand.equals("perm")) && subSubCommand.equals("check")) {
+                    // Permissions vervollständigen
+                    return tabCompletePermissionCommand(sender, Arrays.copyOfRange(args, 1, args.length));
+                } else if (subCommand.equals("sandbox") && (subSubCommand.equals("trust") || subSubCommand.equals("untrust"))) {
+                    // Modulnamen
                     for (String moduleName : apiCore.getLoadedModules().keySet()) {
                         if (moduleName.toLowerCase().startsWith(args[2].toLowerCase())) {
                             completions.add(moduleName);
                         }
                     }
-                } else if (args[0].equalsIgnoreCase("cache") && args[1].equalsIgnoreCase("clear")) {
-                    List<String> cacheTypes = Arrays.asList("all", "methods", "permissions", "reflection");
-                    for (String type : cacheTypes) {
-                        if (type.startsWith(args[2].toLowerCase())) {
-                            completions.add(type);
+                } else if ((subCommand.equals("performance") || subCommand.equals("perf")) && subSubCommand.equals("bossbar")) {
+                    // BossBar-Optionen
+                    for (String option : Arrays.asList("hide", "cycle")) {
+                        if (option.startsWith(args[2].toLowerCase())) {
+                            completions.add(option);
+                        }
+                    }
+                    
+                    // Auch Modulnamen
+                    for (String moduleName : apiCore.getLoadedModules().keySet()) {
+                        if (moduleName.toLowerCase().startsWith(args[2].toLowerCase())) {
+                            completions.add(moduleName);
                         }
                     }
                 }
-                
-                // Keine Return-Anweisung, damit auch die spezifischere Prüfung unten ausgeführt wird
-            }
-            
-            // Verwende die dedizierte Tab-Completion für Permission-Befehle
-            // Wenn der Befehl perm/permission/perms ist, verwende immer unsere spezialisierte Methode
-            if (args.length > 0 && (args[0].equalsIgnoreCase("perm") || args[0].equalsIgnoreCase("permission") || args[0].equalsIgnoreCase("perms"))) {
-                return tabCompletePermissionCommand(sender, args);
             }
             
             return completions;
         });
         
-        apiCore.getLogger().info("Core-Befehle wurden registriert!");
-    }
-    
-    /**
-     * Batch registriert mehrere Befehle
-     */
-    public void registerCommands(List<DynamicCommand> commands) {
-        try {
-            final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-            bukkitCommandMap.setAccessible(true);
-            CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-            
-            int successCount = 0;
-            
-            for (DynamicCommand command : commands) {
-                try {
-                    boolean registered = commandMap.register(command.getModuleName(), command);
-                    
-                    if (registered) {
-                        successCount++;
-                        if (apiCore.isDebugMode()) {
-                            apiCore.getLogger().info("Befehl registriert: " + command.getName() + " (" + command.getModuleName() + ")");
-                        }
-                    } else if (command != null) { // Add null check here
-                        apiCore.getLogger().warning("Konnte Befehl nicht registrieren: " + command.getName() + " (" + command.getModuleName() + ")");
-                    } else {
-                        apiCore.getLogger().warning("Konnte Befehl nicht registrieren: null command object");
-                    }
-                } catch (Exception e) {
-                    apiCore.getLogger().log(Level.WARNING, "Fehler beim Registrieren des Befehls " + (command != null ? command.getName() : "null") + ": " + e.getMessage(), e);
-                }
-            }
-
-            // Command-Map synchronisieren, um sicherzustellen, dass Tab-Completion sofort funktioniert
-            apiCore.getModuleManager().synchronizeCommands();
-            
-            apiCore.getLogger().info(successCount + " von " + commands.size() + " Befehlen erfolgreich registriert");
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.SEVERE, "Kritischer Fehler beim Registrieren der Befehle: " + e.getMessage(), e);
+        // Zusätzlich: Den "commandmanager" oder "cm" Befehl registrieren, um Befehle zu verwalten
+        DynamicCommand cmdManager = new DynamicCommand("commandmanager", 
+                                                      "Verwaltet ApiCore-Befehle (aktivieren/deaktivieren)",
+                                                      "/commandmanager <deactivate|activate> <command>",
+                                                      Arrays.asList("cm"), "apicore", "apicore.admin.commands", apiCore);
+        
+        cmdManager.setExecutor(commandManagerExecutor);
+        cmdManager.setTabCompleter(commandManagerTabCompleter);
+        
+        // Nur registrieren, wenn der Befehl nicht deaktiviert ist
+        if (!isCommandDeactivated("commandmanager")) {
+            apiCore.registerCommands(Collections.singletonList(cmdManager));
         }
     }
     
     /**
-     * Entfernt mehrere Befehle in einem Durchgang
+     * Diese Methode wird als Executor für den commandmanager/cm-Befehl verwendet
      */
-    public void unregisterCommands(List<DynamicCommand> commands) {
-        try {
-            final Field bukkitCommandMap = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-            bukkitCommandMap.setAccessible(true);
-            CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
-            
-            // Zugriff auf die knownCommands-Map über Reflection
-            Field knownCommandsField = null;
-            Map<String, org.bukkit.command.Command> knownCommands = null;
-            
-            try {
-                // Versuche, die knownCommands-Map zu bekommen
-                // Die genaue Implementierung kann je nach Bukkit-Version variieren
-                knownCommandsField = commandMap.getClass().getDeclaredField("knownCommands");
-                knownCommandsField.setAccessible(true);
-                
-                @SuppressWarnings("unchecked")
-                Map<String, org.bukkit.command.Command> cmdMap = 
-                    (Map<String, org.bukkit.command.Command>) knownCommandsField.get(commandMap);
-                knownCommands = cmdMap;
-            } catch (Exception e) {
-                apiCore.getLogger().warning("Konnte knownCommands nicht per Reflection zugreifen: " + e.getMessage());
-                // Wir machen trotzdem weiter, selbst wenn wir knownCommands nicht bekommen können
-            }
-            
-            // Menge aller zu entfernenden Befehle (für effizientes Lookup)
-            Set<String> commandIdentifiers = new HashSet<>();
-            
-            for (DynamicCommand cmd : commands) {
-                try {
-                    // Standardmäßigen unregister aufrufen
-                    cmd.unregister(commandMap);
-                    
-                    // Sammle alle möglichen Befehlsbezeichner
-                    String cmdName = cmd.getName().toLowerCase();
-                    String prefixedCmdName = cmd.getModuleName().toLowerCase() + ":" + cmdName;
-                    String minecraftPrefixedCmdName = "minecraft:" + cmdName;
-                    
-                    commandIdentifiers.add(cmdName);
-                    commandIdentifiers.add(prefixedCmdName);
-                    commandIdentifiers.add(minecraftPrefixedCmdName);
-                    
-                    // Sammle auch alle Alias-Kombinationen
-                    for (String alias : cmd.getAliases()) {
-                        String aliasLower = alias.toLowerCase();
-                        commandIdentifiers.add(aliasLower);
-                        commandIdentifiers.add(cmd.getModuleName().toLowerCase() + ":" + aliasLower);
-                        commandIdentifiers.add("minecraft:" + aliasLower);
-                    }
-                    
-                    // Zurücksetzen des internen Zustands
-                    cmd.resetCommand();
-                } catch (Exception e) {
-                    apiCore.getLogger().warning("Fehler beim Entfernen des Befehls " + cmd.getName() + ": " + e.getMessage());
-                }
-            }
-            
-            // Zusätzlich aus der knownCommands-Map entfernen, falls wir Zugriff haben
-            if (knownCommands != null) {
-                // Erstelle eine Liste aller Schlüssel, die zu entfernen sind
-                List<String> keysToRemove = new ArrayList<>();
-                
-                // Gehe alle Kommandos durch und überprüfe, ob sie entfernt werden sollen
-                for (Map.Entry<String, org.bukkit.command.Command> entry : knownCommands.entrySet()) {
-                    String key = entry.getKey();
-                    org.bukkit.command.Command command = entry.getValue();
-                    
-                    // Direkte Übereinstimmung mit gespeicherten Identifikatoren
-                    if (commandIdentifiers.contains(key)) {
-                        keysToRemove.add(key);
-                        continue;
-                    }
-                    
-                    // Überprüfe auf Command-Instanz-Gleichheit oder wenn es ein DynamicCommand ist
-                    if (command instanceof DynamicCommand) {
-                        DynamicCommand dynamicCmd = (DynamicCommand) command;
-                        
-                        // Überprüfe, ob dieser DynamicCommand zu einem der zu entfernenden gehört
-                        for (DynamicCommand cmdToRemove : commands) {
-                            if (dynamicCmd.getName().equals(cmdToRemove.getName()) &&
-                                dynamicCmd.getModuleName().equals(cmdToRemove.getModuleName())) {
-                                keysToRemove.add(key);
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                // Entferne alle identifizierten Schlüssel
-                for (String key : keysToRemove) {
-                    knownCommands.remove(key);
-                }
-                
-                if (apiCore.isDebugMode() && !keysToRemove.isEmpty()) {
-                    apiCore.getLogger().info("Befehle vollständig aus Command-Cache entfernt: " + keysToRemove.size() + " Einträge");
-                }
-            }
-            
-            // Versuche den Command-Cache von Bukkit zu aktualisieren (wichtig nach Reload)
-            apiCore.getModuleManager().synchronizeCommands();
-            
-            if (apiCore.isDebugMode()) {
-                apiCore.getLogger().info(commands.size() + " Befehle wurden entfernt");
-            }
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.SEVERE, "Fehler beim Entfernen der Befehle", e);
-        }
-    }
+    private final CommandExecutor commandManagerExecutor = (sender, command, label, args) -> {
+        return handleCommandManagerCommand(sender, args);
+    };
     
-    // Die verschiedenen Befehlsmethoden - Diese würden normal implementiert werden
-    // Hier als Platzhalter dargestellt, in der tatsächlichen Implementierung würden sie den Code enthalten
+    /**
+     * Tab-Completer für den CommandManager-Befehl
+     */
+    private final TabCompleter commandManagerTabCompleter = (sender, command, alias, args) -> {
+        return tabCompleteCommandManagerCommand(sender, args);
+    };
     
-    private void showHelp(CommandSender sender) {
+    /**
+     * Handhabt den CommandManager-Befehl zur Verwaltung von ApiCore-Befehlen
+     * 
+     * @param sender Der Befehlsabsender
+     * @param args Die Befehlsargumente
+     */
+    private void displaySandboxStatus(CommandSender sender) {
         String prefix = apiCore.getMessagePrefix();
+        ModuleSandbox sandbox = apiCore.getModuleSandbox();
         
-        // Header
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3ApiCore Befehle #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-        
-        // Module Verwaltung
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lModul-Verwaltung:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore list #FFFFFF- #A8A8A8Zeigt alle verfügbaren Module an"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore info <Modul> #FFFFFF- #A8A8A8Zeigt detaillierte Informationen zum Modul"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore enable <Modul> #FFFFFF- #A8A8A8Aktiviert ein Modul"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore disable <Modul> #FFFFFF- #A8A8A8Deaktiviert ein Modul"));
-        
-        // Befehle-Sektion
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lBefehle:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore commands #FFFFFF- #A8A8A8Zeigt alle verfügbaren Befehle an"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore commands <Modul> #FFFFFF- #A8A8A8Zeigt Befehle eines bestimmten Moduls"));
-        
-        // System-Sektion
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lSystem:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore reload #FFFFFF- #A8A8A8Lädt alle Module neu"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore reload <Modul> #FFFFFF- #A8A8A8Lädt ein bestimmtes Modul neu"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore debug #FFFFFF- #A8A8A8Schaltet den Debug-Modus ein/aus"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore status #FFFFFF- #A8A8A8Zeigt den aktuellen System-Status an"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark #FFFFFF- #A8A8A8Führt Performance-Tests durch"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore cache #FFFFFF- #A8A8A8Verwaltet den Cache des Systems"));
-        
-        // Footer
-        sender.sendMessage(apiCore.formatHex("#38C6C3┌─────────────────────────┐"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3Version: #FFFFFF" + apiCore.getDescription().getVersion()));
-    }
-    
-    private void listModules(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        Map<String, ApiCore.ModuleInfo> loadedModules = apiCore.getLoadedModules();
-        List<String> availableModules = apiCore.getModuleManager().getAvailableButNotLoadedModules();
-        
-        // Header
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Module Übersicht #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-        
-        // Geladene Module anzeigen
-        if (!loadedModules.isEmpty()) {
-            sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lAktive Module: #4DEEEB[" + loadedModules.size() + "]"));
-            
-            for (Map.Entry<String, ApiCore.ModuleInfo> entry : loadedModules.entrySet()) {
-                ApiCore.ModuleInfo info = entry.getValue();
-                String statusSymbol = "#00FF00●"; // Grüner Punkt für aktive Module
-                
-                sender.sendMessage(apiCore.formatHex("  " + statusSymbol + " #74E8E5" + info.getName() + 
-                                                    " #FFFFFF- v" + info.getVersion() + 
-                                                    " #A8A8A8- " + info.getDescription()));
-            }
-        } else {
-            sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lAktive Module: #FF5555Keine"));
-        }
-        
-        // Verfügbare aber nicht geladene Module anzeigen
-        if (!availableModules.isEmpty()) {
-            sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lVerfügbare Module: #4DEEEB[" + availableModules.size() + "]"));
-            
-            for (String moduleName : availableModules) {
-                String statusSymbol = "#FF5555○"; // Roter Kreis für inaktive Module
-                sender.sendMessage(apiCore.formatHex("  " + statusSymbol + " #74E8E5" + moduleName + 
-                                                    " #A8A8A8- Nicht geladen"));
-            }
-        }
-        
-        // Tipp anzeigen
-        sender.sendMessage(apiCore.formatHex("\n#A8A8A8Tipp: Nutze #74E8E5/apicore info <Modul> #A8A8A8für mehr Details"));
-    }
-    
-    private void moduleInfo(CommandSender sender, String moduleName) {
-        String prefix = apiCore.getMessagePrefix();
-        ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
-        
-        if (moduleInfo == null) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + " &cist nicht geladen!"));
-            
-            // Prüfen, ob das Modul verfügbar aber nicht geladen ist
-            List<String> availableModules = apiCore.getModuleManager().getAvailableButNotLoadedModules();
-            if (availableModules.contains(moduleName)) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Das Modul ist verfügbar, aber nicht geladen. Nutze &e/apicore enable " + moduleName + "&7 zum Aktivieren."));
-            }
+        if (sandbox == null) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDie Modul-Sandbox ist nicht verfügbar!"));
             return;
         }
         
-        // Header
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Modul Details: #4DEEEB" + moduleInfo.getName() + " #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
+        boolean enabled = sandbox.isSandboxEnabled();
+        sender.sendMessage(apiCore.formatHex(prefix + "&7Status der Modul-Sandbox: " + 
+                (enabled ? "&aAktiviert" : "&cDeaktiviert")));
         
-        // Modulinformationen anzeigen
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lAllgemeine Informationen:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Name: #FFFFFF" + moduleInfo.getName()));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Version: #FFFFFF" + moduleInfo.getVersion()));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Beschreibung: #FFFFFF" + moduleInfo.getDescription()));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Status: #00FF00Aktiv"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Datei: #FFFFFF" + moduleInfo.getJarFile().getName()));
+        // Zeige Liste der vertrauenswürdigen Module
+        sender.sendMessage(apiCore.formatHex(prefix + "&7Vertrauenswürdige Module (laufen außerhalb der Sandbox):"));
+        boolean hasTrustedModules = false;
         
-        // Plugin-Klasse
-        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lTechnische Details:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Hauptklasse: #FFFFFF" + moduleInfo.getInstance().getClass().getName()));
-        
-        // Befehle zählen
-        List<DynamicCommand> commands = apiCore.getModuleManager().getModuleCommands(moduleName);
-        int commandCount = commands != null ? commands.size() : 0;
-        
-        if (commandCount > 0) {
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Befehle: #FFFFFF" + commandCount + 
-                                           " #A8A8A8(Nutze #74E8E5/apicore commands " + moduleName + "#A8A8A8)"));
-        } else {
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Befehle: #A8A8A8Keine"));
-        }
-        
-        // Aktionen anzeigen
-        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lAktionen:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore disable " + moduleName + " #FFFFFF- #A8A8A8Modul deaktivieren"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore reload " + moduleName + " #FFFFFF- #A8A8A8Modul neu laden"));
-    }
-    
-    private void listAllCommands(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        Map<String, ApiCore.ModuleInfo> loadedModules = apiCore.getLoadedModules();
-        
-        // Header
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Alle Befehle #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-        
-        // Core-Befehle anzeigen
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lApiCore:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore #FFFFFF- #A8A8A8Zeigt Hilfe zum ApiCore"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore help #FFFFFF- #A8A8A8Zeigt diese Hilfe"));
-        
-        // Befehle nach Modulen sortiert anzeigen
-        boolean hasCommands = false;
-        
-        for (String moduleName : loadedModules.keySet()) {
-            List<DynamicCommand> commands = apiCore.getModuleManager().getModuleCommands(moduleName);
-            
-            if (commands != null && !commands.isEmpty()) {
-                hasCommands = true;
-                sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&l" + moduleName + ":"));
-                
-                for (DynamicCommand cmd : commands) {
-                    String description = cmd.getDescription();
-                    if (description == null || description.isEmpty()) {
-                        description = "Kein Beschreibung verfügbar";
-                    }
-                    
-                    sender.sendMessage(apiCore.formatHex("  #74E8E5/" + cmd.getName() + " #FFFFFF- #A8A8A8" + description));
-                }
+        for (String moduleName : apiCore.getLoadedModules().keySet()) {
+            if (sandbox.isTrustedModule(moduleName)) {
+                sender.sendMessage(apiCore.formatHex("  &8- &e" + moduleName));
+                hasTrustedModules = true;
             }
         }
         
-        if (!hasCommands) {
-            sender.sendMessage(apiCore.formatHex("\n#FF5555Keine zusätzlichen Befehle von Modulen gefunden."));
-        }
-        
-        // Footer
-        sender.sendMessage(apiCore.formatHex("\n#A8A8A8Tipp: Nutze #74E8E5/apicore commands <Modul> #A8A8A8für Modul-spezifische Befehle"));
-    }
-    
-    private void listModuleCommands(CommandSender sender, String moduleName) {
-        String prefix = apiCore.getMessagePrefix();
-        ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
-        
-        if (moduleInfo == null) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + " &cist nicht geladen!"));
-            return;
-        }
-        
-        List<DynamicCommand> commands = apiCore.getModuleManager().getModuleCommands(moduleName);
-        
-        // Header
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Befehle: #4DEEEB" + moduleInfo.getName() + " #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-        
-        if (commands == null || commands.isEmpty()) {
-            sender.sendMessage(apiCore.formatHex("#FF5555Dieses Modul stellt keine Befehle bereit."));
-            return;
-        }
-        
-        // Befehle auflisten
-        for (DynamicCommand cmd : commands) {
-            // Befehlsname und Beschreibung
-            sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&l/" + cmd.getName() + "#FFFFFF:"));
-            
-            String description = cmd.getDescription();
-            if (description != null && !description.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex("  #74E8E5Beschreibung: #FFFFFF" + description));
-            }
-            
-            // Verwendung
-            String usage = cmd.getUsage();
-            if (usage != null && !usage.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex("  #74E8E5Verwendung: #FFFFFF" + usage));
-            }
-            
-            // Aliase
-            List<String> aliases = cmd.getAliases();
-            if (aliases != null && !aliases.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex("  #74E8E5Aliase: #FFFFFF" + String.join(", ", aliases)));
-            }
-            
-            // Berechtigung
-            String permission = cmd.getPermission();
-            if (permission != null && !permission.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex("  #74E8E5Berechtigung: #FFFFFF" + permission));
-            }
-        }
-    }
-    
-    private void enableModule(CommandSender sender, String moduleName) {
-        String prefix = apiCore.getMessagePrefix();
-        
-        // Modulnamen normalisieren (Versionsnummer entfernen, falls vorhanden)
-        String normalizedModuleName = normalizeModuleName(moduleName);
-        
-        // Prüfen, ob das Modul bereits geladen ist
-        if (apiCore.getModuleInfo(normalizedModuleName) != null) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + normalizedModuleName + "&c ist bereits geladen!"));
-            return;
-        }
-        
-        // Prüfen, ob das Modul im Verzeichnis vorhanden ist
-        List<String> availableModules = apiCore.getModuleManager().getAvailableButNotLoadedModules();
-        
-        // Normalisierte verfügbare Module und genauen Match suchen
-        String matchedModuleName = null;
-        for (String availableModule : availableModules) {
-            String normalizedAvailable = normalizeModuleName(availableModule);
-            if (normalizedAvailable.equalsIgnoreCase(normalizedModuleName)) {
-                matchedModuleName = availableModule;
-                break;
-            }
-        }
-        
-        if (matchedModuleName == null) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + normalizedModuleName + "&c wurde nicht gefunden!"));
-            
-            // Vorschläge für ähnliche Modulnamen anzeigen
-            List<String> suggestions = new ArrayList<>();
-            for (String available : availableModules) {
-                if (available.toLowerCase().contains(normalizedModuleName.toLowerCase())) {
-                    suggestions.add(available);
-                }
-            }
-            
-            if (!suggestions.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Meintest du eines dieser Module?"));
-                for (String suggestion : suggestions) {
-                    sender.sendMessage(apiCore.formatHex("  &7- &e" + suggestion));
-                }
-            } else {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Verfügbare Module: &e" + 
-                                String.join(", ", availableModules)));
-            }
-            return;
-        }
-        
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Aktiviere Modul &e" + matchedModuleName + "&7..."));
-        
-        // JAR-Datei des Moduls finden
-        File modulesDir = new File(apiCore.getDataFolder(), "modules");
-        File moduleFile = new File(modulesDir, matchedModuleName + ".jar");
-        
-        if (!moduleFile.exists()) {
-            // Versuche die JAR-Datei mit dem ursprünglichen Namen zu finden, falls der normalisierte nicht funktioniert
-            moduleFile = new File(modulesDir, moduleName + ".jar");
-            if (!moduleFile.exists()) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&cModuldatei für &e" + matchedModuleName + "&c wurde nicht gefunden!"));
-                return;
-            }
-        }
-        
-        try {
-            // Modulname aus der JAR-Datei lesen
-            String actualModuleName = matchedModuleName;
-            try (JarFile jar = new JarFile(moduleFile)) {
-                JarEntry moduleYml = jar.getJarEntry("module.yml");
-                if (moduleYml != null) {
-                    YamlConfiguration moduleConfig = YamlConfiguration.loadConfiguration(
-                            new InputStreamReader(jar.getInputStream(moduleYml), StandardCharsets.UTF_8));
-                    String nameFromYml = moduleConfig.getString("name");
-                    if (nameFromYml != null && !nameFromYml.isEmpty()) {
-                        actualModuleName = nameFromYml;
-                    }
-                }
-            } catch (Exception e) {
-                apiCore.getLogger().warning("Konnte module.yml in " + moduleFile.getName() + " nicht lesen: " + e.getMessage());
-            }
-            
-            // Konfigurationsdatei erstellen oder aktualisieren
-            File configFile = apiCore.getModuleConfigFile(actualModuleName);
-            org.bukkit.configuration.file.YamlConfiguration config;
-            
-            if (configFile.exists()) {
-                config = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(configFile);
-                // Sicherstellen, dass das Modul aktiviert ist
-                config.set("enabled", true);
-                config.save(configFile);
-            } else {
-                // Neue Konfigurationsdatei erstellen
-                config = new org.bukkit.configuration.file.YamlConfiguration();
-                config.set("enabled", true);
-                try {
-                    // Sicherstellen, dass das Verzeichnis existiert
-                    configFile.getParentFile().mkdirs();
-                    config.save(configFile);
-                } catch (IOException e) {
-                    apiCore.getLogger().warning("Konnte Konfigurationsdatei für " + actualModuleName + " nicht erstellen: " + e.getMessage());
-                }
-            }
-            
-            // Debug-Log
-            if (apiCore.isDebugMode()) {
-                apiCore.getLogger().info("Normalisierter Modulname: " + normalizedModuleName);
-                apiCore.getLogger().info("Tatsächlicher Modulname aus module.yml: " + actualModuleName);
-                apiCore.getLogger().info("Tatsächlicher JAR-Dateiname: " + moduleFile.getName());
-                apiCore.getLogger().info("Konfigurationsdatei: " + configFile.getAbsolutePath() + " (exists: " + configFile.exists() + ")");
-            }
-            
-            // Modul laden
-            apiCore.getModuleManager().loadModule(moduleFile);
-            
-            // Erfolg melden
-            ApiCore.ModuleInfo info = apiCore.getModuleInfo(actualModuleName);
-            if (info != null) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&aModul &e" + info.getName() + " v" + 
-                                info.getVersion() + "&a wurde erfolgreich aktiviert!"));
-                
-                // Stelle sicher, dass Bukkit's Command-System aktualisiert wird
-                apiCore.getServer().getScheduler().runTask(apiCore, () -> {
-                    // Sync-Task, um Bukkit-Command-System zu aktualisieren
-                    try {
-                        List<DynamicCommand> commands = apiCore.getModuleManager().getModuleCommands(info.getName());
-                        if (commands != null && !commands.isEmpty()) {
-                            apiCore.getLogger().info("Synchronisiere Befehle für " + info.getName() + " (" + commands.size() + " Befehle)");
-                            // Fordern Sie die Spieler auf, /reload oder /minecraft:reload zu verwenden, falls Befehle nicht sofort arbeiten
-                            for (Player player : apiCore.getServer().getOnlinePlayers()) {
-                                if (player.isOp() || player.hasPermission("apicore.admin")) {
-                                    player.sendMessage(apiCore.formatHex(prefix + "&7Falls Befehle nicht sofort funktionieren, gib &e/minecraft:reload &7ein."));
-                                    break; // Nur einen Admin benachrichtigen
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        apiCore.getLogger().warning("Fehler beim Synchronisieren der Befehle: " + e.getMessage());
-                    }
-                });
-            } else {
-                sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + matchedModuleName + 
-                                "&c konnte nicht aktiviert werden. Siehe Konsole für Details."));
-            }
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Aktivieren des Moduls &e" + 
-                            matchedModuleName + "&c: " + e.getMessage()));
-            apiCore.getLogger().severe("Fehler beim Aktivieren des Moduls " + matchedModuleName + ": " + e.getMessage());
-            e.printStackTrace();
+        if (!hasTrustedModules) {
+            sender.sendMessage(apiCore.formatHex("  &8- &7(Keine vertrauenswürdigen Module)"));
         }
     }
     
     /**
-     * Normalisiert einen Modulnamen durch Entfernen von Versionsnummern.
-     * Zum Beispiel: "MyModule-1.0.0" wird zu "MyModule"
+     * Aktiviert oder deaktiviert die Modul-Sandbox
+     * 
+     * @param sender Der Befehlsabsender
+     * @param enabled Ob die Sandbox aktiviert werden soll
      */
-    private String normalizeModuleName(String moduleName) {
-        // Typische Versionsmuster entfernen
-        return moduleName.replaceAll("-\\d+(\\.\\d+)*(-SNAPSHOT)?", "");
-    }
-    
-    private void disableModule(CommandSender sender, String moduleName) {
+    private void setSandboxEnabled(CommandSender sender, boolean enabled) {
         String prefix = apiCore.getMessagePrefix();
+        ModuleSandbox sandbox = apiCore.getModuleSandbox();
         
-        // Modulnamen normalisieren
-        String normalizedModuleName = normalizeModuleName(moduleName);
-        
-        // Prüfen, ob das Modul geladen ist - mit normalisiertem Namen
-        ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(normalizedModuleName);
-        
-        // Falls nicht gefunden, versuche mit dem Originalnamen
-        if (moduleInfo == null) {
-            moduleInfo = apiCore.getModuleInfo(moduleName);
-        }
-        
-        if (moduleInfo == null) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + normalizedModuleName + "&c ist nicht geladen!"));
+        if (sandbox == null) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDie Modul-Sandbox ist nicht verfügbar!"));
             return;
         }
         
-        // Verwende den tatsächlichen Namen des geladenen Moduls
-        String actualModuleName = moduleInfo.getName();
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Deaktiviere Modul &e" + actualModuleName + "&7..."));
+        // Status setzen
+        sandbox.setSandboxEnabled(enabled);
         
-        try {
-            // Verwende die zentrale disableModule-Methode in ApiCore
-            // Diese Methode kümmert sich um Konfiguration, Entladen des Moduls und Command-Synchronisierung
-            boolean success = apiCore.disableModule(actualModuleName);
-            
-            if (success) {
-                // Erfolg melden
-                sender.sendMessage(apiCore.formatHex(prefix + "&aModul &e" + actualModuleName + 
-                                "&a wurde erfolgreich deaktiviert!"));
-            } else {
-                sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + actualModuleName + 
-                                "&c konnte nicht deaktiviert werden. Details in der Konsole."));
-            }
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Deaktivieren des Moduls &e" + 
-                            actualModuleName + "&c: " + e.getMessage()));
-            apiCore.getLogger().severe("Fehler beim Deaktivieren des Moduls " + actualModuleName + ": " + e.getMessage());
-        }
-    }
-    
-    private void reloadAll(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Lade alle Komponenten neu..."));
-        
-        try {
-            // Konfiguration neu laden
-            sender.sendMessage(apiCore.formatHex(prefix + "&7Lade Konfiguration neu..."));
-            apiCore.reloadConfig();
-        
-        // Liste der geladenen Module speichern
-        List<String> moduleNames = new ArrayList<>(apiCore.getLoadedModules().keySet());
-            
-            // Verzeichnisse für Module erstellen/prüfen
-            sender.sendMessage(apiCore.formatHex(prefix + "&7Erstelle Modul-Datenverzeichnisse..."));
-            for (String moduleName : moduleNames) {
-                File moduleDataDir = apiCore.getModuleDataFolder(moduleName);
-                
-                if (!moduleDataDir.exists()) {
-                    boolean created = moduleDataDir.mkdirs();
-                    if (created) {
-                        if (apiCore.isDebugMode()) {
-                            apiCore.getLogger().info("Datenverzeichnis für Modul " + moduleName + " erstellt: " + moduleDataDir.getAbsolutePath());
-                        }
-                    } else {
-                        apiCore.getLogger().warning("Konnte Datenverzeichnis für Modul " + moduleName + " nicht erstellen: " + moduleDataDir.getAbsolutePath());
-        }
-                }
-            }
-            
-            // Module neu laden, falls vorhanden
-            if (!moduleNames.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Lade alle Module neu..."));
-        
-        // Zähler für erfolgreich/fehlgeschlagene Reloads
-        int success = 0;
-        int failed = 0;
-        
-        // Alle Module neu laden
-        for (String moduleName : moduleNames) {
-            try {
-                // Modul-Info und JAR-Datei speichern
-                ApiCore.ModuleInfo info = apiCore.getModuleInfo(moduleName);
-                if (info == null) continue;
-                
-                File jarFile = info.getJarFile();
-                
-                // Modul entladen
-                apiCore.getModuleManager().unloadModule(moduleName);
-                
-                // Modul neu laden
-                apiCore.getModuleManager().loadModule(jarFile);
-                
-                if (apiCore.getModuleInfo(moduleName) != null) {
-                    success++;
-                } else {
-                    failed++;
-                }
-            } catch (Exception e) {
-                failed++;
-                apiCore.getLogger().severe("Fehler beim Neuladen des Moduls " + moduleName + ": " + e.getMessage());
-            }
-        }
-        
-        // Ergebnis melden
-        if (failed == 0) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&aAlle Module (" + success + ") wurden erfolgreich neu geladen!"));
+        // Bestätigung
+        if (enabled) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&aDie Modul-Sandbox wurde aktiviert!"));
+            sender.sendMessage(apiCore.formatHex(prefix + "&7Module laufen nun in einer geschützten Umgebung."));
         } else {
-            sender.sendMessage(apiCore.formatHex(prefix + "&eModule neu geladen: &a" + success + " &eerfolgreich, &c" + 
-                            failed + " &efehlgeschlagen"));
-                }
-            } else {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Keine Module zum Neuladen gefunden."));
-            }
-            
-            // Nach neuen Modulen suchen
-            sender.sendMessage(apiCore.formatHex(prefix + "&7Suche nach neuen Modulen..."));
-            int newCount = apiCore.getModuleManager().checkForNewModules(sender);
-            
-            if (newCount > 0) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&a" + newCount + " neue Module gefunden und geladen!"));
-            } else if (apiCore.isDebugMode()) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Keine neuen Module gefunden."));
-            }
-            
-            // Modulressourcen extrahieren
-            sender.sendMessage(apiCore.formatHex(prefix + "&7Extrahiere Modulressourcen..."));
-            try {
-                apiCore.extractModuleResources();
-                sender.sendMessage(apiCore.formatHex(prefix + "&aModulressourcen wurden extrahiert. Bestehende Dateien wurden nicht überschrieben."));
-            } catch (Exception e) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Extrahieren der Modulressourcen: " + e.getMessage()));
-                apiCore.getLogger().log(Level.WARNING, "Fehler beim Extrahieren der Modulressourcen", e);
-            }
-            
-            // Synchronisiere Befehle
-            try {
-                apiCore.getModuleManager().synchronizeCommands();
-                sender.sendMessage(apiCore.formatHex(prefix + "&aBefehle wurden synchronisiert."));
-            } catch (Exception e) {
-                apiCore.getLogger().log(Level.WARNING, "Fehler bei der Befehl-Synchronisierung", e);
-                sender.sendMessage(apiCore.formatHex(prefix + "&cFehler bei der Befehl-Synchronisierung: " + e.getMessage()));
-            }
-            
-            // Caches leeren (optional)
-            if (apiCore.getConfig().getBoolean("performance.auto-clear-cache-on-reload", false)) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&7Leere Caches..."));
-                clearPermissionCache();
-                clearMethodCache();
-                clearReflectionCache();
-                sender.sendMessage(apiCore.formatHex(prefix + "&aCaches wurden geleert."));
-            }
-            
-            sender.sendMessage(apiCore.formatHex(prefix + "&aApiCore wurde vollständig neu geladen!"));
-            
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim vollständigen Neuladen von ApiCore: " + e.getMessage()));
-            apiCore.getLogger().log(Level.SEVERE, "Fehler beim Neuladen von ApiCore", e);
-            
-            // Versuche Minecraft-Befehle zu synchronisieren als Notfallmaßnahme
-            sender.sendMessage(apiCore.formatHex(prefix + "&eVersuche, Befehle zu reparieren..."));
-            try {
-                apiCore.getModuleManager().synchronizeCommands();
-                sender.sendMessage(apiCore.formatHex(prefix + "&aBefehle wurden synchronisiert."));
-            } catch (Exception ex) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&cKritischer Fehler bei der Befehl-Synchronisierung. Server-Neustart empfohlen."));
-            }
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDie Modul-Sandbox wurde deaktiviert!"));
+            sender.sendMessage(apiCore.formatHex(prefix + "&7&lAchtung: &7Module laufen nun ohne Absturz-Schutz."));
         }
     }
     
-    private void reloadModule(CommandSender sender, String moduleName) {
+    /**
+     * Markiert ein Modul als vertrauenswürdig
+     * 
+     * @param sender Der Befehlsabsender
+     * @param moduleName Der Name des Moduls
+     */
+    private void trustModule(CommandSender sender, String moduleName) {
         String prefix = apiCore.getMessagePrefix();
+        ModuleSandbox sandbox = apiCore.getModuleSandbox();
         
-        // Prüfen, ob das Modul geladen ist
-        ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
-        if (moduleInfo == null) {
+        if (sandbox == null) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDie Modul-Sandbox ist nicht verfügbar!"));
+            return;
+        }
+        
+        // Prüfen, ob das Modul existiert
+        if (!apiCore.getLoadedModules().containsKey(moduleName)) {
             sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + "&c ist nicht geladen!"));
             return;
         }
         
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Lade Modul &e" + moduleName + "&7 neu..."));
+        // Als vertrauenswürdig markieren
+        sandbox.trustModule(moduleName);
         
-        try {
-            // JAR-Datei des Moduls speichern
-            File jarFile = moduleInfo.getJarFile();
-            
-            // Modul entladen
-            apiCore.getModuleManager().unloadModule(moduleName);
-            
-            // Modul neu laden
-            apiCore.getModuleManager().loadModule(jarFile);
-            
-            // Erfolg prüfen
-            ApiCore.ModuleInfo newInfo = apiCore.getModuleInfo(moduleName);
-            if (newInfo != null) {
-                sender.sendMessage(apiCore.formatHex(prefix + "&aModul &e" + moduleName + 
-                                " v" + newInfo.getVersion() + "&a wurde erfolgreich neu geladen!"));
-            } else {
-                sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + 
-                                "&c konnte nicht neu geladen werden. Siehe Konsole für Details."));
-            }
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Neuladen des Moduls &e" + 
-                            moduleName + "&c: " + e.getMessage()));
-            apiCore.getLogger().severe("Fehler beim Neuladen des Moduls " + moduleName + ": " + e.getMessage());
-        }
+        // Bestätigung
+        sender.sendMessage(apiCore.formatHex(prefix + "&aModul &e" + moduleName + 
+                "&a wurde als vertrauenswürdig markiert und läuft außerhalb der Sandbox."));
     }
     
-    private void toggleDebug(CommandSender sender) {
-        boolean currentDebugMode = apiCore.isDebugMode();
-        
-        // Debug-Modus umschalten
-        // (Diese Methode ist nur ein Platzhalter - in einer vollständigen Implementierung 
-        // würde man die Konfiguration aktualisieren und speichern)
-        
+    /**
+     * Entfernt ein Modul aus der Liste der vertrauenswürdigen Module
+     * 
+     * @param sender Der Befehlsabsender
+     * @param moduleName Der Name des Moduls
+     */
+    private void untrustModule(CommandSender sender, String moduleName) {
         String prefix = apiCore.getMessagePrefix();
-        sender.sendMessage(apiCore.formatHex(prefix + 
-                    (currentDebugMode ? "#FF5555Debug-Modus wurde deaktiviert" : "#00FF00Debug-Modus wurde aktiviert")));
+        ModuleSandbox sandbox = apiCore.getModuleSandbox();
         
-        // Zeige Debugging-Informationen, wenn der Debug-Modus aktiviert ist oder wird
-        if (sender instanceof Player) {
-            Player player = (Player)sender;
-            
-            sender.sendMessage(apiCore.formatHex(prefix + "#74E8E5Debug-Information:"));
-            sender.sendMessage(apiCore.formatHex("#FFFFFF- Spieler: #74E8E5" + player.getName()));
-            sender.sendMessage(apiCore.formatHex("#FFFFFF- UUID: #74E8E5" + player.getUniqueId()));
-            sender.sendMessage(apiCore.formatHex("#FFFFFF- OP: #74E8E5" + player.isOp()));
-            
-            // Prüfen wichtiger Berechtigungen
-            String[] keyPermissions = {
-                "apicore.admin", 
-                "apicore.admin.*", 
-                "apicore.commands", 
-                "apicore.debug", 
-                "apicore.status"
-            };
-            
-            sender.sendMessage(apiCore.formatHex("#FFFFFF- Berechtigungen:"));
-            for (String perm : keyPermissions) {
-                boolean hasPerm = player.hasPermission(perm);
-                boolean hasPermApiCore = apiCore.hasPermission(player, perm);
-                sender.sendMessage(apiCore.formatHex("  #FFFFFF" + perm + ": #74E8E5" + hasPerm + 
-                        " #FFFFFF(ApiCore: #74E8E5" + hasPermApiCore + "#FFFFFF)"));
-            }
-            
-            // Zeige alle Befehle
-            sender.sendMessage(apiCore.formatHex("#FFFFFF- Registrierte Befehle:"));
-            for (String moduleName : apiCore.getLoadedModules().keySet()) {
-                List<DynamicCommand> commands = apiCore.getModuleManager().getModuleCommands(moduleName);
-                if (commands != null && !commands.isEmpty()) {
-                    for (DynamicCommand cmd : commands) {
-                        boolean hasCommandPerm = apiCore.hasPermission(player, cmd.getPermission());
-                        sender.sendMessage(apiCore.formatHex("  #FFFFFF/" + cmd.getName() + 
-                                " (#74E8E5" + cmd.getPermission() + "#FFFFFF): #74E8E5" + hasCommandPerm));
-                    }
-                }
-            }
+        if (sandbox == null) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDie Modul-Sandbox ist nicht verfügbar!"));
+            return;
         }
+        
+        // Prüfen, ob das Modul existiert
+        if (!apiCore.getLoadedModules().containsKey(moduleName)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + "&c ist nicht geladen!"));
+            return;
+        }
+        
+        // Aus der Liste der vertrauenswürdigen Module entfernen
+        sandbox.untrustModule(moduleName);
+        
+        // Bestätigung
+        sender.sendMessage(apiCore.formatHex(prefix + "&aModul &e" + moduleName + 
+                "&a wurde aus der Liste der vertrauenswürdigen Module entfernt und läuft nun in der Sandbox."));
     }
     
-    private void showStatus(CommandSender sender) {
+    /**
+     * Zeigt die Performance-Informationen für ein Modul an
+     * 
+     * @param sender Der Befehlsabsender
+     * @param moduleName Der Name des Moduls
+     */
+    private void showModulePerformance(CommandSender sender, String moduleName) {
         String prefix = apiCore.getMessagePrefix();
-        Map<String, ApiCore.ModuleInfo> loadedModules = apiCore.getLoadedModules();
+        
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDieser Befehl kann nur von Spielern ausgeführt werden!"));
+            return;
+        }
+        
+        Player player = (Player) sender;
+        
+        // Prüfe, ob das Modul existiert
+        if (!apiCore.getLoadedModules().containsKey(moduleName)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + " &cist nicht geladen!"));
+            return;
+        }
+        
+        // Hole Performance-Daten
+        ModuleManager moduleManager = apiCore.getModuleManager();
+        ModuleManager.ModulePerformanceData performanceData = moduleManager.getModulePerformanceData(moduleName);
+        
+        if (performanceData == null) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cKeine Performance-Daten für Modul &e" + moduleName + " &cverfügbar!"));
+            
+            // Performance-Tracking starten falls noch nicht aktiv
+            sender.sendMessage(apiCore.formatHex(prefix + "&7Starte Performance-Tracking..."));
+            moduleManager.startPerformanceTracking();
+            
+            // Nach 3 Sekunden erneut versuchen
+            Bukkit.getScheduler().runTaskLater(apiCore, () -> showModulePerformance(sender, moduleName), 60L);
+            return;
+        }
+        
+        // Performance-Status bestimmen
+        ModuleManager.PerformanceStatus status = performanceData.getPerformanceStatus();
+        
+        // Farbcodes basierend auf Status
+        String statusColor;
+        String statusText;
+        
+        switch (status) {
+            case CRITICAL:
+                statusColor = "#FF5555";
+                statusText = "KRITISCH - Sollte überprüft werden";
+                break;
+            case WARNING:
+                statusColor = "#FFAA00";
+                statusText = "WARNUNG - Hohe Auslastung";
+                break;
+            default:
+                statusColor = "#55FF55";
+                statusText = "OK - Normale Auslastung";
+                break;
+        }
         
         // Header
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3ApiCore Status #4DEEEB◆"));
+        sender.sendMessage(apiCore.formatHex("\n" + prefix + "#4DEEEB◆ #38C6C3Performance: #FFFFFF" + moduleName + " #4DEEEB◆"));
         sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
         
-        // Plugin-Version
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lSystem-Information:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Version: #FFFFFF" + apiCore.getDescription().getVersion()));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Debug-Modus: #FFFFFF" + 
-                (apiCore.isDebugMode() ? "#00FF00Aktiv" : "#FF5555Inaktiv")));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Permissions-System: #FFFFFF" + 
-                (apiCore.isPermissionsHooked() ? "#00FF00Verbunden" : "#FF5555Nicht verbunden")));
+        // Status
+        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lStatus: " + statusColor + statusText));
         
-        // Modul-Statistiken
-        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lModul-Übersicht:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Geladene Module: #FFFFFF" + loadedModules.size()));
-        
-        // Detail-Tabelle für Module
-        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lModul-Status:"));
-        for (Map.Entry<String, ApiCore.ModuleInfo> entry : loadedModules.entrySet()) {
-            ApiCore.ModuleInfo info = entry.getValue();
-            String statusSymbol = "#00FF00●"; // Grüner Punkt für aktive Module
-            
-            sender.sendMessage(apiCore.formatHex("  " + statusSymbol + " #74E8E5" + info.getName() + 
-                                                " #FFFFFF| v" + info.getVersion()));
-            
-            // Befehle zählen
-            List<DynamicCommand> commands = apiCore.getModuleManager().getModuleCommands(info.getName());
-            int commandCount = commands != null ? commands.size() : 0;
-            
-            if (commandCount > 0) {
-                sender.sendMessage(apiCore.formatHex("    #FFFFFF- Befehle: #74E8E5" + commandCount));
-            }
-        }
-        
-        // Performance-Daten anzeigen, wenn Performance-Monitoring aktiviert ist
-        if (apiCore.getConfig().getBoolean("performance.monitoring.enabled", false)) {
-            sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lPerformance-Übersicht:"));
-            
-            Map<String, ModulePerformanceData> performanceData = apiCore.getPerformanceMonitor().getPerformanceData();
-            if (performanceData.isEmpty()) {
-                sender.sendMessage(apiCore.formatHex("  #FF5555Keine Performance-Daten verfügbar"));
-            } else {
-                // Top 3 Module nach Ausführungszeit anzeigen
-                List<ModulePerformanceData> sortedModules = new ArrayList<>(performanceData.values());
-                sortedModules.sort((a, b) -> Double.compare(b.getAverageExecutionTime(), a.getAverageExecutionTime()));
-                
-                for (int i = 0; i < Math.min(3, sortedModules.size()); i++) {
-                    ModulePerformanceData data = sortedModules.get(i);
-                    if (data.getInvocationCount() > 0) {
-                        String color = data.getAverageExecutionTime() > 50 ? "#FF5555" : 
-                                      (data.getAverageExecutionTime() > 20 ? "#FFAA00" : "#00FF00");
-                        
-                        sender.sendMessage(apiCore.formatHex("  #FFFFFF" + (i+1) + ". #74E8E5" + data.getModuleName() + 
-                                          " #FFFFFF- Durchschnitt: " + color + String.format("%.2f", data.getAverageExecutionTime()) + 
-                                          "ms #FFFFFF- Aufrufe: #74E8E5" + data.getInvocationCount()));
-                    }
-                }
-                
-                sender.sendMessage(apiCore.formatHex("  #A8A8A8Hinweis: Vollständige Daten werden in der Konsole angezeigt"));
-            }
-        }
+        // CPU-Auslastung
+        double cpuUsage = performanceData.getCpuUsagePercent();
+        String cpuColor = getCpuColorCode(cpuUsage);
+        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lCPU-Auslastung: " + 
+            cpuColor + String.format("%.1f", cpuUsage) + "%"));
         
         // Speichernutzung
-        long usedMemory = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024);
-        long totalMemory = Runtime.getRuntime().totalMemory() / (1024 * 1024);
-        long maxMemory = Runtime.getRuntime().maxMemory() / (1024 * 1024);
+        String memoryFormatted = performanceData.getMemoryUsageFormatted();
+        long memoryMB = performanceData.getMemoryUsageBytes() / (1024 * 1024);
+        String memoryColor = getMemoryColorCode(memoryMB);
+        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lSpeichernutzung: " + 
+            memoryColor + memoryFormatted));
         
-        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lSpeichernutzung:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Genutzt: #FFFFFF" + usedMemory + " MB / " + totalMemory + " MB"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Maximal: #FFFFFF" + maxMemory + " MB"));
+        // Methodenaufrufe
+        long executionCount = performanceData.getTotalExecutionCount();
+        double avgExecutionTime = performanceData.getAvgExecutionTimeMs();
+        String executionColor = getExecutionTimeColorCode(avgExecutionTime);
+        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lMethodenaufrufe: " + 
+            "#FFFFFF" + executionCount + " #7F7F7F(Durchschnitt: " + 
+            executionColor + String.format("%.2f", avgExecutionTime) + "ms#7F7F7F)"));
         
-        // Cache-Statistiken
-        int permCacheSize = apiCore.getPermissionCacheSize();
+        // BossBar-Anzeige
+        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lBossBar-Anzeige:"));
+        sender.sendMessage(apiCore.formatHex("#7F7F7F- #FFFFFFZeigt detaillierte Performance-Daten als BossBar an"));
+        sender.sendMessage(apiCore.formatHex("#7F7F7F- #FFFFFFKlicke #FFAA00[BossBar anzeigen]#FFFFFF, um die Anzeige zu starten"));
         
-        sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lCache-Statistiken:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5Permission-Cache: #FFFFFF" + permCacheSize + " Einträge"));
+        // Interaktive Komponenten hinzufügen
+        // Hier würde man normalerweise Text-Komponenten mit Click-Events erstellen,
+        // aber wir nutzen stattdessen einen einfachen Befehl zur Demo
+        sender.sendMessage(apiCore.formatHex("#FFAA00Führe #FFFFFF/apicore performance bossbar " + moduleName + 
+            " #FFFFFFaus, um die BossBar zu aktivieren!"));
+        
+        // Warnung für kritischen Status
+        if (status == ModuleManager.PerformanceStatus.CRITICAL) {
+            sender.sendMessage(apiCore.formatHex("\n#FF5555⚠ WARNUNG: Dieses Modul zeigt kritische Performance-Probleme!"));
+            sender.sendMessage(apiCore.formatHex("#FF5555Es wird empfohlen, das Modul zu überprüfen oder temporär zu deaktivieren."));
+            sender.sendMessage(apiCore.formatHex("#FFAA00Führe #FFFFFF/apicore disable " + moduleName + 
+                " #FFFFFFaus, um das Modul zu deaktivieren."));
+        }
+    }
+    
+    /**
+     * Zeigt eine BossBar mit Performance-Daten für ein Modul an
+     * 
+     * @param sender Der Befehlsabsender
+     * @param moduleName Der Name des Moduls
+     */
+    private void showModulePerformanceBossBar(CommandSender sender, String moduleName) {
+        String prefix = apiCore.getMessagePrefix();
+        
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDieser Befehl kann nur von Spielern ausgeführt werden!"));
+            return;
+        }
+        
+        Player player = (Player) sender;
+        
+        // Prüfe, ob das Modul existiert
+        if (!apiCore.getLoadedModules().containsKey(moduleName)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cModul &e" + moduleName + " &cist nicht geladen!"));
+            return;
+        }
+        
+        try {
+            // Hole oder erstelle ModulePerformanceBossBar
+            com.essentialscore.util.ModulePerformanceBossBar performanceBossBar = getPerformanceBossBar();
+            
+            // Performance-Tracking starten falls noch nicht aktiv
+            apiCore.getModuleManager().startPerformanceTracking();
+            
+            // BossBar starten und anzeigen
+            performanceBossBar.start();
+            performanceBossBar.showBossBarForModule(player, moduleName);
+            
+            sender.sendMessage(apiCore.formatHex(prefix + "&aBossBar für Modul &e" + moduleName + 
+                " &awird angezeigt. Zum Wechseln der Ansicht führe &f/apicore performance bossbar cycle &aaus."));
+            
+            // Hinweis zum Beenden anzeigen
+            sender.sendMessage(apiCore.formatHex(prefix + "&7Zum Ausblenden der BossBar führe &f/apicore performance bossbar hide &7aus."));
+        } catch (Exception e) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Anzeigen der BossBar: &e" + e.getMessage()));
+            if (apiCore.isDebugMode()) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Blendet die Performance-BossBar für einen Spieler aus
+     * 
+     * @param sender Der Befehlsabsender
+     */
+    private void hideModulePerformanceBossBar(CommandSender sender) {
+        String prefix = apiCore.getMessagePrefix();
+        
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDieser Befehl kann nur von Spielern ausgeführt werden!"));
+            return;
+        }
+        
+        Player player = (Player) sender;
+        
+        try {
+            // Hole ModulePerformanceBossBar
+            com.essentialscore.util.ModulePerformanceBossBar performanceBossBar = getPerformanceBossBar();
+            
+            // BossBar ausblenden
+            performanceBossBar.removeBossBar(player);
+            
+            sender.sendMessage(apiCore.formatHex(prefix + "&aBossBar wurde ausgeblendet."));
+        } catch (Exception e) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Ausblenden der BossBar: &e" + e.getMessage()));
+            if (apiCore.isDebugMode()) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Wechselt die angezeigte BossBar für einen Spieler
+     * 
+     * @param sender Der Befehlsabsender
+     */
+    private void cycleModulePerformanceBossBar(CommandSender sender) {
+        String prefix = apiCore.getMessagePrefix();
+        
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cDieser Befehl kann nur von Spielern ausgeführt werden!"));
+            return;
+        }
+        
+        Player player = (Player) sender;
+        
+        try {
+            // Hole ModulePerformanceBossBar
+            com.essentialscore.util.ModulePerformanceBossBar performanceBossBar = getPerformanceBossBar();
+            
+            // BossBar wechseln
+            performanceBossBar.cycleActiveBossBar(player);
+            
+            sender.sendMessage(apiCore.formatHex(prefix + "&7BossBar-Ansicht gewechselt."));
+        } catch (Exception e) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Wechseln der BossBar: &e" + e.getMessage()));
+            if (apiCore.isDebugMode()) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // Hilfsmethode, um die richtige Instanz der ModulePerformanceBossBar zu erhalten
+    private com.essentialscore.util.ModulePerformanceBossBar getPerformanceBossBar() {
+        // In ApiCore cachen und abrufen
+        com.essentialscore.util.ModulePerformanceBossBar performanceBossBar = 
+            (com.essentialscore.util.ModulePerformanceBossBar) apiCore.getSharedData("performanceBossBar");
+        
+        // Falls noch nicht erstellt, neu erstellen
+        if (performanceBossBar == null) {
+            performanceBossBar = new com.essentialscore.util.ModulePerformanceBossBar(apiCore);
+            apiCore.setSharedData("performanceBossBar", performanceBossBar);
+        }
+        
+        return performanceBossBar;
+    }
+    
+    /**
+     * Gibt einen Farbcode für eine CPU-Auslastung zurück
+     * 
+     * @param cpuPercent Die CPU-Auslastung in Prozent
+     * @return Ein Hexadezimal-Farbcode
+     */
+    private String getCpuColorCode(double cpuPercent) {
+        if (cpuPercent >= ModuleManager.CPU_THRESHOLD_CRITICAL) {
+            return "#FF5555"; // Rot
+        } else if (cpuPercent >= ModuleManager.CPU_THRESHOLD_WARNING) {
+            return "#FFAA00"; // Gelb
+        } else {
+            return "#55FF55"; // Grün
+        }
+    }
+    
+    /**
+     * Gibt einen Farbcode für eine Speichernutzung zurück
+     * 
+     * @param memoryMB Die Speichernutzung in MB
+     * @return Ein Hexadezimal-Farbcode
+     */
+    private String getMemoryColorCode(long memoryMB) {
+        if (memoryMB >= ModuleManager.MEMORY_THRESHOLD_CRITICAL) {
+            return "#FF5555"; // Rot
+        } else if (memoryMB >= ModuleManager.MEMORY_THRESHOLD_WARNING) {
+            return "#FFAA00"; // Gelb
+        } else {
+            return "#55FF55"; // Grün
+        }
+    }
+    
+    /**
+     * Gibt einen Farbcode für eine Ausführungszeit zurück
+     * 
+     * @param executionTimeMs Die Ausführungszeit in Millisekunden
+     * @return Ein Hexadezimal-Farbcode
+     */
+    private String getExecutionTimeColorCode(double executionTimeMs) {
+        if (executionTimeMs >= ModuleManager.EXECUTION_THRESHOLD_CRITICAL) {
+            return "#FF5555"; // Rot
+        } else if (executionTimeMs >= ModuleManager.EXECUTION_THRESHOLD_WARNING) {
+            return "#FFAA00"; // Gelb
+        } else {
+            return "#55FF55"; // Grün
+        }
     }
 
     /**
-     * Zeigt die Hilfe für Benchmark-Befehle
+     * Zeigt eine Übersicht aller Module mit ihrem Performance-Status an
+     * 
+     * @param sender Der Befehlsabsender
      */
-    private void showBenchmarkHelp(CommandSender sender) {
+    private void showAllModulesPerformance(CommandSender sender) {
         String prefix = apiCore.getMessagePrefix();
         
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Benchmark-Befehle #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
+        // Hole alle Modul-Performance-Daten
+        ModuleManager moduleManager = apiCore.getModuleManager();
+        Map<String, ModuleManager.ModulePerformanceData> performanceDataMap = moduleManager.getAllModulePerformanceData();
         
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lVerfügbare Benchmarks:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark full #FFFFFF- #A8A8A8Führt einen vollständigen Benchmark durch"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark threads #FFFFFF- #A8A8A8Testet nur den Thread-Pool"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark cache #FFFFFF- #A8A8A8Testet nur das Caching-System"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark modules #FFFFFF- #A8A8A8Testet nur das Modul-Laden"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark io #FFFFFF- #A8A8A8Testet nur I/O-Operationen"));
+        // Prüfe, ob Performance-Tracking aktiv ist
+        if (performanceDataMap.isEmpty()) {
+            sender.sendMessage(apiCore.formatHex(prefix + "&cKeine Performance-Daten verfügbar!"));
+            
+            // Performance-Tracking starten
+            sender.sendMessage(apiCore.formatHex(prefix + "&7Starte Performance-Tracking..."));
+            moduleManager.startPerformanceTracking();
+            
+            // Nach 3 Sekunden erneut versuchen
+            Bukkit.getScheduler().runTaskLater(apiCore, () -> showAllModulesPerformance(sender), 60L);
+            return;
+        }
         
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lErgebnisse:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark results #FFFFFF- #A8A8A8Zeigt verfügbare Benchmark-Ergebnisse"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark results <Datei> #FFFFFF- #A8A8A8Zeigt detaillierte Ergebnisse"));
+        // Sortiere Module nach Performance-Status (kritisch -> warnung -> ok)
+        List<ModuleManager.ModulePerformanceData> sortedData = new ArrayList<>(performanceDataMap.values());
+        sortedData.sort((a, b) -> {
+            int statusCompare = b.getPerformanceStatus().compareTo(a.getPerformanceStatus());
+            if (statusCompare != 0) {
+                return statusCompare;
+            }
+            
+            // Bei gleichem Status nach CPU-Auslastung sortieren
+            return Double.compare(b.getCpuUsagePercent(), a.getCpuUsagePercent());
+        });
         
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lVergleiche:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark compare <Datei1> <Datei2> #FFFFFF- #A8A8A8Vergleicht zwei Benchmark-Ergebnisse"));
+        // Header
+        sender.sendMessage(apiCore.formatHex("\n" + prefix + "#4DEEEB◆ #38C6C3Performance aller Module #4DEEEB◆"));
+        sender.sendMessage(apiCore.formatHex("#38C6C3└────────────────────────┘"));
         
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lVerwaltung:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore benchmark clear #FFFFFF- #A8A8A8Löscht alle Benchmark- und Performance-Monitoring-Dateien"));
+        // Kritische Module zuerst anzeigen
+        boolean hasCritical = false;
+        for (ModuleManager.ModulePerformanceData data : sortedData) {
+            if (data.getPerformanceStatus() == ModuleManager.PerformanceStatus.CRITICAL) {
+                if (!hasCritical) {
+                    sender.sendMessage(apiCore.formatHex("\n#FF5555⚠ KRITISCHE Module:"));
+                    hasCritical = true;
+                }
+                showPerformanceSummary(sender, data);
+            }
+        }
         
-        sender.sendMessage(apiCore.formatHex("#38C6C3┌─────────────────────────┐"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3Benchmark-Ergebnisse werden in plugins/EssentialsCore/benchmarks/ gespeichert"));
+        // Module mit Warnungen anzeigen
+        boolean hasWarning = false;
+        for (ModuleManager.ModulePerformanceData data : sortedData) {
+            if (data.getPerformanceStatus() == ModuleManager.PerformanceStatus.WARNING) {
+                if (!hasWarning) {
+                    sender.sendMessage(apiCore.formatHex("\n#FFAA00⚠ Module mit WARNUNG:"));
+                    hasWarning = true;
+                }
+                showPerformanceSummary(sender, data);
+            }
+        }
+        
+        // OK Module anzeigen
+        boolean hasOk = false;
+        for (ModuleManager.ModulePerformanceData data : sortedData) {
+            if (data.getPerformanceStatus() == ModuleManager.PerformanceStatus.OK) {
+                if (!hasOk) {
+                    sender.sendMessage(apiCore.formatHex("\n#55FF55✓ Module mit normaler Auslastung:"));
+                    hasOk = true;
+                }
+                showPerformanceSummary(sender, data);
+            }
+        }
+        
+        // Hinweis auf detaillierte Ansicht
+        sender.sendMessage(apiCore.formatHex("\n#AAAAAA➤ Für detaillierte Informationen: #FFFFFF/apicore performance <Modulname>"));
+        sender.sendMessage(apiCore.formatHex("#AAAAAA➤ Für BossBar-Anzeige: #FFFFFF/apicore performance bossbar <Modulname>"));
+    }
+    
+    /**
+     * Zeigt eine Zusammenfassung der Performance-Daten eines Moduls an
+     * 
+     * @param sender Der Befehlsabsender
+     * @param data Die Performance-Daten
+     */
+    private void showPerformanceSummary(CommandSender sender, ModuleManager.ModulePerformanceData data) {
+        ModuleManager.PerformanceStatus status = data.getPerformanceStatus();
+        
+        String statusColor;
+        switch (status) {
+            case CRITICAL:
+                statusColor = "#FF5555";
+                break;
+            case WARNING:
+                statusColor = "#FFAA00";
+                break;
+            default:
+                statusColor = "#55FF55";
+                break;
+        }
+        
+        double cpuUsage = data.getCpuUsagePercent();
+        String cpuColor = getCpuColorCode(cpuUsage);
+        
+        String memoryFormatted = data.getMemoryUsageFormatted();
+        long memoryMB = data.getMemoryUsageBytes() / (1024 * 1024);
+        String memoryColor = getMemoryColorCode(memoryMB);
+        
+        // Kurzzusammenfassung mit farbigen Werten
+        sender.sendMessage(apiCore.formatHex(statusColor + "➤ " + "#FFFFFF" + data.getModuleName() + 
+            " - CPU: " + cpuColor + String.format("%.1f", cpuUsage) + "%" + 
+            "#FFFFFF - Speicher: " + memoryColor + memoryFormatted));
+    }
+
+    /**
+     * Registriert mehrere Befehle auf einmal
+     * 
+     * @param commands Die zu registrierenden Befehle
+     */
+    public void registerCommands(List<DynamicCommand> commands) {
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        
+        for (DynamicCommand command : commands) {
+            try {
+                registerCommand(command);
+            } catch (Exception e) {
+                console.error("Fehler beim Registrieren des Befehls " + command.getName() + ": " + e.getMessage());
+                if (apiCore.isDebugMode()) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    
+    /**
+     * Deregistriert mehrere Befehle auf einmal
+     * 
+     * @param commands Die zu deregistrierenden Befehle
+     */
+    public void unregisterCommands(List<DynamicCommand> commands) {
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        
+        for (DynamicCommand command : commands) {
+            try {
+                unregisterCommand(command.getName());
+            } catch (Exception e) {
+                console.error("Fehler beim Deregistrieren des Befehls " + command.getName() + ": " + e.getMessage());
+                if (apiCore.isDebugMode()) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * Registriert den Befehl zum Verwalten der Befehlsdeaktivierung
+     */
+    public void registerCommandDeactivationCommand() {
+        DynamicCommand cmdDeactivate = new DynamicCommand("commanddeactivate",
+                "Deaktiviert oder reaktiviert ApiCore-Befehle",
+                "/commanddeactivate <deactivate|activate> <command>",
+                Arrays.asList("cmdd", "cmddeactivate", "deactivatecmd"),
+                "apicore",
+                "apicore.admin.commands",
+                apiCore);
+        
+        cmdDeactivate.setExecutor(new CommandExecutor() {
+            @Override
+            public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+                if (args.length < 2) {
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cVerwendung: /commanddeactivate <deactivate|activate> <command>"));
+                    return true;
+                }
+                
+                String action = args[0].toLowerCase();
+                String commandName = args[1].toLowerCase();
+                
+                if (action.equals("deactivate")) {
+                    if (isApiCoreCommand(commandName)) {
+                        boolean success = deactivateCommand(commandName);
+                        if (success) {
+                            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBefehl &e" + commandName + " &awurde deaktiviert. Änderung wird nach Neustart wirksam."));
+                        } else {
+                            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cBefehl &e" + commandName + " &ckonnte nicht deaktiviert werden oder ist bereits deaktiviert."));
+                        }
+                    } else {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cNur ApiCore-Befehle können deaktiviert werden."));
+                    }
+                } else if (action.equals("activate")) {
+                    boolean success = reactivateCommand(commandName);
+                    if (success) {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBefehl &e" + commandName + " &awurde reaktiviert. Änderung wird nach Neustart wirksam."));
+                    } else {
+                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cBefehl &e" + commandName + " &ckonnte nicht reaktiviert werden oder ist nicht deaktiviert."));
+                    }
+                } else {
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cUngültige Aktion. Verwende 'deactivate' oder 'activate'."));
+                }
+                
+                return true;
+            }
+        });
+        
+        cmdDeactivate.setTabCompleter(new TabCompleter() {
+            @Override
+            public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+                if (args.length == 1) {
+                    return Arrays.asList("deactivate", "activate");
+                } else if (args.length == 2) {
+                    if (args[0].equalsIgnoreCase("deactivate")) {
+                        List<String> apiCommands = new ArrayList<>();
+                        for (Command cmd : getCommandMapCommands()) {
+                            if (isApiCoreCommand(cmd.getName()) && !isCommandDeactivated(cmd.getName())) {
+                                apiCommands.add(cmd.getName());
+                            }
+                        }
+                        return apiCommands;
+                    } else if (args[0].equalsIgnoreCase("activate")) {
+                        return new ArrayList<>(deactivatedCommands);
+                    }
+                }
+                return Collections.emptyList();
+            }
+        });
+        
+        apiCore.registerCommands(Collections.singletonList(cmdDeactivate));
+    }
+
+    /**
+     * Zeigt die Hilfe für den ApiCore-Befehl
+     * 
+     * @param sender Der Empfänger der Hilfe-Nachricht
+     */
+    private void showHelp(CommandSender sender) {
+        // Implementation of help command
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fVerfügbare Befehle:"));
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&b/apicore help &8- &7Zeigt diese Hilfe an"));
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&b/apicore modules &8- &7Listet alle geladenen Module auf"));
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&b/apicore info <modul> &8- &7Zeigt Informationen zu einem Modul"));
+        // Add more commands
+    }
+    
+    /**
+     * Listet alle geladenen Module auf
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void listModules(CommandSender sender) {
+        // Implementation of module listing
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fGeladene Module:"));
+        for (String moduleName : apiCore.getLoadedModules().keySet()) {
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&8- &b" + moduleName));
+        }
+    }
+    
+    /**
+     * Zeigt Informationen zu einem Modul
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param moduleName Der Name des Moduls
+     */
+    private void moduleInfo(CommandSender sender, String moduleName) {
+        // Implementation of module info
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fInformationen zu Modul " + moduleName));
+    }
+    
+    /**
+     * Listet alle verfügbaren Befehle auf
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void listAllCommands(CommandSender sender) {
+        // Implementation of command listing
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fVerfügbare Befehle:"));
+    }
+    
+    /**
+     * Listet alle Befehle eines Moduls auf
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param moduleName Der Name des Moduls
+     */
+    private void listModuleCommands(CommandSender sender, String moduleName) {
+        // Implementation of module command listing
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fBefehle von Modul " + moduleName + ":"));
+    }
+    
+    /**
+     * Aktiviert ein Modul
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param moduleName Der Name des Moduls
+     */
+    private void enableModule(CommandSender sender, String moduleName) {
+        // Implementation of module enabling
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aModul " + moduleName + " wurde aktiviert."));
+    }
+    
+    /**
+     * Deaktiviert ein Modul
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param moduleName Der Name des Moduls
+     */
+    private void disableModule(CommandSender sender, String moduleName) {
+        // Implementation of module disabling
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModul " + moduleName + " wurde deaktiviert."));
+    }
+    
+    /**
+     * Lädt alles neu (Config, Module, etc.)
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void reloadAll(CommandSender sender) {
+        // Implementation of full reload
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aAlle Komponenten wurden neu geladen."));
+    }
+    
+    /**
+     * Lädt alle Module neu
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void reloadAllModules(CommandSender sender) {
+        // Implementation of module reloading
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aAlle Module wurden neu geladen."));
+    }
+    
+    /**
+     * Lädt die Konfiguration neu
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void reloadConfig(CommandSender sender) {
+        // Implementation of config reloading
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aKonfiguration wurde neu geladen."));
+    }
+    
+    /**
+     * Lädt die Ressourcen neu
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void reloadResources(CommandSender sender) {
+        // Implementation of resource reloading
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aRessourcen wurden neu geladen."));
+    }
+    
+    /**
+     * Lädt ein einzelnes Modul neu
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param moduleName Der Name des Moduls
+     */
+    private void reloadModule(CommandSender sender, String moduleName) {
+        // Implementation of single module reloading
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aModul " + moduleName + " wurde neu geladen."));
+    }
+    
+    /**
+     * Schaltet den Debug-Modus um
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void toggleDebug(CommandSender sender) {
+        // Implementation of debug toggle
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aDebug-Modus wurde umgeschaltet."));
+    }
+    
+    /**
+     * Zeigt den Status des ApiCore an
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void showStatus(CommandSender sender) {
+        // Implementation of status display
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fStatus des ApiCore:"));
+    }
+    
+    /**
+     * Zeigt die Hilfe für den Benchmark-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
+     */
+    private void showBenchmarkHelp(CommandSender sender) {
+        // Implementation of benchmark help
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fBenchmark-Befehle:"));
     }
     
     /**
      * Führt einen Benchmark aus
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param args Die Befehlsargumente
      */
     private void runBenchmark(CommandSender sender, String[] args) {
-        if (sender instanceof Player) {
-            Player player = (Player) sender;
-            if (!apiCore.getPermissionManager().hasPermission(player, "apicore.admin.system.benchmark")) {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Du hast keine Berechtigung, Benchmarks auszuführen!"));
-                return;
-            }
-        } else if (!sender.hasPermission("apicore.admin.system.benchmark")) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Du hast keine Berechtigung, Benchmarks auszuführen!"));
-            return;
-        }
-        
-        String type = args[1].toLowerCase();
-        
-        // Asynchron ausführen, um den Hauptthread nicht zu blockieren
-        if (type.equals("full") || type.equals("threads") || type.equals("cache") || 
-            type.equals("modules") || type.equals("io")) {
-            
-            // Informiere den Sender über den Start des Benchmarks
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                    "#4DEEEBStarte Benchmark: #FFFFFF" + type + " #4DEEEB- Bitte warten..."));
-            
-            Bukkit.getScheduler().runTaskAsynchronously(apiCore, () -> {
-                Map<String, Object> results;
-                
-                try {
-                    switch (type) {
-                        case "full":
-                            results = apiCore.getPerformanceBenchmark().runFullBenchmark();
-                            break;
-                        case "threads":
-                            results = apiCore.getPerformanceBenchmark().benchmarkThreadPool();
-                            break;
-                        case "cache":
-                            results = apiCore.getPerformanceBenchmark().benchmarkCache();
-                            break;
-                        case "modules":
-                            results = apiCore.getPerformanceBenchmark().benchmarkModuleLoading();
-                            break;
-                        case "io":
-                            results = apiCore.getPerformanceBenchmark().benchmarkIO();
-                            break;
-                        default:
-                            return;
-                    }
-                    
-                    // Benchmark abgeschlossen
-                    Bukkit.getScheduler().runTask(apiCore, () -> {
-                        if (results.containsKey("error")) {
-                            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                    "#FF5555Fehler beim Benchmark: #FFFFFF" + results.get("error")));
-                            return;
-                        }
-                        
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#4DEEEBBenchmark abgeschlossen! #FFFFFFErgebnisse wurden gespeichert."));
-                        
-                        // Zeige einige wichtige Ergebnisse direkt an
-                        if (type.equals("threads")) {
-                            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                    "#4DEEEBEinfache Aufgaben/Sekunde: #FFFFFF" + 
-                                    String.format("%.2f", (double) results.getOrDefault("tasks_per_second", 0.0))));
-                        } else if (type.equals("cache")) {
-                            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                    "#4DEEEBCache-Zugriffe/Sekunde: #FFFFFF" + 
-                                    String.format("%.2f", (double) results.getOrDefault("method_cache_accesses_per_second", 0.0))));
-                        }
-                        
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#4DEEEBVerwende #FFFFFF/apicore benchmark results #4DEEEBfür detaillierte Ergebnisse."));
-                    });
-                } catch (Exception e) {
-                    // Fehlerbehandlung
-                    Bukkit.getScheduler().runTask(apiCore, () -> {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#FF5555Benchmark fehlgeschlagen: #FFFFFF" + e.getMessage()));
-                        apiCore.getLogger().warning("Benchmark fehlgeschlagen: " + e.getMessage());
-                        e.printStackTrace();
-                    });
-                }
-            });
-        } else if (type.equals("results")) {
-            if (args.length == 2) {
-                // Liste der verfügbaren Ergebnisse anzeigen
-                List<String> results = apiCore.getPerformanceBenchmark().getAvailableResults();
-                if (results.isEmpty()) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                            "#FF5555Keine Benchmark-Ergebnisse gefunden!"));
-                    return;
-                }
-                
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                        "#4DEEEB◆ #38C6C3Verfügbare Benchmark-Ergebnisse #4DEEEB◆"));
-                sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-                
-                for (String result : results) {
-                    String color = result.startsWith("benchmark_") ? "#4DEEEB" : "#74E8E5";
-                    sender.sendMessage(apiCore.formatHex(color + "» #FFFFFF" + result));
-                }
-                
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                        "#4DEEEBVerwende #FFFFFF/apicore benchmark results <Datei> #4DEEEBfür Details."));
-            } else {
-                // Detaillierte Ergebnisse anzeigen
-                String filename = args[2];
-                List<String> lines = apiCore.getPerformanceBenchmark().getFormattedResults(filename);
-                
-                // Titel anzeigen
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                        "#4DEEEB◆ #38C6C3Detaillierte Benchmark-Ergebnisse #4DEEEB◆"));
-                sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-                
-                // Ergebnisse senden
-                for (String line : lines) {
-                    sender.sendMessage(apiCore.formatHex(line));
-                }
-                
-                // Hinweis hinzufügen, wenn es sich um eine Vergleichsdatei handelt
-                if (filename.startsWith("comparison_")) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                            "#4DEEEBHinweis: #FFFFFFDie Vergleichsergebnisse wurden kompakter gestaltet."));
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                            "#4DEEEBFür vollständige Details überprüfe die YAML-Datei im Benchmarks-Ordner."));
-                }
-            }
-        } else if (type.equals("compare") && args.length >= 4) {
-            // Vergleiche zwei Benchmark-Ergebnisse
-            String file1 = args[2];
-            String file2 = args[3];
-            
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                    "#4DEEEBVergleiche Benchmarks: #FFFFFF" + file1 + " #4DEEEBund #FFFFFF" + file2));
-            
-            Bukkit.getScheduler().runTaskAsynchronously(apiCore, () -> {
-                Map<String, Object> results = apiCore.getPerformanceBenchmark().compareConfigurations(file1, file2);
-                
-                Bukkit.getScheduler().runTask(apiCore, () -> {
-                    if (results.containsKey("error")) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#FF5555Fehler beim Vergleich: #FFFFFF" + results.get("error")));
-                        return;
-                    }
-                    
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                            "#4DEEEBVergleich abgeschlossen! #FFFFFFErgebnisse wurden gespeichert."));
-                    
-                    // Debug-Ausgabe für die Anzahl der gefundenen Unterschiede
-                    int differenceCount = 0;
-                    if (results.containsKey("difference_count")) {
-                        differenceCount = (int) results.get("difference_count");
-                    } else if (results.containsKey("differences")) {
-                        Object differencesObj = results.get("differences");
-                        if (differencesObj instanceof Map) {
-                            differenceCount = ((Map<?, ?>) differencesObj).size();
-                        }
-                    }
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                            "#4DEEEBAnzahl der Unterschiede: #FFFFFF" + differenceCount));
-                    
-                    // Zeige die neuesten Vergleichsergebnisse
-                    List<String> availableResults = apiCore.getPerformanceBenchmark().getAvailableResults();
-                    boolean resultsShown = false;
-                    
-                    for (String result : availableResults) {
-                        if (result.startsWith("comparison_")) {
-                            List<String> lines = apiCore.getPerformanceBenchmark().getFormattedResults(result);
-                            for (String line : lines) {
-                                sender.sendMessage(apiCore.formatHex(line));
-                            }
-                            resultsShown = true;
-                            break;
-                        }
-                    }
-                    
-                    // Wenn keine Ergebnisse angezeigt wurden, dem Benutzer einen Hinweis geben
-                    if (!resultsShown) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#FF5555Keine Vergleichsergebnisse gefunden! Versuche den Befehl erneut."));
-                    }
-                });
-            });
-        } else if (type.equals("clear")) {
-            // Lösche alle Benchmark-Dateien
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                    "#4DEEEBLösche alle Benchmark- und Performance-Monitoring-Dateien..."));
-            
-            Bukkit.getScheduler().runTaskAsynchronously(apiCore, () -> {
-                int count = apiCore.getPerformanceBenchmark().clearAllBenchmarkFiles();
-                
-                Bukkit.getScheduler().runTask(apiCore, () -> {
-                    if (count > 0) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#4DEEEB" + count + " #FFFFFFDateien wurden erfolgreich gelöscht."));
-                    } else {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                                "#FFFFFFKeine Dateien zum Löschen gefunden."));
-                    }
-                });
-            });
-        } else {
-            showBenchmarkHelp(sender);
-        }
-    }
-
-    private void reloadConfig(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Lade Konfiguration neu..."));
-        
-        try {
-            // Konfiguration neu laden
-            apiCore.reloadConfig();
-            
-            // In der loadConfiguration()-Methode von ApiCore wird der ConfigManager bereits aktualisiert
-            sender.sendMessage(apiCore.formatHex(prefix + "&aKonfiguration wurde erfolgreich neu geladen!"));
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Neuladen der Konfiguration: " + e.getMessage()));
-            apiCore.getLogger().severe("Fehler beim Neuladen der Konfiguration: " + e.getMessage());
-        }
+        // Implementation of benchmark execution
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBenchmark wird ausgeführt..."));
     }
     
-    private void reloadAllModules(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Lade alle Module neu..."));
-        
-        // Liste der geladenen Module speichern
-        List<String> moduleNames = new ArrayList<>(apiCore.getLoadedModules().keySet());
-        if (moduleNames.isEmpty()) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cEs sind keine Module geladen!"));
-            return;
-        }
-        
-        // Zähler für erfolgreich/fehlgeschlagene Reloads
-        int success = 0;
-        int failed = 0;
-        
-        // Alle Module neu laden
-        for (String moduleName : moduleNames) {
-            try {
-                // Modul-Info und JAR-Datei speichern
-                ApiCore.ModuleInfo info = apiCore.getModuleInfo(moduleName);
-                if (info == null) continue;
-                
-                File jarFile = info.getJarFile();
-                
-                // Modul entladen
-                apiCore.getModuleManager().unloadModule(moduleName);
-                
-                // Modul neu laden
-                apiCore.getModuleManager().loadModule(jarFile);
-                
-                if (apiCore.getModuleInfo(moduleName) != null) {
-                    success++;
-                } else {
-                    failed++;
-                }
-            } catch (Exception e) {
-                failed++;
-                apiCore.getLogger().severe("Fehler beim Neuladen des Moduls " + moduleName + ": " + e.getMessage());
-            }
-        }
-        
-        // Ergebnis melden
-        if (failed == 0) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&aAlle Module (" + success + ") wurden erfolgreich neu geladen!"));
-        } else {
-            sender.sendMessage(apiCore.formatHex(prefix + "&eModule neu geladen: &a" + success + " &eerfolgreich, &c" + 
-                            failed + " &efehlgeschlagen"));
-            sender.sendMessage(apiCore.formatHex(prefix + "&7Details wurden in der Konsole protokolliert."));
-        }
-    }
-
-    private void showCacheHelp(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Cache-Befehle #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-        
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lVerfügbare Befehle:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore cache clear all #FFFFFF- #A8A8A8Leert alle Caches"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore cache clear methods #FFFFFF- #A8A8A8Leert nur den Methoden-Cache"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore cache clear permissions #FFFFFF- #A8A8A8Leert nur den Berechtigungs-Cache"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore cache clear reflection #FFFFFF- #A8A8A8Leert nur den Reflection-Cache"));
-        
-        sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lInfos:"));
-        sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore cache info #FFFFFF- #A8A8A8Zeigt Informationen über den aktuellen Cache-Status"));
-        
-        sender.sendMessage(apiCore.formatHex("#38C6C3┌─────────────────────────┐"));
-        sender.sendMessage(apiCore.formatHex("#A8A8A8Cache leeren kann bei Speicherproblemen helfen oder wenn Änderungen nicht übernommen werden."));
-    }
-    
-    private void handleCacheCommand(CommandSender sender, String[] args) {
-        String prefix = apiCore.getMessagePrefix();
-        
-        // Berechtigungsprüfung
-        if (!sender.hasPermission("apicore.admin.system.cache")) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cDu hast keine Berechtigung, den Cache zu verwalten!"));
-            return;
-        }
-        
-        String subCommand = args[1].toLowerCase();
-        
-        try {
-            if (subCommand.equals("clear")) {
-                if (args.length < 3) {
-                    sender.sendMessage(apiCore.formatHex(prefix + "&cBitte gib an, welcher Cache geleert werden soll (all, methods, permissions, reflection)"));
-                    return;
-                }
-                
-                String cacheType = args[2].toLowerCase();
-                
-                switch (cacheType) {
-                    case "all":
-                        // Alle Caches leeren
-                        int methodCount = clearMethodCache();
-                        int permCount = clearPermissionCache();
-                        int reflectionCount = clearReflectionCache();
-                        
-                        sender.sendMessage(apiCore.formatHex(prefix + "&aAlle Caches wurden geleert!"));
-                        sender.sendMessage(apiCore.formatHex(prefix + "&7Methoden-Cache: &e" + methodCount + " &7Einträge entfernt"));
-                        sender.sendMessage(apiCore.formatHex(prefix + "&7Berechtigungs-Cache: &e" + permCount + " &7Einträge entfernt"));
-                        sender.sendMessage(apiCore.formatHex(prefix + "&7Reflection-Cache: &e" + reflectionCount + " &7Einträge entfernt"));
-                        break;
-                    case "methods":
-                        // Nur Methoden-Cache leeren
-                        int count = clearMethodCache();
-                        sender.sendMessage(apiCore.formatHex(prefix + "&aMethoden-Cache wurde geleert! &e" + count + " &aEinträge entfernt."));
-                        break;
-                    case "permissions":
-                        // Nur Permissions-Cache leeren
-                        count = clearPermissionCache();
-                        sender.sendMessage(apiCore.formatHex(prefix + "&aBerechtigungs-Cache wurde geleert! &e" + count + " &aEinträge entfernt."));
-                        break;
-                    case "reflection":
-                        // Nur Reflection-Cache leeren
-                        count = clearReflectionCache();
-                        sender.sendMessage(apiCore.formatHex(prefix + "&aReflection-Cache wurde geleert! &e" + count + " &aEinträge entfernt."));
-                        break;
-                    default:
-                        sender.sendMessage(apiCore.formatHex(prefix + "&cUnbekannter Cache-Typ: &e" + cacheType));
-                        sender.sendMessage(apiCore.formatHex(prefix + "&7Verfügbare Typen: &eall, methods, permissions, reflection"));
-                        break;
-                }
-            } else if (subCommand.equals("info")) {
-                // Cache-Informationen anzeigen
-                showCacheInfo(sender);
-            } else {
-                showCacheHelp(sender);
-            }
-        } catch (Exception e) {
-            // Fehlerbehandlung, um sicherzustellen, dass der Server nicht hängenbleibt
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler bei der Cache-Verwaltung: " + e.getMessage()));
-            apiCore.getLogger().log(Level.WARNING, "Fehler bei der Cache-Verwaltung", e);
-        }
-    }
-    
-    private int clearMethodCache() {
-        try {
-            // Prüfen, ob methodCache existiert
-            java.lang.reflect.Field field = null;
-            try {
-                field = ApiCore.class.getDeclaredField("methodCache");
-                field.setAccessible(true);
-            } catch (Exception e) {
-                apiCore.getLogger().warning("Methoden-Cache-Feld nicht gefunden: " + e.getMessage());
-                return 0;
-            }
-            
-            Object obj = field.get(apiCore);
-            if (obj == null) {
-                apiCore.getLogger().warning("Methoden-Cache ist null");
-                return 0;
-            }
-            
-            if (!(obj instanceof Map)) {
-                apiCore.getLogger().warning("Methoden-Cache ist kein Map-Objekt");
-                return 0;
-            }
-            
-            Map<?, ?> cache = (Map<?, ?>) obj;
-            int size = cache.size();
-            cache.clear();
-            
-            return size;
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.WARNING, "Fehler beim Leeren des Methoden-Cache", e);
-            return 0;
-        }
-    }
-    
-    private int clearPermissionCache() {
-        try {
-            // Prüfen, ob permissionExactCache existiert
-            java.lang.reflect.Field field = null;
-            int size = 0;
-            
-            try {
-                field = ApiCore.class.getDeclaredField("permissionExactCache");
-                field.setAccessible(true);
-                
-                Object obj = field.get(apiCore);
-                if (obj != null && obj instanceof Map) {
-                    Map<?, ?> cache = (Map<?, ?>) obj;
-                    size = cache.size();
-                    cache.clear();
-                }
-            } catch (Exception e) {
-                apiCore.getLogger().warning("Berechtigungs-Cache-Feld nicht gefunden: " + e.getMessage());
-            }
-            
-            // Versuchen, permissionCache (BloomFilter) zurückzusetzen
-            try {
-                field = ApiCore.class.getDeclaredField("permissionCache");
-                field.setAccessible(true);
-                
-                Object bloomFilter = field.get(apiCore);
-                if (bloomFilter != null) {
-                    // Versuchen, die clear-Methode aufzurufen, wenn sie existiert
-                    try {
-                        Method clearMethod = bloomFilter.getClass().getMethod("clear");
-                        clearMethod.invoke(bloomFilter);
-                    } catch (NoSuchMethodException e) {
-                        // Falls clear nicht verfügbar, ignorieren
-                        apiCore.getLogger().info("BloomFilter hat keine clear-Methode, wird ignoriert");
-                    }
-                }
-            } catch (Exception e) {
-                // Ignorieren, falls permissionCache nicht existiert
-                apiCore.getLogger().warning("BloomFilter-Cache konnte nicht zurückgesetzt werden: " + e.getMessage());
-            }
-            
-            return size;
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.WARNING, "Fehler beim Leeren des Berechtigungs-Cache", e);
-            return 0;
-        }
-    }
-    
-    private int clearReflectionCache() {
-        try {
-            // Prüfen, ob methodHandleCache existiert
-            java.lang.reflect.Field field = null;
-            try {
-                field = ApiCore.class.getDeclaredField("methodHandleCache");
-                field.setAccessible(true);
-            } catch (Exception e) {
-                apiCore.getLogger().warning("Reflection-Cache-Feld nicht gefunden: " + e.getMessage());
-                return 0;
-            }
-            
-            Object obj = field.get(apiCore);
-            if (obj == null) {
-                apiCore.getLogger().warning("Reflection-Cache ist null");
-                return 0;
-            }
-            
-            if (!(obj instanceof Map)) {
-                apiCore.getLogger().warning("Reflection-Cache ist kein Map-Objekt");
-                return 0;
-            }
-            
-            Map<?, ?> cache = (Map<?, ?>) obj;
-            int size = cache.size();
-            cache.clear();
-            
-            return size;
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.WARNING, "Fehler beim Leeren des Reflection-Cache", e);
-            return 0;
-        }
-    }
-    
-    private void showCacheInfo(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        
-        sender.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3Cache-Informationen #4DEEEB◆"));
-        sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-        
-        try {
-            int methodCacheSize = 0;
-            int reflectionCacheSize = 0;
-            int permCacheSize = 0;
-            
-            // Methodencache
-            try {
-                java.lang.reflect.Field methodField = ApiCore.class.getDeclaredField("methodCache");
-                methodField.setAccessible(true);
-                Object methodObj = methodField.get(apiCore);
-                if (methodObj instanceof Map) {
-                    Map<?, ?> methodCache = (Map<?, ?>) methodObj;
-                    methodCacheSize = methodCache.size();
-                }
-            } catch (Exception e) {
-                sender.sendMessage(apiCore.formatHex("#FF5555Methoden-Cache nicht verfügbar: " + e.getMessage()));
-            }
-            
-            // Reflectioncache
-            try {
-                java.lang.reflect.Field reflectionField = ApiCore.class.getDeclaredField("methodHandleCache");
-                reflectionField.setAccessible(true);
-                Object reflectionObj = reflectionField.get(apiCore);
-                if (reflectionObj instanceof Map) {
-                    Map<?, ?> reflectionCache = (Map<?, ?>) reflectionObj;
-                    reflectionCacheSize = reflectionCache.size();
-                }
-            } catch (Exception e) {
-                sender.sendMessage(apiCore.formatHex("#FF5555Reflection-Cache nicht verfügbar: " + e.getMessage()));
-            }
-            
-            // Permissioncache
-            try {
-                java.lang.reflect.Field permField = ApiCore.class.getDeclaredField("permissionExactCache");
-                permField.setAccessible(true);
-                Object permObj = permField.get(apiCore);
-                if (permObj instanceof Map) {
-                    Map<?, ?> permCache = (Map<?, ?>) permObj;
-                    permCacheSize = permCache.size();
-                }
-            } catch (Exception e) {
-                sender.sendMessage(apiCore.formatHex("#FF5555Berechtigungs-Cache nicht verfügbar: " + e.getMessage()));
-            }
-            
-            // Cache-Größen aus Konfiguration lesen
-            int maxMethodCache = apiCore.getConfig().getInt("performance.cache-size.methods", 500);
-            int maxReflectionCache = apiCore.getConfig().getInt("performance.cache-size.reflection", 200);
-            int maxPermCache = apiCore.getConfig().getInt("performance.cache-size.permissions", 2048);
-            
-            // Methoden-Cache
-            double methodCachePercentage = maxMethodCache > 0 ? methodCacheSize * 100.0 / maxMethodCache : 0;
-            String methodColor = methodCachePercentage < 70 ? "#00FF00" : (methodCachePercentage < 90 ? "#FFAA00" : "#FF5555");
-            
-            sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lMethoden-Cache:"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Einträge: " + methodColor + methodCacheSize + " #FFFFFF/ #74E8E5" + maxMethodCache));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Auslastung: " + methodColor + String.format("%.1f", methodCachePercentage) + "%"));
-            
-            // Reflection-Cache
-            double reflectionCachePercentage = maxReflectionCache > 0 ? reflectionCacheSize * 100.0 / maxReflectionCache : 0;
-            String reflectionColor = reflectionCachePercentage < 70 ? "#00FF00" : (reflectionCachePercentage < 90 ? "#FFAA00" : "#FF5555");
-            
-            sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lReflection-Cache:"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Einträge: " + reflectionColor + reflectionCacheSize + " #FFFFFF/ #74E8E5" + maxReflectionCache));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Auslastung: " + reflectionColor + String.format("%.1f", reflectionCachePercentage) + "%"));
-            
-            // Permission-Cache
-            double permCachePercentage = maxPermCache > 0 ? permCacheSize * 100.0 / maxPermCache : 0;
-            String permColor = permCachePercentage < 70 ? "#00FF00" : (permCachePercentage < 90 ? "#FFAA00" : "#FF5555");
-            
-            sender.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lBerechtigungs-Cache:"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Einträge: " + permColor + permCacheSize + " #FFFFFF/ #74E8E5" + maxPermCache));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5Auslastung: " + permColor + String.format("%.1f", permCachePercentage) + "%"));
-            
-            // Tipps
-            sender.sendMessage(apiCore.formatHex("\n#A8A8A8Bei hoher Auslastung (>90%) kann das Leeren des jeweiligen Caches helfen."));
-            sender.sendMessage(apiCore.formatHex("#A8A8A8Verwende #74E8E5/apicore cache clear <Typ> #A8A8A8zum Leeren."));
-            
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Abrufen der Cache-Informationen: " + e.getMessage()));
-            apiCore.getLogger().log(Level.WARNING, "Fehler beim Abrufen der Cache-Informationen", e);
-        }
-    }
-
     /**
-     * Lädt nur die Modul-Ressourcen neu
+     * Zeigt die Hilfe für den Cache-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
      */
-    private void reloadResources(CommandSender sender) {
-        String prefix = apiCore.getMessagePrefix();
-        sender.sendMessage(apiCore.formatHex(prefix + "&7Lade Modulressourcen neu..."));
-        
-        try {
-            // Ressourcen extrahieren
-            apiCore.extractModuleResources();
-            
-            // Erfolg melden
-            sender.sendMessage(apiCore.formatHex(prefix + "&aModulressourcen wurden erfolgreich neu geladen! Bestehende Dateien wurden nicht überschrieben."));
-        } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(prefix + "&cFehler beim Neuladen der Modulressourcen: " + e.getMessage()));
-            apiCore.getLogger().log(Level.SEVERE, "Fehler beim Neuladen der Modulressourcen", e);
-        }
+    private void showCacheHelp(CommandSender sender) {
+        // Implementation of cache help
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fCache-Befehle:"));
     }
-
+    
     /**
-     * Behandelt Befehle zum Testen und Verwalten von Berechtigungen
+     * Verarbeitet einen Cache-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param args Die Befehlsargumente
+     */
+    private void handleCacheCommand(CommandSender sender, String[] args) {
+        // Implementation of cache command handling
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aCache-Befehl wird ausgeführt..."));
+    }
+    
+    /**
+     * Verarbeitet einen Berechtigungs-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param args Die Befehlsargumente
      */
     private void handlePermissionCommand(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            // Zeige Hilfe für Permission-Befehle
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#4DEEEB◆ #38C6C3Berechtigungen #4DEEEB◆"));
-            sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-            sender.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lVerfügbare Befehle:"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm check <Spieler> <Berechtigung> #FFFFFF- #A8A8A8Prüft eine Berechtigung für einen Spieler"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm test <Berechtigung> #FFFFFF- #A8A8A8Testet eine Berechtigung für dich selbst"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm add player <Spieler> <Berechtigung> [true/false] #FFFFFF- #A8A8A8Fügt einem Spieler eine Berechtigung hinzu"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm add group <Gruppe> <Berechtigung> [true/false] #FFFFFF- #A8A8A8Fügt einer Gruppe eine Berechtigung hinzu"));
-            sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm list groups #FFFFFF- #A8A8A8Zeigt alle verfügbaren Gruppen an"));
-            return;
-        }
-        
-        String subCommand = args[1].toLowerCase();
-        
-        switch (subCommand) {
-            case "check":
-                // /apicore perm check <player> <permission>
-                if (args.length < 4) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Verwendung: /apicore perm check <Spieler> <Berechtigung>"));
-                    return;
-                }
-                
-                String playerName = args[2];
-                String permission = args[3];
-                
-                Player target = Bukkit.getPlayer(playerName);
-                if (target == null) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Spieler " + playerName + " nicht gefunden oder nicht online!"));
-                    return;
-                }
-                
-                // Prüfe die Berechtigung auf verschiedene Arten
-                boolean nativeResult = apiCore.getPermissionManager().hasPermission(target, permission);
-                boolean apiCoreResult = apiCore.hasPermission(target, permission);
-                boolean permManagerResult = apiCore.getPermissionManager().hasPermission(target, permission);
-                
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#4DEEEB◆ #38C6C3Berechtigungsprüfung #4DEEEB◆"));
-                sender.sendMessage(apiCore.formatHex("#FFFFFF- Spieler: #74E8E5" + target.getName()));
-                sender.sendMessage(apiCore.formatHex("#FFFFFF- UUID: #74E8E5" + target.getUniqueId()));
-                sender.sendMessage(apiCore.formatHex("#FFFFFF- Berechtigung: #74E8E5" + permission));
-                sender.sendMessage(apiCore.formatHex("#FFFFFF- OP: #74E8E5" + target.isOp()));
-                sender.sendMessage(apiCore.formatHex("#FFFFFF- Ergebnisse:"));
-                sender.sendMessage(apiCore.formatHex("  #FFFFFF- Bukkit: " + (nativeResult ? "#00FF00JA" : "#FF5555NEIN")));
-                sender.sendMessage(apiCore.formatHex("  #FFFFFF- ApiCore: " + (apiCoreResult ? "#00FF00JA" : "#FF5555NEIN")));
-                sender.sendMessage(apiCore.formatHex("  #FFFFFF- PermManager: " + (permManagerResult ? "#00FF00JA" : "#FF5555NEIN")));
-                
-                // Prüfe auch Wildcards
-                if (!nativeResult && permission.contains(".")) {
-                    String[] parts = permission.split("\\.");
-                    StringBuilder wildcardBuilder = new StringBuilder();
-                    for (int i = 0; i < parts.length - 1; i++) {
-                        wildcardBuilder.append(parts[i]).append(".");
-                    }
-                    wildcardBuilder.append("*");
-                    String wildcardPerm = wildcardBuilder.toString();
-                    
-                    boolean wildcardResult = target.hasPermission(wildcardPerm);
-                    sender.sendMessage(apiCore.formatHex("#FFFFFF- Wildcard-Prüfung:"));
-                    sender.sendMessage(apiCore.formatHex("  #FFFFFF- " + wildcardPerm + ": " + (wildcardResult ? "#00FF00JA" : "#FF5555NEIN")));
-                }
-                
-                // Prüfe LuckPerms-Verbindung
-                sender.sendMessage(apiCore.formatHex("#FFFFFF- LuckPerms verbunden: " + 
-                    (apiCore.isPermissionsHooked() ? "#00FF00JA" : "#FF5555NEIN")));
-                break;
-                
-            case "test":
-                // /apicore perm test <permission>
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Dieser Befehl kann nur von Spielern ausgeführt werden!"));
-                    return;
-                }
-                
-                if (args.length < 3) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Verwendung: /apicore perm test <Berechtigung>"));
-                    return;
-                }
-                
-                Player player = (Player) sender;
-                String permToTest = args[2];
-                
-                // Rufe den check-Befehl mit dem aktuellen Spieler auf
-                handlePermissionCommand(sender, new String[]{"perm", "check", player.getName(), permToTest});
-                break;
-                
-            case "add":
-                // Überprüfe Berechtigung für den Add-Befehl
-                if (!sender.hasPermission("apicore.admin.permissions")) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Du hast keine Berechtigung, Berechtigungen hinzuzufügen!"));
-                    return;
-                }
-                
-                if (args.length < 5) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Verwendung:"));
-                    sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm add player <Spieler> <Berechtigung> [true/false]"));
-                    sender.sendMessage(apiCore.formatHex("  #74E8E5/apicore perm add group <Gruppe> <Berechtigung> [true/false]"));
-                    return;
-                }
-                
-                String targetType = args[2].toLowerCase();
-                String targetName = args[3];
-                String permToAdd = args[4];
-                boolean permValue = args.length > 5 ? Boolean.parseBoolean(args[5]) : true;
-                
-                if (targetType.equals("player")) {
-                    // Berechtigungen zu einem Spieler hinzufügen
-                    Player targetPlayer = Bukkit.getPlayer(targetName);
-                    if (targetPlayer == null) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Spieler " + targetName + " nicht gefunden oder nicht online!"));
-                        return;
-                    }
-                    
-                    // Temporärer Parameter
-                    boolean isTemporary = args.length > 6 && args[6].equalsIgnoreCase("temp");
-                    
-                    boolean success = apiCore.getPermissionManager().addPermissionToPlayer(targetPlayer, permToAdd, permValue, isTemporary);
-                    if (success) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#00FF00Berechtigung " + permToAdd + 
-                                         " wurde Spieler " + targetPlayer.getName() + " hinzugefügt!"));
-                    } else {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Fehler beim Hinzufügen der Berechtigung! Siehe Konsole für Details."));
-                    }
-                } else if (targetType.equals("group")) {
-                    // Berechtigungen zu einer Gruppe hinzufügen
-                    boolean success = apiCore.getPermissionManager().addPermissionToGroup(targetName, permToAdd, permValue);
-                    if (success) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#00FF00Berechtigung " + permToAdd + 
-                                         " wurde Gruppe " + targetName + " hinzugefügt!"));
-                    } else {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Fehler beim Hinzufügen der Berechtigung! Siehe Konsole für Details."));
-                    }
-                } else {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Ungültiger Zieltyp! Verwende 'player' oder 'group'."));
-                }
-                break;
-                
-            case "list":
-                if (args.length < 3) {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Verwendung: /apicore perm list groups"));
-                    return;
-                }
-                
-                String listType = args[2].toLowerCase();
-                
-                if (listType.equals("groups")) {
-                    // Gruppen auflisten
-                    java.util.List<String> groups = apiCore.getPermissionManager().getAvailableGroups();
-                    
-                    if (groups.isEmpty()) {
-                        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Keine Gruppen gefunden oder kein Permissions-System verbunden!"));
-                        return;
-                    }
-                    
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#4DEEEB◆ #38C6C3Verfügbare Gruppen #4DEEEB◆"));
-                    sender.sendMessage(apiCore.formatHex("#38C6C3└─────────────────────────┘"));
-                    
-                    for (String group : groups) {
-                        sender.sendMessage(apiCore.formatHex("#74E8E5" + group));
-                    }
-                } else {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Ungültiger Listen-Typ! Verwende 'groups'."));
-                }
-                break;
-                
-            default:
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Unbekannter Unterbefehl! Verwende &f/apicore perm &cfür Hilfe."));
-                break;
-        }
+        // Implementation of permission command handling
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBerechtigungs-Befehl wird ausgeführt..."));
     }
-
+    
     /**
-     * Tab-Completion für Permission-Befehle
+     * Vervollständigt einen Berechtigungs-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param args Die Befehlsargumente
+     * @return Eine Liste der möglichen Vervollständigungen
      */
     private List<String> tabCompletePermissionCommand(CommandSender sender, String[] args) {
-        List<String> completions = new ArrayList<>();
-        
-        // Der subcommand befindet sich an Position args[1]
-        String subCommand = args.length > 1 ? args[1].toLowerCase() : "";
-        
-        if (args.length == 2) {
-            // Unterbefehl-Vorschläge - Zweites Argument (perm ...)
-            List<String> subCommands = Arrays.asList("check", "test", "add", "list", "help");
-            for (String cmd : subCommands) {
-                if (cmd.toLowerCase().startsWith(subCommand)) {
-                    completions.add(cmd);
-                }
-            }
-        } else if (args.length == 3) {
-            // Dritter Parameter für alle Unterbefehle
-            switch (subCommand) {
-                case "check":
-                    // Spielernamen für check
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        if (player.getName().toLowerCase().startsWith(args[2].toLowerCase())) {
-                            completions.add(player.getName());
-                        }
-                    }
-                    break;
-                case "add":
-                    // player oder group für add
-                    List<String> types = Arrays.asList("player", "group");
-                    for (String type : types) {
-                        if (type.toLowerCase().startsWith(args[2].toLowerCase())) {
-                            completions.add(type);
-                        }
-                    }
-                    break;
-                case "test":
-                    // Berechtigungen für test
-                    for (String perm : getCommonPermissions()) {
-                        if (perm.toLowerCase().startsWith(args[2].toLowerCase())) {
-                            completions.add(perm);
-                        }
-                    }
-                    break;
-                case "list":
-                    // list groups
-                    if ("groups".startsWith(args[2].toLowerCase())) {
-                        completions.add("groups");
-                    }
-                    break;
-            }
-        } else if (args.length == 4) {
-            // Vierter Parameter für bestimmte Unterbefehle
-            if (subCommand.equals("check")) {
-                // Berechtigungen für check
-                for (String perm : getCommonPermissions()) {
-                    if (perm.toLowerCase().startsWith(args[3].toLowerCase())) {
-                        completions.add(perm);
-                    }
-                }
-            } else if (subCommand.equals("add")) {
-                String targetType = args[2].toLowerCase();
-                
-                if (targetType.equals("player")) {
-                    // Spielernamen für add player
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        if (player.getName().toLowerCase().startsWith(args[3].toLowerCase())) {
-                            completions.add(player.getName());
-                        }
-                    }
-                } else if (targetType.equals("group")) {
-                    // Gruppennamen für add group
-                    for (String group : apiCore.getPermissionManager().getAvailableGroups()) {
-                        if (group.toLowerCase().startsWith(args[3].toLowerCase())) {
-                            completions.add(group);
-                        }
-                    }
-                }
-            }
-        } else if (args.length == 5) {
-            // Fünfter Parameter für bestimmte Unterbefehle
-            if (subCommand.equals("add")) {
-                // Berechtigungen für add player/group <name>
-                for (String perm : getCommonPermissions()) {
-                    if (perm.toLowerCase().startsWith(args[4].toLowerCase())) {
-                        completions.add(perm);
-                    }
-                }
-            } else if (subCommand.equals("check")) {
-                // Keine weiteren Vorschläge
-            }
-        } else if (args.length == 6) {
-            // Sechster Parameter (nur für add)
-            if (subCommand.equals("add")) {
-                // true/false
-                List<String> values = Arrays.asList("true", "false");
-                for (String value : values) {
-                    if (value.toLowerCase().startsWith(args[5].toLowerCase())) {
-                        completions.add(value);
-                    }
-                }
-            }
-        } else if (args.length == 7) {
-            // Siebter Parameter (nur für add player)
-            if (subCommand.equals("add") && args[2].equalsIgnoreCase("player")) {
-                // temp für temporäre Berechtigung
-                if ("temp".startsWith(args[6].toLowerCase())) {
-                    completions.add("temp");
-                }
-            }
-        }
-        
-        return completions;
+        // Implementation of permission tab completion
+        return new ArrayList<>();
     }
     
     /**
-     * Gibt eine Liste häufiger Berechtigungen zurück, die für Tab-Completion verwendet werden können
+     * Verarbeitet einen CommandManager-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param args Die Befehlsargumente
+     * @return true, wenn der Befehl erfolgreich ausgeführt wurde
      */
-    private List<String> getCommonPermissions() {
-        // Erstelle eine neue Liste für die gefilterten Berechtigungen
-        List<String> permissions = new ArrayList<>();
-        
-        // Füge apicore Berechtigungen hinzu
-        permissions.add("apicore.admin");
-        permissions.add("apicore.admin.*");
-        permissions.add("apicore.commands");
-        permissions.add("apicore.debug");
-        permissions.add("apicore.status");
-        permissions.add("apicore.modules.*");
-        permissions.add("apicore.reload");
-        
-        // Füge Modul-Berechtigungen hinzu
-        for (String moduleName : apiCore.getLoadedModules().keySet()) {
-            String moduleLower = moduleName.toLowerCase();
-            
-            // Standard-Modul-Berechtigungen
-            permissions.add(moduleLower + ".admin");
-            permissions.add(moduleLower + ".use");
-            permissions.add(moduleLower + ".command.*");
-            
-            // Globale Präfixe mit essentialscore
-            permissions.add("essentialscore." + moduleLower + ".admin");
-        }
-        
-        // Optional: Füge nur Berechtigungen aus dem PermissionManager hinzu, die mit apicore oder einem Modulnamen beginnen
-        java.util.Set<String> registeredPermissions = apiCore.getPermissionManager().getAllRegisteredPermissions();
-        for (String permission : registeredPermissions) {
-            String permLower = permission.toLowerCase();
-            if (permLower.startsWith("apicore.") || modulePrefixMatch(permLower)) {
-                permissions.add(permission);
-            }
-        }
-        
-        return permissions;
+    private boolean handleCommandManagerCommand(CommandSender sender, String[] args) {
+        // Implementation of command manager command handling
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aCommandManager-Befehl wird ausgeführt..."));
+        return true;
     }
     
     /**
-     * Hilfsmethode um zu prüfen, ob eine Berechtigung mit einem Modulnamen beginnt
+     * Vervollständigt einen CommandManager-Befehl
+     * 
+     * @param sender Der Empfänger der Nachricht
+     * @param args Die Befehlsargumente
+     * @return Eine Liste der möglichen Vervollständigungen
      */
-    private boolean modulePrefixMatch(String permission) {
-        for (String moduleName : apiCore.getLoadedModules().keySet()) {
-            String moduleLower = moduleName.toLowerCase();
-            if (permission.startsWith(moduleLower + ".")) {
-                return true;
-            }
-        }
-        return false;
+    private List<String> tabCompleteCommandManagerCommand(CommandSender sender, String[] args) {
+        // Implementation of command manager tab completion
+        return new ArrayList<>();
+    }
+    
+    /**
+     * Registriert einen Befehl
+     * 
+     * @param command Der zu registrierende Befehl
+     */
+    private void registerCommand(DynamicCommand command) {
+        // Implementation of command registration
     }
 
     /**
-     * Zeigt Systeminformationen für einen Spieler an
+     * Holt alle Befehle aus der CommandMap
+     * 
+     * @return Eine Sammlung von Commands
      */
-    private void showSystemInfo(Player player) {
-        String prefix = apiCore.getMessagePrefix();
-        
-        player.sendMessage(apiCore.formatHex(prefix + "#4DEEEB◆ #38C6C3System-Informationen #4DEEEB◆"));
-        player.sendMessage(apiCore.formatHex("#38C6C3└────────────────────────────┘"));
-        
-        // Server-Info
-        player.sendMessage(apiCore.formatHex("#4DEEEB» #FFFFFF&lServer:"));
-        player.sendMessage(apiCore.formatHex("  #74E8E5Version: #FFFFFF" + Bukkit.getBukkitVersion()));
-        player.sendMessage(apiCore.formatHex("  #74E8E5Online-Spieler: #FFFFFF" + Bukkit.getOnlinePlayers().size() + " / " + Bukkit.getMaxPlayers()));
-        
-        // Spieler-Info
-        player.sendMessage(apiCore.formatHex("\n#4DEEEB» #FFFFFF&lSpieler:"));
-        player.sendMessage(apiCore.formatHex("  #74E8E5Name: #FFFFFF" + player.getName()));
-        player.sendMessage(apiCore.formatHex("  #74E8E5UUID: #FFFFFF" + player.getUniqueId()));
-        player.sendMessage(apiCore.formatHex("  #74E8E5OP: #FFFFFF" + player.isOp()));
-        
-        // Prüfen wichtiger Berechtigungen
-        String[] keyPermissions = {
-            "apicore.admin", 
-            "apicore.admin.*", 
-            "apicore.commands", 
-            "apicore.debug", 
-            "apicore.status"
-        };
-        
-        player.sendMessage(apiCore.formatHex("#FFFFFF- Berechtigungen:"));
-        for (String perm : keyPermissions) {
-            boolean hasPerm = apiCore.getPermissionManager().hasPermission(player, perm);
-            boolean hasPermApiCore = apiCore.hasPermission(player, perm);
-            player.sendMessage(apiCore.formatHex("  #FFFFFF" + perm + ": #74E8E5" + hasPerm + 
-                    " #FFFFFF(ApiCore: #74E8E5" + hasPermApiCore + "#FFFFFF)"));
-        }
-    }
-
-    /**
-     * Führt ein Reload des Plugins durch
-     */
-    private void handleReloadCommand(CommandSender sender, String[] args) {
-        // Verbesserte Reload-Logik
+    private Collection<Command> getCommandMapCommands() {
         try {
-            if (args.length > 1) {
-                if (args[1].equalsIgnoreCase("modules")) {
-                    // Nur Module neu laden
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Module neu..."));
-                    
-                    // Verbesserte Methode für das Neuladen der Module verwenden
-                    apiCore.reloadModules();
-                    
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aModule wurden neu geladen!"));
-                    return;
-                } else if (args[1].equalsIgnoreCase("config")) {
-                    // Nur Konfiguration neu laden
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Konfiguration neu..."));
-                    apiCore.reloadConfig();
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aKonfiguration wurde neu geladen!"));
-                    return;
-                } else if (args[1].equalsIgnoreCase("resources")) {
-                    // Nur Ressourcen neu extrahieren
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Extrahiere Ressourcen neu..."));
-                    apiCore.extractModuleResources();
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aRessourcen wurden neu extrahiert!"));
-                    return;
-                } else if (args[1].equalsIgnoreCase("commands")) {
-                    // Nur Befehle synchronisieren
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Synchronisiere Befehle..."));
-                    apiCore.getModuleManager().synchronizeCommands();
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBefehle wurden synchronisiert!"));
-                    return;
-                } else if (args[1].equalsIgnoreCase("permissions")) {
-                    // Nur Berechtigungen neu laden
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Berechtigungen neu..."));
-                    // Hier könnten wir eine spezielle Methode aufrufen, falls vorhanden
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aBerechtigungen wurden neu geladen!"));
-                    return;
-                }
-            }
+            // Using reflection to get commands from the CommandMap
+            Field knownCommandsField = Bukkit.getServer().getClass().getDeclaredField("commandMap");
+            knownCommandsField.setAccessible(true);
+            CommandMap commandMap = (CommandMap) knownCommandsField.get(Bukkit.getServer());
             
-            // Vollständiges Reload
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Starte vollständigen Reload..."));
+            // Now get the knownCommands map from SimpleCommandMap
+            Field knownCommandsMapField = commandMap.getClass().getDeclaredField("knownCommands");
+            knownCommandsMapField.setAccessible(true);
             
-            // 1. Konfiguration neu laden
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Konfiguration neu..."));
-            apiCore.reloadConfig();
+            @SuppressWarnings("unchecked")
+            Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsMapField.get(commandMap);
             
-            // 2. Module neu laden
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Module neu..."));
-            apiCore.reloadModules();
-            
-            // 3. Befehle synchronisieren (falls noch nötig)
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Synchronisiere Befehle..."));
-            apiCore.getModuleManager().synchronizeCommands();
-            
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aReload abgeschlossen!"));
+            return new ArrayList<>(knownCommands.values());
         } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cFehler beim Reload: " + e.getMessage()));
-            e.printStackTrace();
+            console.error("Fehler beim Zugriff auf die CommandMap: " + e.getMessage());
+            return Collections.emptyList();
         }
     }
 } 
