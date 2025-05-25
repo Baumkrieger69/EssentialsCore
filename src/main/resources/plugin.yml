@@ -10,15 +10,28 @@ commands:
     usage: /apicore <subcommand> [arguments]
     aliases: [acore, ac]
     permission: apicore.admin
+  module:
+    description: Manage modules with advanced lifecycle control
+    usage: /module <list|info|load|unload|reload|enable|disable|install|uninstall|backup|restore|scan>
+    permission: apicore.admin.modules
+    aliases: [modules, mod]
 permissions:
   apicore.admin:
-    description: Allows full access to all ApiCore features
+    description: Grants access to all ApiCore commands
+    default: op
+  apicore.admin.modules:
+    description: Grants access to module management commands
+    default: op
+  apicore.admin.language:
+    description: Grants access to language commands
     default: op
   apicore.admin.*:
     description: Grants admin permissions for all modules
     default: op
     children:
       apicore.admin: true
+      apicore.admin.modules: true
+      apicore.admin.language: true
   apicore.admin.system:
     description: Allows access to system-level features
     default: op
