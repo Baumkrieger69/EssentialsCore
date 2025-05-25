@@ -8,7 +8,7 @@ commands:
   apicore:
     description: Main command for controlling the ApiCore system
     usage: /apicore <subcommand> [arguments]
-    aliases: [acore, ac]
+    aliases: [acore, ac, ess, essentials, core, ec, esscore]
     permission: apicore.admin
   module:
     description: Manage modules with advanced lifecycle control

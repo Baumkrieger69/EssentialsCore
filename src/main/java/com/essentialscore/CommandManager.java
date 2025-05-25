@@ -204,6 +204,8 @@ public class CommandManager {
      * Registriert die Core-Befehle des Plugins
      */
     public void registerCoreCommands() {
+        console.info("Registriere Core-Befehle...");
+        
         // Prüfe, ob der Hauptbefehl in der Konfiguration deaktiviert ist
         if (isConfigDisabled("apicore")) {
             console.warning("Der apicore-Befehl ist in der Konfiguration deaktiviert!");
@@ -211,7 +213,14 @@ public class CommandManager {
         }
         
         // Hauptbefehl registrieren
-        apiCore.getCommand("apicore").setExecutor((sender, command, label, args) -> {
+        PluginCommand apiCoreCommand = apiCore.getCommand("apicore");
+        if (apiCoreCommand == null) {
+            console.error("Konnte Hauptbefehl 'apicore' nicht finden! Befehle werden nicht funktionieren.");
+            console.error("Stelle sicher, dass die plugin.yml korrekt ist und den 'apicore' Befehl enthält.");
+            return;
+        }
+        
+        apiCoreCommand.setExecutor((sender, command, label, args) -> {
             if (args.length == 0) {
                 showHelp(sender);
                 return true;
@@ -251,7 +260,7 @@ public class CommandManager {
         });
         
         // Tab-Completer registrieren
-        apiCore.getCommand("apicore").setTabCompleter((sender, command, alias, args) -> {
+        apiCoreCommand.setTabCompleter((sender, command, alias, args) -> {
             List<String> completions = new ArrayList<>();
             
             if (args.length == 1) {
@@ -279,14 +288,8 @@ public class CommandManager {
             
             return completions;
         });
-    }
-    
-    /**
-     * Registriert den Befehl zum Verwalten der Befehlsdeaktivierung
-     */
-    public void registerCommandDeactivationCommand() {
-        // Diese Funktionalität wurde entfernt und wird jetzt komplett über die config.yml verwaltet
-        console.info("Befehlsdeaktivierung wird jetzt über die config.yml verwaltet");
+        
+        console.success("Core-Befehle erfolgreich registriert!");
     }
     
     /**
@@ -342,6 +345,8 @@ public class CommandManager {
      * Registriert alle Befehle
      */
     public void registerCommands() {
+        console.info("Registriere Plugin-Befehle...");
+        
         // Register module command for lifecycle management
         ModuleCommand moduleCommand = new ModuleCommand(apiCore);
         try {
@@ -359,6 +364,8 @@ public class CommandManager {
         
         // Register core commands
         registerCoreCommands();
+        
+        console.success("Alle Plugin-Befehle erfolgreich registriert!");
     }
     
     /**
