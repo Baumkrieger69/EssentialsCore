@@ -5,7 +5,13 @@ import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collections;
+<<<<<<< HEAD
 import java.util.List;
+=======
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+>>>>>>> 1cd13da (Das ist Dumm)
 
 /**
  * Base implementation of the Module interface that provides default implementations
@@ -17,7 +23,12 @@ public abstract class BaseModule implements Module {
     private final String name;
     private final String version;
     private final String description;
+<<<<<<< HEAD
     private final List<String> dependencies;
+=======
+    private final Map<String, String> dependencies;
+    private final Map<String, String> optionalDependencies;
+>>>>>>> 1cd13da (Das ist Dumm)
     
     /**
      * Constructs a new base module with the specified information
@@ -27,7 +38,11 @@ public abstract class BaseModule implements Module {
      * @param description The module description
      */
     public BaseModule(String name, String version, String description) {
+<<<<<<< HEAD
         this(name, version, description, Collections.emptyList());
+=======
+        this(name, version, description, Collections.emptyMap(), Collections.emptyMap());
+>>>>>>> 1cd13da (Das ist Dumm)
     }
     
     /**
@@ -36,15 +51,50 @@ public abstract class BaseModule implements Module {
      * @param name The module name
      * @param version The module version
      * @param description The module description
+<<<<<<< HEAD
      * @param dependencies List of module dependencies
      */
     public BaseModule(String name, String version, String description, List<String> dependencies) {
+=======
+     * @param dependencies Map of module dependencies with version ranges
+     */
+    public BaseModule(String name, String version, String description, Map<String, String> dependencies) {
+        this(name, version, description, dependencies, Collections.emptyMap());
+    }
+    
+    /**
+     * Constructs a new base module with the specified information
+     * 
+     * @param name The module name
+     * @param version The module version
+     * @param description The module description
+     * @param dependencies Map of module dependencies with version ranges
+     * @param optionalDependencies Map of optional module dependencies with version ranges
+     */
+    public BaseModule(String name, String version, String description, 
+                     Map<String, String> dependencies, 
+                     Map<String, String> optionalDependencies) {
+>>>>>>> 1cd13da (Das ist Dumm)
         this.name = name;
         this.version = version;
         this.description = description;
         this.dependencies = dependencies != null ? 
+<<<<<<< HEAD
             Collections.unmodifiableList(new ArrayList<>(dependencies)) : 
             Collections.emptyList();
+=======
+            Collections.unmodifiableMap(new HashMap<>(dependencies)) : 
+            Collections.emptyMap();
+        this.optionalDependencies = optionalDependencies != null ? 
+            Collections.unmodifiableMap(new HashMap<>(optionalDependencies)) : 
+            Collections.emptyMap();
+    }
+    
+    @Override
+    public void onPreLoad(ModuleAPI api) {
+        this.api = api;
+        // Default implementation, can be overridden by subclasses
+>>>>>>> 1cd13da (Das ist Dumm)
     }
     
     @Override
@@ -54,6 +104,26 @@ public abstract class BaseModule implements Module {
         onInitialize();
     }
     
+<<<<<<< HEAD
+=======
+    @Override
+    public void onPostLoad() {
+        // Default implementation, can be overridden by subclasses
+    }
+    
+    @Override
+    public void onUnload() {
+        // Default implementation, can be overridden by subclasses
+    }
+    
+    @Override
+    public boolean onReload(FileConfiguration config) {
+        // Default implementation, update config and return success
+        this.config = config;
+        return true;
+    }
+    
+>>>>>>> 1cd13da (Das ist Dumm)
     /**
      * Called after the API and config have been set.
      * Override this to perform initialization logic.
@@ -78,10 +148,22 @@ public abstract class BaseModule implements Module {
     }
     
     @Override
+<<<<<<< HEAD
     public List<String> getDependencies() {
         return dependencies;
     }
     
+=======
+    public Map<String, String> getDependencies() {
+        return dependencies;
+    }
+    
+    @Override
+    public Map<String, String> getOptionalDependencies() {
+        return optionalDependencies;
+    }
+    
+>>>>>>> 1cd13da (Das ist Dumm)
     /**
      * Logs an informational message
      * 

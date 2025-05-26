@@ -8,6 +8,7 @@ commands:
   apicore:
     description: Main command for controlling the ApiCore system
     usage: /apicore <subcommand> [arguments]
+<<<<<<< HEAD
     aliases: [acore, ac, ess, essentials, core, ec, esscore]
     permission: apicore.admin
   module:
@@ -24,14 +25,24 @@ permissions:
     default: op
   apicore.admin.language:
     description: Grants access to language commands
+=======
+    aliases: [acore, ac]
+    permission: apicore.admin
+permissions:
+  apicore.admin:
+    description: Allows full access to all ApiCore features
+>>>>>>> 1cd13da (Das ist Dumm)
     default: op
   apicore.admin.*:
     description: Grants admin permissions for all modules
     default: op
     children:
       apicore.admin: true
+<<<<<<< HEAD
       apicore.admin.modules: true
       apicore.admin.language: true
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
   apicore.admin.system:
     description: Allows access to system-level features
     default: op

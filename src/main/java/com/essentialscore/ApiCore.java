@@ -89,7 +89,10 @@ public class ApiCore extends JavaPlugin implements Listener {
     private PerformanceBenchmark performanceBenchmark;
     private ModuleFileManager moduleFileManager;
     private ModuleResourceManager resourceManager; // Neue Instanzvariable für verbesserten Ressourcenmanager
+<<<<<<< HEAD
     private ModuleSandbox moduleSandbox; // Neue Instanzvariable für Modul-Sandbox
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
     private ConsoleFormatter console;
     
     // Thread-safe shared data with optimized initial capacity
@@ -405,6 +408,7 @@ public class ApiCore extends JavaPlugin implements Listener {
      * Initialisiert die Module des Plugins
      */
     private void initializeModules() {
+<<<<<<< HEAD
         // Initialize modules directory if it doesn't exist
         modulesDir.mkdirs();
         
@@ -437,6 +441,26 @@ public class ApiCore extends JavaPlugin implements Listener {
                 "Modul-Sandbox initialisiert mit Sicherheitsstufe: " + 
                 getConfig().getString("security.sandbox-level", "medium"));
         }
+=======
+        // Thread-Manager initialisieren
+        threadManager = new ThreadManager(this);
+        executorService = threadManager.getExecutorService();
+        console.categoryInfo(ConsoleFormatter.MessageCategory.THREAD, "Thread-Manager initialisiert");
+        
+        // Manager initialisieren
+        configManager = new ConfigManager(this);
+        permissionManager = new PermissionManager(this);
+        moduleFileManager = new ModuleFileManager(this);
+        resourceManager = new ModuleResourceManager(this);
+        
+        // ModuleManager initialisieren
+        moduleManager = new ModuleManager(this, modulesDir, configDir, 
+            (Map<String, Object>)(Map<String, ?>)loadedModules, 
+            moduleCommands, executorService);
+        
+        // CommandManager initialisieren
+        commandManager = new CommandManager(this);
+>>>>>>> 1cd13da (Das ist Dumm)
         
         console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Alle Module erfolgreich initialisiert");
         
@@ -477,6 +501,7 @@ public class ApiCore extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+<<<<<<< HEAD
         console.header("ESSENTIALS CORE " + getDescription().getVersion());
         console.info("Plugin wird deaktiviert...");
         
@@ -531,6 +556,11 @@ public class ApiCore extends JavaPlugin implements Listener {
             console.error("Fehler beim Deaktivieren des Plugins: " + e.getMessage());
             e.printStackTrace();
         }
+=======
+        console.subHeader("DEAKTIVIERUNG VON APICORE");
+        // Code für die Deaktivierung hier einfügen
+        console.categorySuccess(ConsoleFormatter.MessageCategory.SYSTEM, "EssentialsCore wurde deaktiviert");
+>>>>>>> 1cd13da (Das ist Dumm)
     }
 
     /**
@@ -1295,6 +1325,7 @@ public class ApiCore extends JavaPlugin implements Listener {
     }
 
     /**
+<<<<<<< HEAD
      * Gibt die ModuleSandbox zurück
      * 
      * @return ModuleSandbox-Instanz
@@ -1304,6 +1335,8 @@ public class ApiCore extends JavaPlugin implements Listener {
     }
 
     /**
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
      * Gets the ModuleAPI for a specific module
      * 
      * @param moduleName The name of the module
@@ -1376,6 +1409,7 @@ public class ApiCore extends JavaPlugin implements Listener {
             console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "ModuleManager ist nicht initialisiert!");
         }
     }
+<<<<<<< HEAD
 
     /**
      * Gibt den CommandManager zurück
@@ -1385,5 +1419,7 @@ public class ApiCore extends JavaPlugin implements Listener {
     public CommandManager getCommandManager() {
         return commandManager;
     }
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
 }
         

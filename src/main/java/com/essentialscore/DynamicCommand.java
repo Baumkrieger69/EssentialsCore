@@ -34,6 +34,7 @@ public class DynamicCommand extends Command implements TabCompleter {
     // Präkompilierte RegEx für häufige Befehlsmuster
     private static final Pattern COMMAND_ARGS_PATTERN = Pattern.compile("\"([^\"]*)\"|([^\\s]+)");
     
+<<<<<<< HEAD
     // Command executor implementation
     private org.bukkit.command.CommandExecutor executor;
     private org.bukkit.command.TabCompleter customTabCompleter;
@@ -78,6 +79,8 @@ public class DynamicCommand extends Command implements TabCompleter {
         return customTabCompleter;
     }
     
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
     // Optimierte Command-Instance-Erstellung
     public DynamicCommand(String name, String description, String usageMessage, List<String> aliases, 
                           String moduleName, String permission, ApiCore apiCore) {
@@ -117,11 +120,14 @@ public class DynamicCommand extends Command implements TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+<<<<<<< HEAD
         // Check if we have a custom tab completer
         if (customTabCompleter != null) {
             return customTabCompleter.onTabComplete(sender, command, alias, args);
         }
         
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
         // Schnellprüfung für wesentliche Bedingungen
         ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
         if (moduleInfo == null || !hasPermission(sender)) {
@@ -210,6 +216,7 @@ public class DynamicCommand extends Command implements TabCompleter {
         long startTime = System.nanoTime();
         
         try {
+<<<<<<< HEAD
             // Check if the command is deactivated
             if (apiCore.getCommandManager().isCommandDeactivated(getName())) {
                 sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cDieser Befehl wurde deaktiviert!"));
@@ -222,6 +229,8 @@ public class DynamicCommand extends Command implements TabCompleter {
             }
             
             // Otherwise, use the module-based execution
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
             if (moduleName != null && !moduleName.equalsIgnoreCase("apicore")) {
                 ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
                 if (moduleInfo != null && moduleInfo.getInstance() != null) {

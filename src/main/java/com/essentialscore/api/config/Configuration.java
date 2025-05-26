@@ -1,9 +1,19 @@
 package com.essentialscore.api.config;
 
+<<<<<<< HEAD
 import org.bukkit.configuration.file.FileConfiguration;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+=======
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+
+import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+>>>>>>> 1cd13da (Das ist Dumm)
 
 /**
  * Erweiterte Konfigurationsschnittstelle für Module
@@ -105,4 +115,47 @@ public interface Configuration {
      * @return Die Konfigurationsdatei
      */
     File getFile();
+<<<<<<< HEAD
+=======
+    
+    /**
+     * Checks if the configuration contains a path.
+     *
+     * @param path The path to check
+     * @return true if the path exists
+     */
+    boolean contains(String path);
+    
+    /**
+     * Gets all keys at a path.
+     *
+     * @param deep Whether to include nested keys
+     * @return Set of keys
+     */
+    Set<String> getKeys(boolean deep);
+    
+    /**
+     * Gets a configuration section.
+     *
+     * @param path The path to the section
+     * @return The configuration section or null
+     */
+    ConfigurationSection getSection(String path);
+    
+    /**
+     * Creates a new configuration section.
+     *
+     * @param path The path to the section
+     * @return The created section
+     */
+    ConfigurationSection createSection(String path);
+    
+    /**
+     * Gets all values in the configuration.
+     *
+     * @param deep Whether to include nested values
+     * @return Map of path to value
+     */
+    Map<String, Object> getValues(boolean deep);
+>>>>>>> 1cd13da (Das ist Dumm)
 } 

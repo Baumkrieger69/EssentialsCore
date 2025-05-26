@@ -85,8 +85,11 @@ public class ConsoleFormatter {
     private boolean categoriesEnabledGlobal = true;
     private final Map<MessageCategory, CategoryConfig> categoryConfigs = new EnumMap<>(MessageCategory.class);
     
+<<<<<<< HEAD
     private final Map<MessageCategory, CategoryStyle> categoryStyles = new EnumMap<>(MessageCategory.class);
     
+=======
+>>>>>>> 1cd13da (Das ist Dumm)
     /**
      * Konfiguration für eine Nachrichtenkategorie
      */
@@ -271,13 +274,22 @@ public class ConsoleFormatter {
      * @param stylePreset Das zu verwendende Stil-Preset
      */
     public ConsoleFormatter(Logger logger, String prefix, boolean useColors, 
+<<<<<<< HEAD
                           boolean showTimestamp, boolean useUnicodeSymbols, String stylePreset) {
         this.logger = logger;
         this.prefix = colorizePrefix(prefix);
+=======
+                            boolean showTimestamp, boolean useUnicodeSymbols, 
+                            String stylePreset) {
+        this.logger = logger;
+        // Process prefix to convert Minecraft color codes to ANSI codes
+        this.prefix = useColors ? formatHexCodes(prefix) : stripMinecraftColors(prefix);
+>>>>>>> 1cd13da (Das ist Dumm)
         this.useColors = useColors;
         this.showTimestamp = showTimestamp;
         this.useUnicodeSymbols = useUnicodeSymbols;
         this.stylePreset = stylePreset;
+<<<<<<< HEAD
         
         initializeCategoryStyles();
     }
@@ -395,23 +407,65 @@ public class ConsoleFormatter {
     
     /**
      * Gibt eine Informationsbenachrichtigung aus
+=======
+    }
+    
+    /**
+     * Entfernt alle Minecraft-Farbcodes aus einem String
+     * Diese Methode wird verwendet, um sicherzustellen, dass keine Farbcodes in der Konsole angezeigt werden
+     * 
+     * @param input Der Text mit Minecraft-Farbcodes
+     * @return Der Text ohne Minecraft-Farbcodes
+     */
+    private String stripMinecraftColors(String input) {
+        if (input == null) return "";
+        
+        // Entferne alle § und & Farbcodes
+        return input.replaceAll("§[0-9a-fklmnorx]", "")
+                   .replaceAll("§x§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]§[0-9a-f]", "")
+                   .replaceAll("&[0-9a-fklmnorx]", "")
+                   .replaceAll("#[a-fA-F0-9]{6}", "");
+    }
+    
+    /**
+     * Gibt eine Info-Nachricht aus
+>>>>>>> 1cd13da (Das ist Dumm)
      * 
      * @param message Die Nachricht
      */
     public void info(String message) {
+<<<<<<< HEAD
         if (useColors) {
             logger.info(formatWithPrefix(WHITE + message + RESET));
         } else {
             logger.info(formatWithPrefix(message));
+=======
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
+            logger.info(timeStr + CYAN + formatWithPrefix(cleanMessage) + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
+            logger.info(timeStr + formatWithPrefix(cleanMessage));
+>>>>>>> 1cd13da (Das ist Dumm)
         }
     }
     
     /**
+<<<<<<< HEAD
      * Gibt eine Erfolgsbenachrichtigung aus
+=======
+     * Gibt eine Erfolgsnachricht aus
+>>>>>>> 1cd13da (Das ist Dumm)
      * 
      * @param message Die Nachricht
      */
     public void success(String message) {
+<<<<<<< HEAD
         if (useColors) {
             String symbol = useUnicodeSymbols ? "✅ " : "";
             logger.info(formatWithPrefix(GREEN + symbol + message + RESET));
@@ -435,16 +489,112 @@ public class ConsoleFormatter {
             logger.info(formatWithPrefix(BRIGHT_BLUE + "[DEBUG] " + BRIGHT_WHITE + message + RESET));
         } else {
             logger.info(formatWithPrefix("[DEBUG] " + message));
+=======
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
+            logger.info(timeStr + GREEN + formatWithPrefix(symbol + cleanMessage) + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
+            logger.info(timeStr + formatWithPrefix(symbol + cleanMessage));
+>>>>>>> 1cd13da (Das ist Dumm)
         }
     }
     
     /**
+<<<<<<< HEAD
      * Gibt eine Überschrift aus
+=======
+     * Gibt eine Warnmeldung aus
+     * 
+     * @param message Die Nachricht
+     */
+    public void warning(String message) {
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
+            logger.warning(timeStr + YELLOW + formatWithPrefix(symbol + cleanMessage) + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
+            logger.warning(timeStr + formatWithPrefix(symbol + cleanMessage));
+        }
+    }
+    
+    /**
+     * Gibt eine Fehlermeldung aus
+     * 
+     * @param message Die Nachricht
+     */
+    public void error(String message) {
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
+            logger.severe(timeStr + RED + formatWithPrefix(symbol + cleanMessage) + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
+            logger.severe(timeStr + formatWithPrefix(symbol + cleanMessage));
+        }
+    }
+    
+    /**
+     * Gibt eine wichtige Nachricht hervorgehoben aus
+     * 
+     * @param message Die Nachricht
+     */
+    public void important(String message) {
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? IMPORTANT_SYMBOL + " " : "";
+            logger.info(timeStr + BRIGHT_YELLOW + prefix + RESET + " " + 
+                     BOLD + BG_YELLOW + BLACK + " " + symbol + message + " " + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? IMPORTANT_SYMBOL + " " : "";
+            logger.info(timeStr + prefix + " [" + symbol + "WICHTIG] " + message);
+        }
+    }
+    
+    /**
+     * Gibt eine Debug-Nachricht aus (nur wenn Debug-Modus aktiviert)
+     * 
+     * @param message Die Nachricht
+     * @param isDebugMode Ob der Debug-Modus aktiviert ist
+     */
+    public void debug(String message, boolean isDebugMode) {
+        if (!isDebugMode) return;
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
+            logger.info(timeStr + BRIGHT_PURPLE + prefix + " [DEBUG] " + RESET + PURPLE + symbol + message + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
+            logger.info(timeStr + prefix + " [DEBUG] " + symbol + message);
+        }
+    }
+    
+    /**
+     * Gibt eine Überschrift mit Trennlinien und Rahmen aus
+>>>>>>> 1cd13da (Das ist Dumm)
      * 
      * @param title Der Titel
      */
     public void header(String title) {
         if (useColors) {
+<<<<<<< HEAD
             String line = BRIGHT_CYAN + "═══════════════════════════════════════════" + RESET;
             logger.info(line);
             logger.info(formatWithPrefix(BRIGHT_WHITE + BOLD + title + RESET));
@@ -454,10 +604,29 @@ public class ConsoleFormatter {
             logger.info(line);
             logger.info(formatWithPrefix(title));
             logger.info(line);
+=======
+            String line = "═".repeat(Math.max(20, title.length() + 4));
+            logger.info("");
+            logger.info(BRIGHT_CYAN + "╔" + line + "╗" + RESET);
+            logger.info(BRIGHT_CYAN + "║" + " ".repeat((line.length() - title.length()) / 2) + 
+                     BRIGHT_WHITE + BOLD + title + RESET + BRIGHT_CYAN + 
+                     " ".repeat((line.length() - title.length() + 1) / 2) + "║" + RESET);
+            logger.info(BRIGHT_CYAN + "╚" + line + "╝" + RESET);
+            logger.info("");
+        } else {
+            String line = "=".repeat(Math.max(20, title.length() + 4));
+            logger.info("");
+            logger.info(line);
+            logger.info("|" + " ".repeat((line.length() - title.length()) / 2) + 
+                     title + " ".repeat((line.length() - title.length() + 1) / 2) + "|");
+            logger.info(line);
+            logger.info("");
+>>>>>>> 1cd13da (Das ist Dumm)
         }
     }
     
     /**
+<<<<<<< HEAD
      * Gibt einen Sektionsheader aus
      * 
      * @param title Der Titel der Sektion
@@ -620,6 +789,63 @@ public class ConsoleFormatter {
                                         RESET + " " + WHITE + description + RESET));
         } else {
             logger.info(formatWithPrefix("(" + step + "/" + total + ") " + description));
+=======
+     * Gibt eine kleine Überschrift ohne Rahmen aus
+     * 
+     * @param title Der Titel
+     */
+    public void subHeader(String title) {
+        if (useColors) {
+            logger.info("");
+            logger.info(BRIGHT_CYAN + "◈ " + BRIGHT_WHITE + BOLD + title + RESET + 
+                     BRIGHT_CYAN + " " + "─".repeat(Math.max(10, 30 - title.length())) + RESET);
+        } else {
+            logger.info("");
+            logger.info("-- " + title + " " + "-".repeat(Math.max(10, 30 - title.length())));
+        }
+    }
+    
+    /**
+     * Gibt eine Abschnittsüberschrift aus
+     * 
+     * @param section Der Abschnittstitel
+     */
+    public void section(String section) {
+        if (useColors) {
+            logger.info("");
+            logger.info(BRIGHT_BLUE + "► " + BOLD + BRIGHT_WHITE + section + RESET);
+        } else {
+            logger.info("");
+            logger.info("► " + section);
+        }
+    }
+    
+    /**
+     * Gibt einen Listeneintrag mit Einrückung aus
+     * 
+     * @param key Der Schlüssel oder Name
+     * @param value Der Wert
+     */
+    public void listItem(String key, String value) {
+        if (useColors) {
+            logger.info("  " + BRIGHT_GREEN + "• " + BRIGHT_WHITE + key + RESET + ": " + WHITE + value + RESET);
+        } else {
+            logger.info("  • " + key + ": " + value);
+        }
+    }
+    
+    /**
+     * Gibt eine strukturierte Nachricht mit Key-Value-Paaren aus
+     * 
+     * @param title Der Titel der Sektion
+     * @param data Key-Value-Paare als abwechselnde Strings (key1, value1, key2, value2, ...)
+     */
+    public void dataSection(String title, String... data) {
+        section(title);
+        
+        for (int i = 0; i < data.length - 1; i += 2) {
+            listItem(data[i], data[i + 1]);
+>>>>>>> 1cd13da (Das ist Dumm)
         }
     }
     
@@ -631,6 +857,20 @@ public class ConsoleFormatter {
     }
     
     /**
+<<<<<<< HEAD
+=======
+     * Gibt eine horizontale Linie aus
+     */
+    public void line() {
+        if (useColors) {
+            logger.info(BRIGHT_BLACK + "──────────────────────────────────────────────────────" + RESET);
+        } else {
+            logger.info("--------------------------------------------------");
+        }
+    }
+    
+    /**
+>>>>>>> 1cd13da (Das ist Dumm)
      * Gibt eine doppelte horizontale Linie aus
      */
     public void doubleLine() {
@@ -642,6 +882,7 @@ public class ConsoleFormatter {
     }
     
     /**
+<<<<<<< HEAD
      * Gibt eine kleine Überschrift ohne Rahmen aus
      * 
      * @param title Der Titel
@@ -653,10 +894,41 @@ public class ConsoleFormatter {
         } else {
             logger.info("");
             logger.info("-- " + title);
+=======
+     * Gibt einen formatierten Fortschrittsbalken aus
+     * 
+     * @param current Aktueller Wert
+     * @param max Maximaler Wert
+     * @param length Länge des Balkens
+     */
+    public void progressBar(int current, int max, int length) {
+        int progressChars = (int) ((double) current / max * length);
+        StringBuilder bar = new StringBuilder("[");
+        
+        for (int i = 0; i < length; i++) {
+            if (i < progressChars) {
+                bar.append("█");
+            } else {
+                bar.append("░");
+            }
+        }
+        bar.append("]");
+        
+        double percentage = (double) current / max * 100;
+        
+        if (useColors) {
+            logger.info(BRIGHT_CYAN + bar.toString() + RESET + " " + 
+                     BRIGHT_WHITE + String.format("%.1f%%", percentage) + RESET + " " +
+                     BRIGHT_BLACK + "(" + current + "/" + max + ")" + RESET);
+        } else {
+            logger.info(bar.toString() + " " + String.format("%.1f%%", percentage) + 
+                     " (" + current + "/" + max + ")");
+>>>>>>> 1cd13da (Das ist Dumm)
         }
     }
     
     /**
+<<<<<<< HEAD
      * Hilfsdatenklasse für die Stile der verschiedenen Nachrichtenkategorien
      */
     private static class CategoryStyle {
@@ -795,10 +1067,165 @@ public class ConsoleFormatter {
             logger.info(formatWithPrefix(BRIGHT_CYAN + symbol + " " + WHITE + text + RESET));
         } else {
             logger.info(formatWithPrefix(symbol + " " + text));
+=======
+     * Gibt einen farbigen Fortschrittsbalken aus, dessen Farbe sich basierend auf dem Fortschritt ändert
+     * 
+     * @param current Aktueller Wert
+     * @param max Maximaler Wert
+     * @param length Länge des Balkens
+     * @param label Beschriftung für den Fortschrittsbalken
+     */
+    public void colorProgressBar(int current, int max, int length, String label) {
+        int progressChars = (int) ((double) current / max * length);
+        double percentage = (double) current / max * 100;
+        StringBuilder bar = new StringBuilder();
+        
+        // Balkenfarbe basierend auf Fortschritt
+        String barColor;
+        if (percentage < 30) {
+            barColor = RED;
+        } else if (percentage < 70) {
+            barColor = YELLOW;
+        } else {
+            barColor = GREEN;
+        }
+        
+        if (useColors) {
+            bar.append(BRIGHT_WHITE).append("[").append(RESET);
+            
+            for (int i = 0; i < length; i++) {
+                if (i < progressChars) {
+                    bar.append(barColor).append("█").append(RESET);
+                } else {
+                    bar.append(BRIGHT_BLACK).append("▒").append(RESET);
+                }
+            }
+            
+            bar.append(BRIGHT_WHITE).append("]").append(RESET);
+            
+            logger.info(bar.toString() + " " + 
+                     BRIGHT_WHITE + String.format("%.1f%%", percentage) + RESET + " " +
+                     (label != null ? BRIGHT_BLACK + label + RESET : ""));
+        } else {
+            bar.append("[");
+            
+            for (int i = 0; i < length; i++) {
+                if (i < progressChars) {
+                    bar.append("#");
+                } else {
+                    bar.append("-");
+                }
+            }
+            
+            bar.append("]");
+            
+            logger.info(bar.toString() + " " + String.format("%.1f%%", percentage) + 
+                     (label != null ? " " + label : ""));
         }
     }
     
     /**
+     * Gibt eine schrittweise Information aus
+     * 
+     * @param step Die Schrittnummer
+     * @param total Die Gesamtzahl der Schritte
+     * @param description Die Beschreibung
+     */
+    public void step(int step, int total, String description) {
+        if (useColors) {
+            logger.info(BRIGHT_BLUE + "(" + step + "/" + total + ")" + RESET + " " + WHITE + description + RESET);
+        } else {
+            logger.info("(" + step + "/" + total + ") " + description);
+        }
+    }
+    
+    /**
+     * Gibt einen formatierten Schritt mit Icon aus
+     * 
+     * @param step Die Schrittnummer
+     * @param total Die Gesamtzahl der Schritte
+     * @param description Die Beschreibung
+     * @param isSuccess Ob der Schritt erfolgreich war
+     */
+    public void richStep(int step, int total, String description, boolean isSuccess) {
+        String icon = isSuccess ? (useUnicodeSymbols ? "✓ " : "") : (useUnicodeSymbols ? "× " : "");
+        String color = isSuccess ? GREEN : RED;
+        String brightColor = isSuccess ? BRIGHT_GREEN : BRIGHT_RED;
+        
+        if (useColors) {
+            double percentage = (double) step / total * 100;
+            String progress = String.format("%.0f%%", percentage);
+            
+            logger.info(brightColor + "[" + step + "/" + total + "] " + progress + RESET + " " + 
+                     color + icon + WHITE + description + RESET);
+        } else {
+            logger.info("[" + step + "/" + total + "] " + icon + description);
+        }
+    }
+    
+    /**
+     * Zeigt eine Statusmeldung mit Farbkodierung basierend auf dem Status an
+     * 
+     * @param label Die Bezeichnung des Status
+     * @param message Die eigentliche Nachricht
+     * @param success Der Status (true = Erfolg, false = Fehler, null = neutral)
+     */
+    public void status(String label, String message, Boolean success) {
+        String statusSymbol;
+        String statusColor;
+        
+        if (success == null) {
+            // Neutraler Status
+            statusSymbol = useUnicodeSymbols ? "○" : "-";
+            statusColor = RESET;
+        } else if (success) {
+            // Erfolgreicher Status
+            statusSymbol = useUnicodeSymbols ? "✓" : "+";
+            statusColor = GREEN;
+        } else {
+            // Fehlerhafter Status
+            statusSymbol = useUnicodeSymbols ? "✗" : "x";
+            statusColor = RED;
+        }
+        
+        logger.info(formatWithPrefix(CYAN + "[" + statusColor + statusSymbol + CYAN + "] " + 
+                      WHITE + label + ": " + statusColor + message + RESET));
+    }
+    
+    /**
+     * Gibt einen formatierten Block mit Text aus
+     * 
+     * @param title Der Titel des Blocks
+     * @param content Der Inhalt des Blocks
+     * @param isImportant Ob der Block wichtig ist
+     */
+    public void textBlock(String title, String content, boolean isImportant) {
+        if (useColors) {
+            String titleBg = isImportant ? BG_BRIGHT_YELLOW : BG_BRIGHT_BLUE;
+            String titleFg = isImportant ? BLACK : WHITE;
+            String contentBg = isImportant ? BG_BLACK : "";
+            String contentFg = isImportant ? BRIGHT_YELLOW : WHITE;
+            
+            logger.info(titleBg + " " + BOLD + titleFg + title + " " + RESET);
+            
+            if (content.contains("\n")) {
+                for (String line : content.split("\n")) {
+                    logger.info((contentBg.isEmpty() ? "" : contentBg + " ") + 
+                             contentFg + line + RESET);
+                }
+            } else {
+                logger.info((contentBg.isEmpty() ? "" : contentBg + " ") + 
+                         contentFg + content + RESET);
+            }
+        } else {
+            logger.info("--- " + title + " ---");
+            logger.info(content);
+>>>>>>> 1cd13da (Das ist Dumm)
+        }
+    }
+    
+    /**
+<<<<<<< HEAD
      * Zeigt einen einfachen Fortschrittsbalken an
      * 
      * @param current Der aktuelle Fortschritt
@@ -823,5 +1250,392 @@ public class ConsoleFormatter {
         
         bar.append("] ").append(current).append("/").append(total);
         logger.info(formatWithPrefix(bar.toString()));
+=======
+     * Gibt eine Tabelle mit Spaltenüberschriften aus
+     * 
+     * @param headers Die Spaltenüberschriften
+     */
+    public void tableHeader(String... headers) {
+        if (useColors) {
+            StringBuilder sb = new StringBuilder();
+            for (String header : headers) {
+                sb.append(BRIGHT_WHITE).append(BOLD).append(header).append(RESET).append("\t");
+            }
+            logger.info(sb.toString());
+            
+            // Trennlinie
+            sb = new StringBuilder();
+            for (int i = 0; i < headers.length; i++) {
+                sb.append(BRIGHT_BLACK).append("───────────").append(RESET).append("\t");
+            }
+            logger.info(sb.toString());
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (String header : headers) {
+                sb.append(header).append("\t");
+            }
+            logger.info(sb.toString());
+            
+            // Trennlinie
+            sb = new StringBuilder();
+            for (int i = 0; i < headers.length; i++) {
+                sb.append("----------").append("\t");
+            }
+            logger.info(sb.toString());
+        }
+    }
+    
+    /**
+     * Gibt eine Tabellenzeile aus
+     * 
+     * @param cells Die Zelleninhalte
+     */
+    public void tableRow(String... cells) {
+        if (useColors) {
+            StringBuilder sb = new StringBuilder();
+            for (String cell : cells) {
+                sb.append(WHITE).append(cell).append(RESET).append("\t");
+            }
+            logger.info(sb.toString());
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (String cell : cells) {
+                sb.append(cell).append("\t");
+            }
+            logger.info(sb.toString());
+        }
+    }
+    
+    /**
+     * Gibt eine Box mit Text aus
+     * 
+     * @param text Der Text
+     * @param boxWidth Die Breite der Box
+     */
+    public void box(String text, int boxWidth) {
+        if (boxWidth < 10) boxWidth = 10;
+        if (useColors) {
+            String topLine = "╭" + "─".repeat(boxWidth - 2) + "╮";
+            String bottomLine = "╰" + "─".repeat(boxWidth - 2) + "╯";
+            String middle = text.length() > boxWidth - 4 
+                ? text.substring(0, boxWidth - 7) + "..." 
+                : text + " ".repeat(boxWidth - text.length() - 4);
+            
+            logger.info(BRIGHT_CYAN + topLine + RESET);
+            logger.info(BRIGHT_CYAN + "│ " + RESET + WHITE + middle + RESET + BRIGHT_CYAN + " │" + RESET);
+            logger.info(BRIGHT_CYAN + bottomLine + RESET);
+        } else {
+            String topLine = "+" + "-".repeat(boxWidth - 2) + "+";
+            String bottomLine = "+" + "-".repeat(boxWidth - 2) + "+";
+            String middle = text.length() > boxWidth - 4 
+                ? text.substring(0, boxWidth - 7) + "..." 
+                : text + " ".repeat(boxWidth - text.length() - 4);
+            
+            logger.info(topLine);
+            logger.info("| " + middle + " |");
+            logger.info(bottomLine);
+        }
+    }
+    
+    /**
+     * Gibt den aktuellen Zeitstempel zurück
+     */
+    private String getTimeString() {
+        return BRIGHT_BLACK + "[" + LocalDateTime.now().format(TIME_FORMATTER) + "]" + RESET;
+    }
+    
+    /**
+     * Formatiert eine Nachricht mit dem Präfix
+     * 
+     * @param message Die zu formatierende Nachricht
+     * @return Die formatierte Nachricht
+     */
+    private String formatWithPrefix(String message) {
+        StringBuilder result = new StringBuilder();
+        
+        // Timestamp hinzufügen, falls aktiviert
+        if (showTimestamp) {
+            String timestamp = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
+            result.append(BRIGHT_BLACK).append("[").append(timestamp).append("] ").append(RESET);
+        }
+        
+        // Prefix hinzufügen - bereits formatiert, keine weitere Verarbeitung nötig
+        if (prefix != null && !prefix.isEmpty()) {
+            result.append(prefix).append(" ");
+        }
+        
+        // Nachricht hinzufügen
+        result.append(message);
+        
+        return result.toString();
+    }
+    
+    /**
+     * Konvertiert Minecraft-Style Farbcodes (&a, &b, etc.) in ANSI-Farbcodes
+     * oder entfernt sie, wenn Farben deaktiviert sind
+     * 
+     * @param input Der Text mit Minecraft-Farbcodes
+     * @return Der Text mit ANSI-Farbcodes oder ohne Farbcodes
+     */
+    private String formatHexCodes(String input) {
+        if (input == null) return "";
+        
+        // Wenn Farben deaktiviert sind, entferne alle Farbcodes
+        if (!useColors) {
+            return input.replaceAll("&[0-9a-fklmnorx]", "")
+                       .replaceAll("§[0-9a-fklmnorx]", "")
+                       .replaceAll("#[a-fA-F0-9]{6}", "");
+        }
+        
+        // Ersetze zuerst alle §-Codes mit &-Codes für einheitliche Verarbeitung
+        String result = input.replace('§', '&');
+        
+        // Ersetze alle Minecraft-Farbcodes mit ANSI-Farbcodes
+        result = result.replaceAll("&0", BLACK)
+                      .replaceAll("&1", BLUE)
+                      .replaceAll("&2", GREEN)
+                      .replaceAll("&3", CYAN)
+                      .replaceAll("&4", RED)
+                      .replaceAll("&5", PURPLE)
+                      .replaceAll("&6", YELLOW)
+                      .replaceAll("&7", WHITE)
+                      .replaceAll("&8", BRIGHT_BLACK)
+                      .replaceAll("&9", BRIGHT_BLUE)
+                      .replaceAll("&a", BRIGHT_GREEN)
+                      .replaceAll("&b", BRIGHT_CYAN)
+                      .replaceAll("&c", BRIGHT_RED)
+                      .replaceAll("&d", BRIGHT_PURPLE)
+                      .replaceAll("&e", BRIGHT_YELLOW)
+                      .replaceAll("&f", BRIGHT_WHITE)
+                      .replaceAll("&l", BOLD)
+                      .replaceAll("&n", UNDERLINE)
+                      .replaceAll("&o", ITALIC)
+                      .replaceAll("&k", BLINK)
+                      .replaceAll("&m", UNDERLINE)
+                      .replaceAll("&r", RESET);
+        
+        // Stelle sicher, dass der Text mit Reset endet
+        if (!result.endsWith(RESET)) {
+            result += RESET;
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Gibt eine kategorisierte Info-Nachricht aus
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param message Die Nachricht
+     */
+    public void categoryInfo(MessageCategory category, String message) {
+        if (!isCategoryEnabled(category)) return;
+        
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String categoryColor = getCategoryColor(category);
+            String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes für die Kategorie
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
+            
+            // Formatierte Ausgabe mit ANSI-Farbcodes
+            logger.info(timeStr + prefix + " " + categoryStr + categoryColor + BOLD + categoryIcon + RESET + WHITE + cleanMessage + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String categoryIcon = useUnicodeSymbols ? getCategoryIcon(category) + " " : "";
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + categoryIcon + cleanMessage);
+        }
+    }
+    
+    /**
+     * Gibt eine kategorisierte Erfolgsnachricht aus
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param message Die Nachricht
+     */
+    public void categorySuccess(MessageCategory category, String message) {
+        if (!isCategoryEnabled(category)) return;
+        
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String categoryColor = getCategoryColor(category);
+            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
+            
+            logger.info(timeStr + prefix + " " + categoryStr + GREEN + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
+        }
+    }
+    
+    /**
+     * Gibt eine kategorisierte Warnmeldung aus
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param message Die Nachricht
+     */
+    public void categoryWarning(MessageCategory category, String message) {
+        if (!isCategoryEnabled(category)) return;
+        
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String categoryColor = getCategoryColor(category);
+            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
+            
+            logger.warning(timeStr + prefix + " " + categoryStr + YELLOW + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
+            logger.warning(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
+        }
+    }
+    
+    /**
+     * Gibt eine kategorisierte Fehlermeldung aus
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param message Die Nachricht
+     */
+    public void categoryError(MessageCategory category, String message) {
+        if (!isCategoryEnabled(category)) return;
+        
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String categoryColor = getCategoryColor(category);
+            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
+            
+            logger.severe(timeStr + prefix + " " + categoryStr + RED + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
+            logger.severe(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
+        }
+    }
+    
+    /**
+     * Gibt eine kategorisierte Debug-Nachricht aus (nur wenn Debug-Modus aktiviert)
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param message Die Nachricht
+     * @param isDebugMode Ob der Debug-Modus aktiviert ist
+     */
+    public void categoryDebug(MessageCategory category, String message, boolean isDebugMode) {
+        if (!isDebugMode || !isCategoryEnabled(category)) return;
+        
+        // Entferne Minecraft-Farbcodes für die Konsolenausgabe
+        String cleanMessage = stripMinecraftColors(message);
+        
+        if (useColors) {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String categoryColor = getCategoryColor(category);
+            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
+            
+            // Direktes Anwenden der ANSI-Farbcodes
+            String categoryStr = BRIGHT_BLACK + "[" + categoryColor + categoryPrefix + BRIGHT_BLACK + "] " + RESET;
+            
+            logger.info(timeStr + prefix + " " + categoryStr + BRIGHT_BLACK + BOLD + symbol + RESET + WHITE + cleanMessage + RESET);
+        } else {
+            String timeStr = showTimestamp ? getTimeString() + " " : "";
+            String categoryPrefix = getCategoryPrefix(category);
+            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
+            logger.info(timeStr + prefix + " [" + categoryPrefix + "] " + symbol + cleanMessage);
+        }
+    }
+    
+    /**
+     * Gibt einen kategorisierten Tabellenheader aus
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param headers Die Tabellenspalten
+     */
+    public void categoryTableHeader(MessageCategory category, String... headers) {
+        if (useColors) {
+            String categoryStr = "[" + category.getColor() + category.getCode() + RESET + "] ";
+            String headerStr = BRIGHT_WHITE + BOLD;
+            for (int i = 0; i < headers.length; i++) {
+                if (i > 0) headerStr += " | ";
+                headerStr += headers[i];
+            }
+            logger.info(CYAN + prefix + RESET + " " + categoryStr + headerStr + RESET);
+            
+            String dividerStr = "";
+            for (int i = 0; i < headers.length; i++) {
+                if (i > 0) dividerStr += "─┼─";
+                dividerStr += "─".repeat(headers[i].length());
+            }
+            logger.info(CYAN + prefix + RESET + " " + categoryStr + CYAN + dividerStr + RESET);
+        } else {
+            String headerStr = "";
+            for (int i = 0; i < headers.length; i++) {
+                if (i > 0) headerStr += " | ";
+                headerStr += headers[i];
+            }
+            logger.info(prefix + " [" + category.getCode() + "] " + headerStr);
+            
+            String dividerStr = "";
+            for (int i = 0; i < headers.length; i++) {
+                if (i > 0) dividerStr += "-+-";
+                dividerStr += "-".repeat(headers[i].length());
+            }
+            logger.info(prefix + " [" + category.getCode() + "] " + dividerStr);
+        }
+    }
+    
+    /**
+     * Gibt eine kategorisierte Tabellenzeile aus
+     * 
+     * @param category Die Nachrichtenkategorie
+     * @param cells Die Tabellenzellen
+     */
+    public void categoryTableRow(MessageCategory category, String... cells) {
+        if (useColors) {
+            String categoryStr = "[" + category.getColor() + category.getCode() + RESET + "] ";
+            String rowStr = WHITE;
+            for (int i = 0; i < cells.length; i++) {
+                if (i > 0) rowStr += CYAN + " | " + WHITE;
+                rowStr += cells[i];
+            }
+            logger.info(CYAN + prefix + RESET + " " + categoryStr + rowStr + RESET);
+        } else {
+            String rowStr = "";
+            for (int i = 0; i < cells.length; i++) {
+                if (i > 0) rowStr += " | ";
+                rowStr += cells[i];
+            }
+            logger.info(prefix + " [" + category.getCode() + "] " + rowStr);
+        }
+>>>>>>> 1cd13da (Das ist Dumm)
     }
 } 
