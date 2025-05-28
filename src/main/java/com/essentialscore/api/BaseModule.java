@@ -81,23 +81,31 @@ public abstract class BaseModule implements Module {
         onInitialize();
     }
     
+<<<<<<< HEAD
     /**
      * Called when the module is initialized.
      * This method should be implemented by subclasses to perform their initialization.
      */
     protected abstract void onInitialize();
     
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public void onPostLoad() {
         // Default implementation, can be overridden by subclasses
     }
     
     @Override
+<<<<<<< HEAD
     public void onDisable() {
+=======
+    public void onUnload() {
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         // Default implementation, can be overridden by subclasses
     }
     
     @Override
+<<<<<<< HEAD
     public void onReload() {
         // Default implementation, can be overridden by subclasses
         if (config != null) {
@@ -113,40 +121,61 @@ public abstract class BaseModule implements Module {
      * @return True if reload was successful, false otherwise
      */
     public boolean onReload(FileConfiguration config) {
+=======
+    public boolean onReload(FileConfiguration config) {
+        // Default implementation, update config and return success
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         this.config = config;
         return true;
     }
     
     /**
+<<<<<<< HEAD
      * Gets the name of the module.
      * 
      * @return The module name
      */
+=======
+     * Called after the API and config have been set.
+     * Override this to perform initialization logic.
+     */
+    protected void onInitialize() {
+        // Default implementation does nothing
+    }
+    
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String getName() {
         return name;
     }
     
+<<<<<<< HEAD
     /**
      * Gets the version of the module.
      * 
      * @return The module version
      */
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String getVersion() {
         return version;
     }
     
+<<<<<<< HEAD
     /**
      * Gets the description of the module.
      * 
      * @return The module description
      */
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String getDescription() {
         return description;
     }
     
+<<<<<<< HEAD
     /**
      * Gets the dependencies of the module.
      * 
@@ -182,12 +211,20 @@ public abstract class BaseModule implements Module {
      * 
      * @return The optional module dependencies
      */
+=======
+    @Override
+    public Map<String, String> getDependencies() {
+        return dependencies;
+    }
+    
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public Map<String, String> getOptionalDependencies() {
         return optionalDependencies;
     }
     
     /**
+<<<<<<< HEAD
      * Called when a command from this module is executed.
      * This is a legacy method that should not be used in new code.
      * 
@@ -216,6 +253,8 @@ public abstract class BaseModule implements Module {
     }
     
     /**
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Logs an informational message
      * 
      * @param message The message to log

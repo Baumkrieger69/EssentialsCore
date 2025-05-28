@@ -17,30 +17,41 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import java.text.SimpleDateFormat;
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import java.util.zip.ZipEntry;
 =======
 import java.lang.management.ThreadMXBean;
 import java.lang.management.ThreadInfo;
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+import java.lang.management.ThreadMXBean;
+import java.lang.management.ThreadInfo;
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.regex.Pattern;
 
 // Add these imports at the top of the file
@@ -70,6 +81,7 @@ public class ModuleManager {
     private ConsoleFormatter console;
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     // Performance-Tracking für Module
     private final Map<String, ModulePerformanceData> modulePerformanceMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService performanceTrackerService;
@@ -82,6 +94,8 @@ public class ModuleManager {
     
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     public ModuleManager(ApiCore apiCore, File modulesDir, File configDir, 
                          Map<String, Object> loadedModules, 
                          Map<String, List<DynamicCommand>> moduleCommands,
@@ -94,6 +108,7 @@ public class ModuleManager {
         this.executorService = executorService;
         this.bufferCache = ThreadLocal.withInitial(() -> new byte[BUFFER_SIZE]);
 <<<<<<< HEAD
+<<<<<<< HEAD
         this.performanceTrackerService = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "ModulePerformanceTracker");
             thread.setDaemon(true); // Hintergrund-Thread, der den Server nicht am Herunterfahren hindert
@@ -101,6 +116,8 @@ public class ModuleManager {
         });
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         // Erweiterte Konsolen-Formatter Konfiguration
         boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
@@ -116,6 +133,7 @@ public class ModuleManager {
             useColors, showTimestamps, useUnicodeSymbols, stylePreset
         );
 <<<<<<< HEAD
+<<<<<<< HEAD
         
         // Performance-Tracking starten, falls aktiviert
         if (apiCore.getConfig().getBoolean("performance.module-tracking.enabled", true)) {
@@ -124,6 +142,8 @@ public class ModuleManager {
         }
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
@@ -1109,6 +1129,7 @@ public class ModuleManager {
                 // Modul initialisieren - mit robuster Initialisierung unabhängig vom Interface
                 try {
 <<<<<<< HEAD
+<<<<<<< HEAD
                     // Verwende die bereits geladene Konfiguration
                     final FileConfiguration finalConfig = config;
                     final Object finalModuleInstance = moduleInstance;
@@ -1144,6 +1165,8 @@ public class ModuleManager {
                             ModuleAdapter adapter = new ModuleAdapter(
                                 (com.essentialscore.api.Module) finalModuleInstance, 
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                     // Versuche zuerst den direkten Weg über das Module-Interface
                     if (moduleInstance instanceof com.essentialscore.api.Module) {
                         console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Initialisiere Modul " + moduleName + " über Module-Interface");
@@ -1166,7 +1189,10 @@ public class ModuleManager {
                             // Create an adapter that presents the Module as a legacy module
                             ModuleAdapter adapter = new ModuleAdapter(
                                 (com.essentialscore.api.Module) moduleInstance, 
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                                 moduleAPI, 
                                 apiCore
                             );
@@ -1176,10 +1202,13 @@ public class ModuleManager {
                             loadedModules.put(moduleName, moduleInfo);
                         }
 <<<<<<< HEAD
+<<<<<<< HEAD
                     }
                 } catch (Exception e) {
                     console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Initialisieren von Modul " + moduleName + ": " + e.getMessage());
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                     } else {
                         // Fallback auf Reflection für Legacy-Module
                         console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Initialisiere Modul " + moduleName + " über Reflection");
@@ -1234,7 +1263,10 @@ public class ModuleManager {
                     }
                 } catch (Exception e) {
                     console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler bei der Initialisierung von Modul " + moduleName + ": " + e.getMessage());
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                     if (apiCore.isDebugMode()) {
                         e.printStackTrace();
                     }
@@ -2279,6 +2311,7 @@ public class ModuleManager {
         }
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     /**
      * Führt eine private Methode eines Moduls sicher aus
@@ -2919,4 +2952,6 @@ public class ModuleManager {
     }
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 } 

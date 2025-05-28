@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+<<<<<<< HEAD
  * Interface for plugin modules.
  */
 public interface Module {
@@ -106,6 +107,12 @@ public interface Module {
      */
     FileConfiguration getConfig();
     
+=======
+ * Main interface for EssentialsCore modules.
+ * All modules should implement this interface to be properly loaded by the core.
+ */
+public interface Module {
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     /**
      * Called before the module is initialized, allowing setup of early resources
      * 
@@ -127,6 +134,36 @@ public interface Module {
     default void onPostLoad() {}
     
     /**
+<<<<<<< HEAD
+=======
+     * Called when the module is enabled or re-enabled after a reload
+     * This is called after init() and can be used to start tasks or register listeners
+     */
+    default void onEnable() {}
+    
+    /**
+     * Called when the module is disabled
+     */
+    void onDisable();
+    
+    /**
+     * Called when the module is being unloaded completely
+     * This allows the module to clean up resources before being removed
+     */
+    default void onUnload() {}
+    
+    /**
+     * Called when the module is being reloaded
+     * 
+     * @param config The new configuration for the module
+     * @return true if reload was successful, false otherwise
+     */
+    default boolean onReload(FileConfiguration config) {
+        return true;
+    }
+    
+    /**
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Called when a player joins the server
      * 
      * @param player The player who joined
@@ -154,12 +191,40 @@ public interface Module {
     default List<String> onTabComplete(String commandName, CommandSender sender, String[] args) { return null; }
     
     /**
+<<<<<<< HEAD
+=======
+     * Gets the name of the module
+     * 
+     * @return The module name
+     */
+    String getName();
+    
+    /**
+     * Gets the version of the module
+     * 
+     * @return The module version
+     */
+    String getVersion();
+    
+    /**
+     * Gets the description of the module
+     * 
+     * @return The module description
+     */
+    String getDescription();
+    
+    /**
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gets the list of module dependencies
      * Dependencies are required for the module to function
      * 
      * @return Map of dependency names to version range requirements
      */
+<<<<<<< HEAD
     default Map<String, String> getDependenciesMap() { return Map.of(); }
+=======
+    default Map<String, String> getDependencies() { return Map.of(); }
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     
     /**
      * Gets the list of optional module dependencies

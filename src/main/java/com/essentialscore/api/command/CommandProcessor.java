@@ -3,10 +3,23 @@ package com.essentialscore.api.command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
+<<<<<<< HEAD
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+=======
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,7 +30,10 @@ import java.util.logging.Logger;
 public class CommandProcessor {
     private static final Logger LOGGER = Logger.getLogger(CommandProcessor.class.getName());
     
+<<<<<<< HEAD
     @SuppressWarnings("unused")
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     private final Plugin plugin;
     private final CommandManager commandManager;
     private final Map<String, Object> commandObjects;
@@ -90,7 +106,14 @@ public class CommandProcessor {
      * @return The registered command, or null if registration failed
      */
     private Command registerCommandMethod(String moduleId, Object commandObject, Method method, RegisterCommand annotation) {
+<<<<<<< HEAD
         final String name = annotation.name().isEmpty() ? method.getName() : annotation.name();
+=======
+        String name = annotation.name();
+        if (name.isEmpty()) {
+            name = method.getName();
+        }
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         // Create a simple command
         SimpleCommand.Builder builder = SimpleCommand.builder(name, moduleId)
@@ -118,8 +141,13 @@ public class CommandProcessor {
         
         // Check method parameters
         Class<?>[] paramTypes = method.getParameterTypes();
+<<<<<<< HEAD
         final boolean usesContext = paramTypes.length == 1 && CommandContext.class.isAssignableFrom(paramTypes[0]);
         final boolean usesLegacy = paramTypes.length == 3 && 
+=======
+        boolean usesContext = paramTypes.length == 1 && CommandContext.class.isAssignableFrom(paramTypes[0]);
+        boolean usesLegacy = paramTypes.length == 3 && 
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                              CommandSender.class.isAssignableFrom(paramTypes[0]) && 
                              String.class.isAssignableFrom(paramTypes[1]) && 
                              String[].class.isAssignableFrom(paramTypes[2]);
@@ -203,8 +231,12 @@ public class CommandProcessor {
                 return registerCommandMethod(moduleId, commandObject, method, annotation);
             }
             
+<<<<<<< HEAD
             // Create a default annotation using the proxy pattern
             final String finalMethodName = methodName;
+=======
+            // Create a default annotation
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             RegisterCommand defaultAnnotation = new RegisterCommand() {
                 @Override
                 public Class<? extends java.lang.annotation.Annotation> annotationType() {
@@ -213,7 +245,11 @@ public class CommandProcessor {
                 
                 @Override
                 public String name() {
+<<<<<<< HEAD
                     return finalMethodName;
+=======
+                    return methodName;
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 }
                 
                 @Override
@@ -278,4 +314,133 @@ public class CommandProcessor {
             return null;
         }
     }
+<<<<<<< HEAD
+=======
+    
+    /**
+     * Annotation for registering command methods.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface RegisterCommand {
+        /**
+         * The command name.
+         * If empty, the method name will be used.
+         *
+         * @return The command name
+         */
+        String name() default "";
+        
+        /**
+         * The command description.
+         *
+         * @return The command description
+         */
+        String description() default "";
+        
+        /**
+         * The command usage.
+         *
+         * @return The command usage
+         */
+        String usage() default "";
+        
+        /**
+         * The command aliases.
+         *
+         * @return The command aliases
+         */
+        String[] aliases() default {};
+        
+        /**
+         * The permission required to use the command.
+         *
+         * @return The permission
+         */
+        String permission() default "";
+        
+        /**
+         * The minimum number of arguments required.
+         *
+         * @return The minimum arguments
+         */
+        int minArgs() default 0;
+        
+        /**
+         * The maximum number of arguments allowed.
+         *
+         * @return The maximum arguments, or -1 for unlimited
+         */
+        int maxArgs() default -1;
+        
+        /**
+         * The command category.
+         *
+         * @return The category
+         */
+        String category() default "General";
+        
+        /**
+         * Detailed help information.
+         *
+         * @return The detailed help
+         */
+        String detailedHelp() default "";
+        
+        /**
+         * Examples of how to use the command.
+         *
+         * @return The examples
+         */
+        String[] examples() default {};
+        
+        /**
+         * Whether the command is hidden from help listings.
+         *
+         * @return true if the command is hidden
+         */
+        boolean hidden() default false;
+        
+        /**
+         * The cooldown time in seconds.
+         *
+         * @return The cooldown time
+         */
+        int cooldown() default 0;
+    }
+    
+    /**
+     * Example usage of the command processor.
+     */
+    public static class Example {
+        /**
+         * Example command method.
+         *
+         * @param context The command context
+         * @return true if the command was executed successfully
+         */
+        @RegisterCommand(
+            name = "example",
+            description = "An example command",
+            usage = "[arg]",
+            aliases = {"ex", "test"},
+            permission = "example.command",
+            minArgs = 0,
+            maxArgs = 1,
+            category = "Examples",
+            detailedHelp = "This is an example command that shows how to use the command processor.",
+            examples = {"/example", "/example arg"},
+            cooldown = 5
+        )
+        public boolean exampleCommand(CommandContext context) {
+            context.getSender().sendMessage("Example command executed!");
+            
+            if (!context.getArgs().isEmpty()) {
+                context.getSender().sendMessage("Argument: " + context.getArgs().get(0));
+            }
+            
+            return true;
+        }
+    }
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 } 

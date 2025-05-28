@@ -1,12 +1,15 @@
 package com.essentialscore;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,11 +18,15 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+<<<<<<< HEAD
 <<<<<<< HEAD
 import java.util.stream.Collectors;
 
@@ -33,6 +40,8 @@ import org.bukkit.command.PluginCommand;
 import com.essentialscore.commands.ModuleCommand;
 import com.essentialscore.commands.LanguageCommand;
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.logging.Level;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -43,7 +52,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 
 /**
  * Manager für Befehle im ApiCore
@@ -52,13 +64,17 @@ public class CommandManager {
     private final ApiCore apiCore;
     private ConsoleFormatter console;
 <<<<<<< HEAD
+<<<<<<< HEAD
     private LanguageCommand languageCommand;
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     
     public CommandManager(ApiCore apiCore) {
         this.apiCore = apiCore;
         
+<<<<<<< HEAD
 <<<<<<< HEAD
         // Rohpräfix auslesen (ohne Formatierung)
         String rawPrefix = apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&3&lCommand&b&lManager&8]");
@@ -67,21 +83,30 @@ public class CommandManager {
 =======
         // Erweiterte Konsolen-Formatter Konfiguration
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+        // Erweiterte Konsolen-Formatter Konfiguration
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
         boolean showTimestamps = apiCore.getConfig().getBoolean("console.show-timestamps", false);
         boolean useUnicodeSymbols = apiCore.getConfig().getBoolean("console.use-unicode-symbols", true);
         String stylePreset = apiCore.getConfig().getString("console.style-preset", "default");
         
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         // Konsolen-Formatter initialisieren mit Rohpräfix (ohne Formatierung)
         String rawPrefix = apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&6&lCommandManager&8]");
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+        // Konsolen-Formatter initialisieren mit Rohpräfix (ohne Formatierung)
+        String rawPrefix = apiCore.getConfig().getString("console.prefixes.command-manager", "&8[&6&lCommandManager&8]");
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         console = new ConsoleFormatter(
             apiCore.getLogger(),
             rawPrefix,
             useColors, showTimestamps, useUnicodeSymbols, stylePreset
         );
+<<<<<<< HEAD
 <<<<<<< HEAD
         
         // Initialize language command
@@ -255,6 +280,8 @@ public class CommandManager {
             console.error("Konnte Hauptbefehl 'apicore' nicht finden! Befehle werden nicht funktionieren.");
             console.error("Stelle sicher, dass die plugin.yml korrekt ist und den 'apicore' Befehl enthält.");
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
@@ -267,20 +294,28 @@ public class CommandManager {
         
         if (apiCoreCommand == null) {
             apiCore.getLogger().severe("Konnte Hauptbefehl nicht registrieren! Stellen Sie sicher, dass plugin.yml korrekt ist.");
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             return;
         }
         
         apiCoreCommand.setExecutor((sender, command, label, args) -> {
 <<<<<<< HEAD
+<<<<<<< HEAD
             if (args.length == 0) {
 =======
             if (args.length < 1) {
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+            if (args.length < 1) {
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 showHelp(sender);
                 return true;
             }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
             String subCommand = args[0].toLowerCase();
 
@@ -297,10 +332,16 @@ public class CommandManager {
             
             switch (cmd) {
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+            String cmd = args[0].toLowerCase();
+            
+            switch (cmd) {
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 case "help":
                     showHelp(sender);
                     break;
                 case "modules":
+<<<<<<< HEAD
 <<<<<<< HEAD
                 case "list":
                     listModules(sender);
@@ -316,6 +357,8 @@ public class CommandManager {
                 default:
                     sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cUnbekannter Befehl! Nutze &f/apicore help &cfür eine Übersicht."));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                     if (args.length > 1 && args[1].equalsIgnoreCase("info") && args.length > 2) {
                         moduleInfo(sender, args[2]);
                     } else {
@@ -417,7 +460,10 @@ public class CommandManager {
                     break;
                 default:
                     sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "#FF5555Unbekannter Befehl! Verwende &f/apicore help &cfor help."));
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                     break;
             }
 
@@ -425,13 +471,17 @@ public class CommandManager {
         });
         
 <<<<<<< HEAD
+<<<<<<< HEAD
         // Tab-Completer registrieren
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         apiCoreCommand.setTabCompleter((sender, command, alias, args) -> {
             List<String> completions = new ArrayList<>();
             
             if (args.length == 1) {
+<<<<<<< HEAD
 <<<<<<< HEAD
                 // Hauptbefehle
                 List<String> commands = Arrays.asList("help", "modules", "list", "info", "commands", 
@@ -446,6 +496,10 @@ public class CommandManager {
                 List<String> commands = Arrays.asList("help", "modules", "commands", "enable", "disable", 
                                                     "reload", "debug", "status", "info", "benchmark", "cache", "permission");
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+                List<String> commands = Arrays.asList("help", "modules", "commands", "enable", "disable", 
+                                                    "reload", "debug", "status", "info", "benchmark", "cache", "permission");
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 
                 for (String cmd : commands) {
                     if (cmd.startsWith(args[0].toLowerCase())) {
@@ -453,12 +507,15 @@ public class CommandManager {
                     }
                 }
 <<<<<<< HEAD
+<<<<<<< HEAD
             } else if (args.length >= 2 && (args[0].equalsIgnoreCase("language") || args[0].equalsIgnoreCase("lang"))) {
                 // For language subcommands, delegate to the language command handler
                 String[] langArgs = new String[args.length - 1];
                 System.arraycopy(args, 1, langArgs, 0, args.length - 1);
                 return languageCommand.onTabComplete(sender, command, alias, langArgs);
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 
                 return completions;
             }
@@ -567,12 +624,16 @@ public class CommandManager {
             // Wenn der Befehl perm/permission/perms ist, verwende immer unsere spezialisierte Methode
             if (args.length > 0 && (args[0].equalsIgnoreCase("perm") || args[0].equalsIgnoreCase("permission") || args[0].equalsIgnoreCase("perms"))) {
                 return tabCompletePermissionCommand(sender, args);
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             }
             
             return completions;
         });
         
+<<<<<<< HEAD
 <<<<<<< HEAD
         console.success("Core-Befehle erfolgreich registriert!");
     }
@@ -706,6 +767,8 @@ public class CommandManager {
         console.info("Befehlsdeaktivierung wird jetzt über die config.yml verwaltet. Bitte aktualisiere die Konfigurationsdatei.");
         return false;
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         apiCore.getLogger().info("Core-Befehle wurden registriert!");
     }
     
@@ -2637,6 +2700,9 @@ public class CommandManager {
             sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cFehler beim Reload: " + e.getMessage()));
             e.printStackTrace();
         }
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
 } 

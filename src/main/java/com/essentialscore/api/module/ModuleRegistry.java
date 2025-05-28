@@ -157,6 +157,7 @@ public class ModuleRegistry {
     }
     
     /**
+<<<<<<< HEAD
      * Gets all registered modules as a map.
      *
      * @return A map of module IDs to module information
@@ -166,6 +167,8 @@ public class ModuleRegistry {
     }
     
     /**
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Finds modules with a specific capability.
      *
      * @param capability The capability

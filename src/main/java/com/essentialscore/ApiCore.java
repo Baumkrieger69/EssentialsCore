@@ -2,25 +2,61 @@ package com.essentialscore;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.server.PluginEnableEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.io.StringWriter;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,14 +67,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.logging.FileHandler;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadInfo;
-import java.lang.management.ThreadMXBean;
 import java.util.Arrays;
 
 import com.essentialscore.util.BloomFilter;
@@ -53,11 +83,13 @@ import com.essentialscore.api.ModuleEventListener;
 import com.essentialscore.api.impl.CoreModuleAPI;
 import com.essentialscore.api.BasePlugin;
 import com.essentialscore.api.ModuleLogger;
+import com.essentialscore.api.command.Command;
 import com.essentialscore.api.command.CommandManager;
 import com.essentialscore.api.command.DynamicCommand;
 import com.essentialscore.api.config.ConfigManager;
 import com.essentialscore.api.module.ModuleFileManager;
 import com.essentialscore.api.module.ModuleManager;
+import com.essentialscore.api.module.ModuleManager.ModuleInfo;
 import com.essentialscore.api.module.ModulePermissionManager;
 import com.essentialscore.api.module.ModuleSandbox;
 import com.essentialscore.api.permission.PermissionManager;
@@ -67,7 +99,6 @@ import com.essentialscore.api.util.ThreadManager;
 // Correct performance imports from local packages
 import com.essentialscore.PerformanceMonitor;
 import com.essentialscore.PerformanceBenchmark;
-import com.essentialscore.api.command.Command;
 
 public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
 
@@ -203,7 +234,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         }
     }
 
-    // Define our own ModuleInfo class to match what we're storing
+    // ModuleInfo-Klasse public machen
     public static class ModuleInfo {
         private final String name;
         private final String version;
@@ -659,7 +690,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     }
     
     /**
-     * Konfiguriert die Logging-Eigenschaften
+     * Konfiguriert das Logging basierend auf den Einstellungen
      */
     private void configureLogging() {
         // Use basic constructor for ConsoleFormatter
@@ -786,28 +817,30 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             
             // Führe die Modulprüfung asynchron aus
             try {
-                Map<String, Object> availableModules = new HashMap<>();
-                if (moduleManager != null) {
-                    try {
-                        Method getAvailableMethod = moduleManager.getClass()
-                            .getMethod("getAvailableButNotLoadedModules");
-                        Object result = getAvailableMethod.invoke(moduleManager);
-                        if (result instanceof Map) {
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> resultMap = (Map<String, Object>) result;
-                            availableModules = resultMap;
+                // Get available modules
+                List<String> newModules = new ArrayList<>();
+                
+                // Get list of module jar files
+                File[] files = modulesDir.listFiles(file -> 
+                    file.isFile() && file.getName().endsWith(".jar"));
+                
+                if (files != null) {
+                    for (File file : files) {
+                        String moduleName = file.getName().substring(0, file.getName().length() - 4);
+                        
+                        // Check if this module is not loaded yet
+                        if (moduleManager != null && !moduleManager.isModuleLoaded(moduleName)) {
+                            newModules.add(moduleName);
                         }
-                    } catch (Exception e) {
-                        getLogger().log(Level.WARNING, "Failed to get available modules", e);
                     }
                 }
                 
-                if (!availableModules.isEmpty()) {
-                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Neue Module gefunden: " + String.join(", ", availableModules.keySet()));
+                if (!newModules.isEmpty()) {
+                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Neue Module gefunden: " + String.join(", ", newModules));
                     
                     // Lade neue Module, falls Hot-Reload aktiviert ist
                     if (hotReload) {
-                        for (String moduleName : availableModules.keySet()) {
+                        for (String moduleName : newModules) {
                             try {
                                 File moduleFile = new File(modulesDir, moduleName + ".jar");
                                 if (moduleFile.exists()) {
@@ -1054,6 +1087,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      * 
      * @return true, wenn der Debug-Modus aktiviert ist
      */
+    @Override
     public boolean isDebugMode() {
         return debugMode;
     }
@@ -1063,111 +1097,18 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      * 
      * @return der konfigurierte Message-Prefix
      */
+    @Override
     public String getMessagePrefix() {
         return messagePrefix;
     }
     
     /**
-     * Gets all loaded modules.
-     *
-     * @return A map of module names to module information
-     */
-    @Override
-    public Map<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> getLoadedModules() {
-        // Convert from internal ModuleInfo to ModuleManager.ModuleInfo
-        Map<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> result = new HashMap<>();
-        
-        for (Map.Entry<String, ModuleInfo> entry : loadedModules.entrySet()) {
-            ModuleInfo info = entry.getValue();
-            if (info != null) {
-                com.essentialscore.api.module.ModuleManager.ModuleInfo converted = 
-                    new com.essentialscore.api.module.ModuleManager.ModuleInfo(
-                        info.getName(),
-                        info.getVersion(),
-                        info.getDescription(),
-                        info.getInstance(),
-                        info.getLoader());
-                result.put(entry.getKey(), converted);
-            }
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Gets information about a specific module.
-     *
-     * @param moduleName The module name
-     * @return The module information, or null if not found
-     */
-    @Override
-    public com.essentialscore.api.module.ModuleManager.ModuleInfo getModuleInfo(String moduleName) {
-        ModuleInfo info = loadedModules.get(moduleName);
-        if (info != null) {
-            return new com.essentialscore.api.module.ModuleManager.ModuleInfo(
-                info.getName(),
-                info.getVersion(),
-                info.getDescription(),
-                info.getInstance(),
-                info.getLoader());
-        }
-        return null;
-    }
-    
-    /**
-     * Prüft, ob ein Spieler eine Berechtigung hat
-     * 
-     * @param player Der Spieler
-     * @param permission Die zu prüfende Berechtigung
-     * @return true, wenn der Spieler die Berechtigung hat
-     */
-    public boolean hasPermission(Player player, String permission) {
-        if (player == null || permission == null || permission.isEmpty()) {
-            return true;
-        }
-        
-        return permissionManager.hasPermission(player, permission);
-    }
-    
-    /**
-     * Ruft eine Methode auf einem Objekt auf
-     * 
-     * @param instance Die Instanz
-     * @param methodName Der Methodenname
-     * @param parameterTypes Die Parametertypen
-     * @param args Die Argumente
-     * @return Das Ergebnis des Methodenaufrufs
-     * @throws Exception Wenn ein Fehler auftritt
-     */
-    public Object invokeMethod(Object instance, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
-        if (instance == null) {
-            throw new IllegalArgumentException("Instanz darf nicht null sein");
-        }
-        
-        Method method = instance.getClass().getMethod(methodName, parameterTypes);
-        return method.invoke(instance, args);
-    }
-    
-    /**
-     * Speichert eine Zeitmessung für eine Methode
-     * 
-     * @param moduleName Der Modulname
-     * @param methodName Der Methodenname
-     * @param startTime Die Startzeit in Nanosekunden
-     */
-    public void trackMethodTime(String moduleName, String methodName, long startTime) {
-        long duration = System.nanoTime() - startTime;
-        
-        methodTimings.computeIfAbsent(moduleName, k -> new ConcurrentHashMap<>())
-            .merge(methodName, duration / 1_000_000.0, Double::sum);
-    }
-    
-    /**
-     * Gibt den Datenordner eines Moduls zurück
+     * Gibt das Datenverzeichnis eines Moduls zurück
      * 
      * @param moduleName Der Name des Moduls
      * @return Der Datenordner des Moduls
      */
+    @Override
     public File getModuleDataFolder(String moduleName) {
         if (moduleName == null || moduleName.isEmpty()) {
             return null;
@@ -1182,31 +1123,12 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     }
     
     /**
-     * Speichert eine Berechtigung im Cache
-     * 
-     * @param permissionName Die zu speichernde Berechtigung
-     */
-    public void cachePermission(String permissionName) {
-        if (permissionName != null && !permissionName.isEmpty()) {
-            permissionCache.add(permissionName);
-        }
-    }
-    
-    /**
-     * Gibt die Größe des Berechtigungscaches zurück
-     * 
-     * @return Die Größe des Caches
-     */
-    public int getPermissionCacheSize() {
-        return permissionExactCache.size();
-    }
-
-    /**
      * Gibt die Konfigurationsdatei eines Moduls zurück
      * 
      * @param moduleName Der Name des Moduls
      * @return Die Konfigurationsdatei des Moduls
      */
+    @Override
     public File getModuleConfigFile(String moduleName) {
         if (moduleName == null || moduleName.isEmpty()) {
             return null;
@@ -1222,6 +1144,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      * @param moduleName Der Name des Moduls
      * @return Der Ressourcen-Ordner des Moduls
      */
+    @Override
     public File getModuleResourcesFolder(String moduleName) {
         if (moduleName == null || moduleName.isEmpty()) {
             return null;
@@ -1234,7 +1157,83 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         
         return resourcesFolder;
     }
-
+    
+    /**
+     * Gets all loaded modules as required by the BasePlugin interface
+     *
+     * @return A map of module names to module information
+     */
+    @Override
+    public Map<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> getLoadedModules() {
+        Map<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> result = new HashMap<>();
+        
+        // Convert our internal ModuleInfo to the interface ModuleInfo
+        for (Map.Entry<String, ApiCore.ModuleInfo> entry : loadedModules.entrySet()) {
+            ApiCore.ModuleInfo internalInfo = entry.getValue();
+            if (internalInfo != null) {
+                try {
+                    // Create a new ModuleInfo of the correct type
+                    com.essentialscore.api.module.ModuleManager.ModuleInfo moduleInfo = 
+                        new com.essentialscore.api.module.ModuleManager.ModuleInfo(
+                            internalInfo.getName(),
+                            internalInfo.getVersion(),
+                            internalInfo.getDescription(),
+                            internalInfo.getInstance(),
+                            internalInfo.getLoader());
+                    
+                    result.put(entry.getKey(), moduleInfo);
+                } catch (Exception e) {
+                    getLogger().log(Level.WARNING, "Failed to convert ModuleInfo: " + e.getMessage());
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Gets information about a specific module.
+     *
+     * @param moduleName The module name
+     * @return The module information, or null if not found
+     */
+    @Override
+    public com.essentialscore.api.module.ModuleManager.ModuleInfo getModuleInfo(String moduleName) {
+        ApiCore.ModuleInfo internalInfo = loadedModules.get(moduleName);
+        if (internalInfo == null) {
+            return null;
+        }
+        
+        try {
+            // Create a new ModuleInfo of the correct type
+            return new com.essentialscore.api.module.ModuleManager.ModuleInfo(
+                internalInfo.getName(),
+                internalInfo.getVersion(),
+                internalInfo.getDescription(),
+                internalInfo.getInstance(),
+                internalInfo.getLoader());
+        } catch (Exception e) {
+            getLogger().log(Level.WARNING, "Failed to convert ModuleInfo: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Prüft, ob ein Spieler eine Berechtigung hat
+     * 
+     * @param player Der Spieler
+     * @param permission Die zu prüfende Berechtigung
+     * @return true, wenn der Spieler die Berechtigung hat
+     */
+    @Override
+    public boolean hasPermission(Player player, String permission) {
+        if (player == null || permission == null || permission.isEmpty()) {
+            return true;
+        }
+        
+        return permissionManager.hasPermission(player, permission);
+    }
+    
     /**
      * Initialisiert ein Modul
      * 
@@ -1242,13 +1241,19 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      * @param moduleInstance Die Modul-Instanz
      * @param config Die Modul-Konfiguration
      */
+    @Override
     public void initializeModule(String moduleName, Object moduleInstance, FileConfiguration config) {
         // Create the ModuleAPI instance for this module if it doesn't exist
         ModuleAPI moduleAPI = moduleAPIs.computeIfAbsent(moduleName, k -> new CoreModuleAPI(this, k));
         
         if (moduleInstance instanceof Module) {
             // New API interface
-            ((Module) moduleInstance).init(moduleAPI, config);
+            try {
+                Method initMethod = moduleInstance.getClass().getMethod("init", ModuleAPI.class, FileConfiguration.class);
+                initMethod.invoke(moduleInstance, moduleAPI, config);
+            } catch (Exception e) {
+                getLogger().log(Level.WARNING, "Failed to initialize module " + moduleName, e);
+            }
         } else {
             // Use reflection for legacy modules
             try {
@@ -1259,12 +1264,13 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             }
         }
     }
-
+    
     /**
      * Registriert dynamische Befehle
      *
      * @param commands Liste der zu registrierenden Befehle
      */
+    @Override
     public void registerCommands(List<DynamicCommand> commands) {
         if (commandManager != null) {
             try {
@@ -1281,6 +1287,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      *
      * @param commands Liste der zu deregistrierenden Befehle
      */
+    @Override
     public void unregisterCommands(List<DynamicCommand> commands) {
         if (commandManager != null) {
             try {
@@ -1448,7 +1455,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             // Implementation classes
             Class.forName("com.essentialscore.api.impl.CoreModuleAPI");
             Class.forName("com.essentialscore.api.impl.ModuleAdapter");
-            Class.forName("com.essentialscore.api.BasicCommand");
+            Class.forName("com.essentialscore.api.SimpleCommand");
             
             // Explicitly call the helper to ensure all classes are loaded
             com.essentialscore.api.ModuleClassHelper.ensureApiClassesLoaded();

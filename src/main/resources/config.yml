@@ -75,6 +75,7 @@ console:
     config:    { enabled: true, prefix: "CFG",    color: "BRIGHT_BLUE",   icon: "⚙" }
     module:    { enabled: true, prefix: "MOD",    color: "BRIGHT_GREEN",  icon: "📦" }
 <<<<<<< HEAD
+<<<<<<< HEAD
     performance: 
       enabled: true
       prefix: "PERF"
@@ -83,6 +84,9 @@ console:
 =======
     performance:{ enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+    performance:{ enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     security:  { enabled: true, prefix: "SEC",    color: "BRIGHT_RED",    icon: "🔒" }
     network:   { enabled: true, prefix: "NET",    color: "BRIGHT_PURPLE", icon: "🌐" }
     database:  { enabled: true, prefix: "DB",     color: "BRIGHT_WHITE",  icon: "💾" }

@@ -1,12 +1,16 @@
 package com.essentialscore.api.security;
 
+<<<<<<< HEAD
 import org.bukkit.entity.Player;
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+<<<<<<< HEAD
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,6 +25,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Provides audit logging capabilities to track critical system actions.
  * Maintains detailed logs for compliance and security tracking purposes.
+=======
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * Logs security-related events for auditing purposes.
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
  */
 public class AuditLogger {
     private static final Logger LOGGER = Logger.getLogger(AuditLogger.class.getName());
@@ -28,16 +43,23 @@ public class AuditLogger {
     private static final SimpleDateFormat FILE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     
     private final Plugin plugin;
+<<<<<<< HEAD
     private final File logsDirectory;
     private final int retentionDays;
     private final BlockingQueue<LogEntry> logQueue;
     private boolean enabled;
     private Thread logWriterThread;
+=======
+    private final File logDirectory;
+    private final BlockingQueue<LogEntry> logQueue;
+    private final Thread loggerThread;
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     private boolean running;
     
     /**
      * Creates a new audit logger.
      *
+<<<<<<< HEAD
      * @param plugin The plugin
      * @param retentionDays Number of days to keep logs (0 for indefinite)
      */
@@ -47,6 +69,15 @@ public class AuditLogger {
         this.retentionDays = retentionDays;
         this.logQueue = new LinkedBlockingQueue<>();
         this.enabled = true;
+=======
+     * @param plugin The EssentialsCore plugin
+     */
+    public AuditLogger(Plugin plugin) {
+        this.plugin = plugin;
+        this.logDirectory = new File(plugin.getDataFolder(), "security/logs");
+        this.logQueue = new LinkedBlockingQueue<>();
+        this.loggerThread = new Thread(this::processLogQueue, "AuditLogger");
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         this.running = false;
     }
     
@@ -54,6 +85,7 @@ public class AuditLogger {
      * Initializes the audit logger.
      */
     public void initialize() {
+<<<<<<< HEAD
         if (running) return;
         
         // Create logs directory
@@ -80,12 +112,28 @@ public class AuditLogger {
         
         LOGGER.info("Audit logger initialized. Retention policy: " + 
                     (retentionDays > 0 ? retentionDays + " days" : "indefinite"));
+=======
+        LOGGER.info("Initializing audit logger...");
+        
+        // Create log directory if it doesn't exist
+        if (!logDirectory.exists()) {
+            logDirectory.mkdirs();
+        }
+        
+        // Start logger thread
+        running = true;
+        loggerThread.setDaemon(true);
+        loggerThread.start();
+        
+        LOGGER.info("Audit logger initialized");
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
      * Shuts down the audit logger.
      */
     public void shutdown() {
+<<<<<<< HEAD
         if (!running) return;
         
         running = false;
@@ -93,11 +141,32 @@ public class AuditLogger {
         
         // Process remaining logs
         processRemainingLogs();
+=======
+        LOGGER.info("Shutting down audit logger...");
+        
+        // Stop logger thread
+        running = false;
+        loggerThread.interrupt();
+        
+        // Wait for thread to finish
+        try {
+            loggerThread.join(5000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        // Process remaining logs
+        LogEntry entry;
+        while ((entry = logQueue.poll()) != null) {
+            writeLogEntry(entry);
+        }
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         LOGGER.info("Audit logger shut down");
     }
     
     /**
+<<<<<<< HEAD
      * Enables or disables the audit logger.
      *
      * @param enabled Whether the logger is enabled
@@ -250,16 +319,115 @@ public class AuditLogger {
             
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to write to audit log file: " + logFile.getPath(), e);
+=======
+     * Logs a security event.
+     *
+     * @param moduleId The module ID
+     * @param message The message
+     */
+    public void logSecurity(String moduleId, String message) {
+        logQueue.add(new LogEntry(moduleId, "SECURITY", message));
+    }
+    
+    /**
+     * Logs an access event.
+     *
+     * @param moduleId The module ID
+     * @param message The message
+     */
+    public void logAccess(String moduleId, String message) {
+        logQueue.add(new LogEntry(moduleId, "ACCESS", message));
+    }
+    
+    /**
+     * Logs a permission event.
+     *
+     * @param moduleId The module ID
+     * @param message The message
+     */
+    public void logPermission(String moduleId, String message) {
+        logQueue.add(new LogEntry(moduleId, "PERMISSION", message));
+    }
+    
+    /**
+     * Logs a vulnerability event.
+     *
+     * @param moduleId The module ID
+     * @param message The message
+     */
+    public void logVulnerability(String moduleId, String message) {
+        logQueue.add(new LogEntry(moduleId, "VULNERABILITY", message));
+    }
+    
+    /**
+     * Logs a module event.
+     *
+     * @param moduleId The module ID
+     * @param message The message
+     */
+    public void logModule(String moduleId, String message) {
+        logQueue.add(new LogEntry(moduleId, "MODULE", message));
+    }
+    
+    /**
+     * Processes the log queue.
+     */
+    private void processLogQueue() {
+        LOGGER.info("Audit logger thread started");
+        
+        while (running) {
+            try {
+                LogEntry entry = logQueue.take();
+                writeLogEntry(entry);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error processing log entry", e);
+            }
+        }
+        
+        LOGGER.info("Audit logger thread stopped");
+    }
+    
+    /**
+     * Writes a log entry to the log file.
+     *
+     * @param entry The log entry
+     */
+    private void writeLogEntry(LogEntry entry) {
+        File logFile = getLogFile();
+        
+        try (PrintWriter writer = new PrintWriter(new FileWriter(logFile, true))) {
+            writer.println(formatLogEntry(entry));
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error writing to audit log", e);
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
     /**
+<<<<<<< HEAD
      * Formats a log entry as a string.
+=======
+     * Gets the log file for the current date.
+     *
+     * @return The log file
+     */
+    private File getLogFile() {
+        String fileName = "audit-" + FILE_DATE_FORMAT.format(new Date()) + ".log";
+        return new File(logDirectory, fileName);
+    }
+    
+    /**
+     * Formats a log entry.
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      *
      * @param entry The log entry
      * @return The formatted log entry
      */
     private String formatLogEntry(LogEntry entry) {
+<<<<<<< HEAD
         StringBuilder sb = new StringBuilder();
         
         // Format: [timestamp] [category] [action] [userId] [userName] [ipAddress] [details]
@@ -357,10 +525,28 @@ public class AuditLogger {
         private final String userName;
         private final String ipAddress;
         private final String details;
+=======
+        return String.format("[%s] [%s] [%s] %s",
+            DATE_FORMAT.format(entry.timestamp),
+            entry.moduleId,
+            entry.type,
+            entry.message);
+    }
+    
+    /**
+     * Represents a log entry.
+     */
+    private static class LogEntry {
+        private final Date timestamp;
+        private final String moduleId;
+        private final String type;
+        private final String message;
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         /**
          * Creates a new log entry.
          *
+<<<<<<< HEAD
          * @param category The action category
          * @param action The specific action
          * @param userId The user's UUID
@@ -424,4 +610,17 @@ public class AuditLogger {
         public static final String TWO_FACTOR_VERIFIED = "TWO_FACTOR_VERIFIED";
         public static final String SESSION_EXPIRED = "SESSION_EXPIRED";
     }
+=======
+         * @param moduleId The module ID
+         * @param type The entry type
+         * @param message The message
+         */
+        public LogEntry(String moduleId, String type, String message) {
+            this.timestamp = new Date();
+            this.moduleId = moduleId;
+            this.type = type;
+            this.message = message;
+        }
+    }
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 } 

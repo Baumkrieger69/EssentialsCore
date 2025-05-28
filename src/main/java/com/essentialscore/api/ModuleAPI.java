@@ -1,6 +1,7 @@
 package com.essentialscore.api;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.command.CommandSender;
@@ -27,6 +28,8 @@ import java.util.function.Consumer;
  * Die erweiterte API-Schnittstelle für Module, die Zugriff auf alle Core-Funktionen bietet.
  * Diese Schnittstelle ermöglicht Modulen den Zugriff auf gemeinsame Ressourcen und Funktionen.
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import com.essentialscore.api.integration.IntegrationManager;
 import com.essentialscore.api.integration.PluginIntegration;
 import com.essentialscore.api.integration.bukkit.BukkitIntegration;
@@ -53,11 +56,15 @@ import java.util.concurrent.CompletableFuture;
  * Main interface that modules use to interact with the EssentialsCore system.
  * This interface abstracts the core functionality to make modules less dependent
  * on the actual implementation.
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
  */
 public interface ModuleAPI {
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Gibt den Namen des Moduls zurück
      * 
@@ -335,10 +342,15 @@ public interface ModuleAPI {
      * Gets the plugin instance
      * @return The plugin instance
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+     * Gets the plugin instance
+     * @return The plugin instance
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      */
     Plugin getPlugin();
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Holt eine Datenbankverbindung aus dem Verbindungspool
      * 
@@ -543,6 +555,8 @@ public interface ModuleAPI {
         }
     }
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gets the module's data folder
      * @param moduleName The name of the module
      * @return The module's data folder
@@ -829,5 +843,8 @@ public interface ModuleAPI {
      * @param gui The GUI to open
      */
     void openGUI(Player player, GUI gui);
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 } 

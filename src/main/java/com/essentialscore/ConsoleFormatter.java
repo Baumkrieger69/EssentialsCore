@@ -86,10 +86,13 @@ public class ConsoleFormatter {
     private final Map<MessageCategory, CategoryConfig> categoryConfigs = new EnumMap<>(MessageCategory.class);
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     private final Map<MessageCategory, CategoryStyle> categoryStyles = new EnumMap<>(MessageCategory.class);
     
 =======
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     /**
      * Konfiguration für eine Nachrichtenkategorie
      */
@@ -275,20 +278,27 @@ public class ConsoleFormatter {
      */
     public ConsoleFormatter(Logger logger, String prefix, boolean useColors, 
 <<<<<<< HEAD
+<<<<<<< HEAD
                           boolean showTimestamp, boolean useUnicodeSymbols, String stylePreset) {
         this.logger = logger;
         this.prefix = colorizePrefix(prefix);
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                             boolean showTimestamp, boolean useUnicodeSymbols, 
                             String stylePreset) {
         this.logger = logger;
         // Process prefix to convert Minecraft color codes to ANSI codes
         this.prefix = useColors ? formatHexCodes(prefix) : stripMinecraftColors(prefix);
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         this.useColors = useColors;
         this.showTimestamp = showTimestamp;
         this.useUnicodeSymbols = useUnicodeSymbols;
         this.stylePreset = stylePreset;
+<<<<<<< HEAD
 <<<<<<< HEAD
         
         initializeCategoryStyles();
@@ -408,6 +418,8 @@ public class ConsoleFormatter {
     /**
      * Gibt eine Informationsbenachrichtigung aus
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
@@ -429,17 +441,23 @@ public class ConsoleFormatter {
     
     /**
      * Gibt eine Info-Nachricht aus
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * 
      * @param message Die Nachricht
      */
     public void info(String message) {
+<<<<<<< HEAD
 <<<<<<< HEAD
         if (useColors) {
             logger.info(formatWithPrefix(WHITE + message + RESET));
         } else {
             logger.info(formatWithPrefix(message));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         // Entferne Minecraft-Farbcodes für die Konsolenausgabe
         String cleanMessage = stripMinecraftColors(message);
         
@@ -451,20 +469,28 @@ public class ConsoleFormatter {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
             logger.info(timeStr + formatWithPrefix(cleanMessage));
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * Gibt eine Erfolgsbenachrichtigung aus
 =======
      * Gibt eine Erfolgsnachricht aus
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+     * Gibt eine Erfolgsnachricht aus
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * 
      * @param message Die Nachricht
      */
     public void success(String message) {
+<<<<<<< HEAD
 <<<<<<< HEAD
         if (useColors) {
             String symbol = useUnicodeSymbols ? "✅ " : "";
@@ -490,6 +516,8 @@ public class ConsoleFormatter {
         } else {
             logger.info(formatWithPrefix("[DEBUG] " + message));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         // Entferne Minecraft-Farbcodes für die Konsolenausgabe
         String cleanMessage = stripMinecraftColors(message);
         
@@ -501,14 +529,20 @@ public class ConsoleFormatter {
             String timeStr = showTimestamp ? getTimeString() + " " : "";
             String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
             logger.info(timeStr + formatWithPrefix(symbol + cleanMessage));
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
      * Gibt eine Überschrift aus
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt eine Warnmeldung aus
      * 
      * @param message Die Nachricht
@@ -588,12 +622,16 @@ public class ConsoleFormatter {
     
     /**
      * Gibt eine Überschrift mit Trennlinien und Rahmen aus
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * 
      * @param title Der Titel
      */
     public void header(String title) {
         if (useColors) {
+<<<<<<< HEAD
 <<<<<<< HEAD
             String line = BRIGHT_CYAN + "═══════════════════════════════════════════" + RESET;
             logger.info(line);
@@ -605,6 +643,8 @@ public class ConsoleFormatter {
             logger.info(formatWithPrefix(title));
             logger.info(line);
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             String line = "═".repeat(Math.max(20, title.length() + 4));
             logger.info("");
             logger.info(BRIGHT_CYAN + "╔" + line + "╗" + RESET);
@@ -621,11 +661,15 @@ public class ConsoleFormatter {
                      title + " ".repeat((line.length() - title.length() + 1) / 2) + "|");
             logger.info(line);
             logger.info("");
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Gibt einen Sektionsheader aus
      * 
@@ -790,6 +834,8 @@ public class ConsoleFormatter {
         } else {
             logger.info(formatWithPrefix("(" + step + "/" + total + ") " + description));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt eine kleine Überschrift ohne Rahmen aus
      * 
      * @param title Der Titel
@@ -845,7 +891,10 @@ public class ConsoleFormatter {
         
         for (int i = 0; i < data.length - 1; i += 2) {
             listItem(data[i], data[i + 1]);
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
@@ -858,7 +907,10 @@ public class ConsoleFormatter {
     
     /**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt eine horizontale Linie aus
      */
     public void line() {
@@ -870,7 +922,10 @@ public class ConsoleFormatter {
     }
     
     /**
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt eine doppelte horizontale Linie aus
      */
     public void doubleLine() {
@@ -882,6 +937,7 @@ public class ConsoleFormatter {
     }
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Gibt eine kleine Überschrift ohne Rahmen aus
      * 
@@ -895,6 +951,8 @@ public class ConsoleFormatter {
             logger.info("");
             logger.info("-- " + title);
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt einen formatierten Fortschrittsbalken aus
      * 
      * @param current Aktueller Wert
@@ -923,11 +981,15 @@ public class ConsoleFormatter {
         } else {
             logger.info(bar.toString() + " " + String.format("%.1f%%", percentage) + 
                      " (" + current + "/" + max + ")");
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Hilfsdatenklasse für die Stile der verschiedenen Nachrichtenkategorien
      */
@@ -1068,6 +1130,8 @@ public class ConsoleFormatter {
         } else {
             logger.info(formatWithPrefix(symbol + " " + text));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt einen farbigen Fortschrittsbalken aus, dessen Farbe sich basierend auf dem Fortschritt ändert
      * 
      * @param current Aktueller Wert
@@ -1220,11 +1284,15 @@ public class ConsoleFormatter {
         } else {
             logger.info("--- " + title + " ---");
             logger.info(content);
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         }
     }
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Zeigt einen einfachen Fortschrittsbalken an
      * 
@@ -1251,6 +1319,8 @@ public class ConsoleFormatter {
         bar.append("] ").append(current).append("/").append(total);
         logger.info(formatWithPrefix(bar.toString()));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gibt eine Tabelle mit Spaltenüberschriften aus
      * 
      * @param headers Die Spaltenüberschriften
@@ -1636,6 +1706,9 @@ public class ConsoleFormatter {
             }
             logger.info(prefix + " [" + category.getCode() + "] " + rowStr);
         }
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
 } 

@@ -2,6 +2,7 @@ package com.essentialscore.api.config;
 
 import com.essentialscore.api.Module;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -32,6 +33,8 @@ public class ConfigurationManager {
      */
     public static boolean saveConfiguration(Configuration config) {
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import com.essentialscore.api.config.schema.ConfigSchema;
 import com.essentialscore.api.config.schema.ValidationError;
 
@@ -174,11 +177,15 @@ public class ConfigurationManager {
             return false;
         }
         
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         return config.save();
     }
     
     /**
+<<<<<<< HEAD
 <<<<<<< HEAD
      * Implementierung des Configuration Interfaces
      */
@@ -292,6 +299,8 @@ public class ConfigurationManager {
             return configFile;
         }
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Reloads a configuration.
      *
      * @param module The module
@@ -375,6 +384,9 @@ public class ConfigurationManager {
                 config.set(path, value);
             }
         }
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
 } 

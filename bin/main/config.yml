@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 ###############################################################################
 #                        EssentialsCore Configuration                         #
 ###############################################################################
@@ -59,6 +60,8 @@ console:
   
   # Component prefixes
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 ##################################
 #   EssentialsCore Configuration   #
 ##################################
@@ -106,7 +109,10 @@ console:
   color-scheme: "modern"
   
   # Komponenten-Prefixe
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
   prefixes:
     core: "&8[&b&lApiCore&8]"
     module-manager: "&8[&d&lModuleManager&8]"
@@ -117,6 +123,7 @@ console:
     command-manager: "&8[&e&lCommandManager&8]"
     config-manager: "&8[&9&lConfigManager&8]"
     performance-monitor: "&8[&2&lPerformance&8]"
+<<<<<<< HEAD
 <<<<<<< HEAD
   
   # Message categories
@@ -301,6 +308,8 @@ commands:
   # Disabled API Core commands
   disabled: []
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     module: "&8[&a&lModul&8]"
     error: "&8[&c&lFehler&8]"
   
@@ -621,4 +630,7 @@ modules:
       - json
     # Ressourcenänderungen überwachen
     watch-resources: true
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac

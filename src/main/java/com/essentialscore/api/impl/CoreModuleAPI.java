@@ -2,6 +2,7 @@ package com.essentialscore.api.impl;
 
 import com.essentialscore.ApiCore;
 <<<<<<< HEAD
+<<<<<<< HEAD
 import com.essentialscore.ModuleSandbox;
 import com.essentialscore.api.ModuleAPI;
 import com.essentialscore.api.ModuleEventListener;
@@ -14,16 +15,22 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import com.essentialscore.DynamicCommand;
 import com.essentialscore.api.CommandDefinition;
 import com.essentialscore.api.ModuleAPI;
 import com.essentialscore.api.ModuleEventListener;
 import org.bukkit.entity.Player;
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
+<<<<<<< HEAD
 <<<<<<< HEAD
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -36,11 +43,16 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.logging.Level;
 
 /**
@@ -57,6 +69,7 @@ public class CoreModuleAPI implements ModuleAPI {
     }
     
     @Override
+<<<<<<< HEAD
 <<<<<<< HEAD
     public <T> T executeInSandbox(Callable<T> action, T defaultValue) {
         ModuleSandbox sandbox = core.getModuleSandbox();
@@ -114,6 +127,8 @@ public class CoreModuleAPI implements ModuleAPI {
         CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(new UnsupportedOperationException("Database operations not implemented"));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     public Plugin getPlugin() {
         return core;
     }
@@ -252,11 +267,15 @@ public class CoreModuleAPI implements ModuleAPI {
             }
         });
         
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         return future;
     }
     
     @Override
+<<<<<<< HEAD
 <<<<<<< HEAD
     public void releaseDatabaseConnection(Connection connection) {
         // Dummy-Implementierung
@@ -278,6 +297,8 @@ public class CoreModuleAPI implements ModuleAPI {
     }
 
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     public void runAsync(Runnable task) {
         core.getServer().getScheduler().runTaskAsynchronously(core, () -> {
             try {
@@ -305,26 +326,36 @@ public class CoreModuleAPI implements ModuleAPI {
         core.getServer().getScheduler().cancelTask(taskId);
     }
     
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public void logInfo(String message) {
         core.getLogger().info("[" + moduleName + "] " + message);
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
     
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+    
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public void logWarning(String message) {
         core.getLogger().warning("[" + moduleName + "] " + message);
     }
+<<<<<<< HEAD
 <<<<<<< HEAD
 
     @Override
     public void logError(String message, Throwable throwable) {
         core.getLogger().severe("[" + moduleName + "] " + message + ": " + (throwable != null ? throwable.getMessage() : "null"));
 =======
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     
     @Override
     public void logError(String message, Throwable throwable) {
@@ -333,21 +364,29 @@ public class CoreModuleAPI implements ModuleAPI {
         } else {
             core.getLogger().severe("[" + moduleName + "] " + message);
         }
+<<<<<<< HEAD
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     @Override
     public void logDebug(String message) {
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (isDebugMode()) {
 =======
         if (core.isDebugMode()) {
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+        if (core.isDebugMode()) {
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             core.getLogger().info("[" + moduleName + "] [DEBUG] " + message);
         }
     }
     
     @Override
+<<<<<<< HEAD
 <<<<<<< HEAD
     public void log(LogLevel level, String message) {
         switch (level) {
@@ -627,5 +666,9 @@ public class CoreModuleAPI implements ModuleAPI {
     public boolean isDebugMode() {
         return core.isDebugMode();
 >>>>>>> 1cd13da (Das ist Dumm)
+=======
+    public boolean isDebugMode() {
+        return core.isDebugMode();
+>>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
 } 
