@@ -1,14 +1,5 @@
 package com.essentialscore.api.config;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-import org.bukkit.configuration.file.FileConfiguration;
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -16,10 +7,6 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 
 /**
  * Erweiterte Konfigurationsschnittstelle für Module
@@ -121,11 +108,6 @@ public interface Configuration {
      * @return Die Konfigurationsdatei
      */
     File getFile();
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     
     /**
      * Checks if the configuration contains a path.
@@ -166,8 +148,4 @@ public interface Configuration {
      * @return Map of path to value
      */
     Map<String, Object> getValues(boolean deep);
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 } 

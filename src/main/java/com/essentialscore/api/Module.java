@@ -8,111 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
-<<<<<<< HEAD
- * Interface for plugin modules.
- */
-public interface Module {
-    
-    /**
-     * Called when the module is loaded.
-     *
-     * @param plugin The base plugin
-     * @param logger The module logger
-     * @param config The module configuration
-     */
-    void onLoad(BasePlugin plugin, ModuleLogger logger, FileConfiguration config);
-    
-    /**
-     * Called when the module is enabled.
-     */
-    void onEnable();
-    
-    /**
-     * Called when the module is disabled.
-     */
-    void onDisable();
-    
-    /**
-     * Called when the module is reloaded.
-     */
-    void onReload();
-    
-    /**
-     * Gets the module ID.
-     *
-     * @return The module ID
-     */
-    String getId();
-    
-    /**
-     * Gets the module name.
-     *
-     * @return The module name
-     */
-    String getName();
-    
-    /**
-     * Gets the module version.
-     *
-     * @return The module version
-     */
-    String getVersion();
-    
-    /**
-     * Gets the module description.
-     *
-     * @return The module description
-     */
-    String getDescription();
-    
-    /**
-     * Gets the module author.
-     *
-     * @return The module author
-     */
-    String getAuthor();
-    
-    /**
-     * Gets the module dependencies.
-     *
-     * @return The module dependencies
-     */
-    String[] getDependencies();
-    
-    /**
-     * Gets the module soft dependencies.
-     *
-     * @return The module soft dependencies
-     */
-    String[] getSoftDependencies();
-    
-    /**
-     * Gets the module's base plugin.
-     *
-     * @return The base plugin
-     */
-    BasePlugin getPlugin();
-    
-    /**
-     * Gets the module logger.
-     *
-     * @return The module logger
-     */
-    ModuleLogger getLogger();
-    
-    /**
-     * Gets the module configuration.
-     *
-     * @return The module configuration
-     */
-    FileConfiguration getConfig();
-    
-=======
  * Main interface for EssentialsCore modules.
  * All modules should implement this interface to be properly loaded by the core.
  */
 public interface Module {
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+    
     /**
      * Called before the module is initialized, allowing setup of early resources
      * 
@@ -134,8 +34,6 @@ public interface Module {
     default void onPostLoad() {}
     
     /**
-<<<<<<< HEAD
-=======
      * Called when the module is enabled or re-enabled after a reload
      * This is called after init() and can be used to start tasks or register listeners
      */
@@ -163,7 +61,6 @@ public interface Module {
     }
     
     /**
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Called when a player joins the server
      * 
      * @param player The player who joined
@@ -191,8 +88,6 @@ public interface Module {
     default List<String> onTabComplete(String commandName, CommandSender sender, String[] args) { return null; }
     
     /**
-<<<<<<< HEAD
-=======
      * Gets the name of the module
      * 
      * @return The module name
@@ -214,17 +109,30 @@ public interface Module {
     String getDescription();
     
     /**
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+     * Gets the module ID.
+     *
+     * @return The module ID
+     */
+    default String getId() {
+        return getName().toLowerCase().replace(" ", "_");
+    }
+    
+    /**
+     * Gets the module author.
+     *
+     * @return The module author
+     */
+    default String getAuthor() {
+        return "Unknown";
+    }
+    
+    /**
      * Gets the list of module dependencies
      * Dependencies are required for the module to function
      * 
      * @return Map of dependency names to version range requirements
      */
-<<<<<<< HEAD
-    default Map<String, String> getDependenciesMap() { return Map.of(); }
-=======
     default Map<String, String> getDependencies() { return Map.of(); }
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     
     /**
      * Gets the list of optional module dependencies
@@ -233,4 +141,24 @@ public interface Module {
      * @return Map of dependency names to version range requirements
      */
     default Map<String, String> getOptionalDependencies() { return Map.of(); }
+    
+    /**
+     * Gets the module dependencies as an array of strings
+     * @deprecated Use {@link #getDependencies()} instead
+     * @return The module dependencies
+     */
+    @Deprecated
+    default String[] getDependenciesArray() {
+        return getDependencies().keySet().toArray(new String[0]);
+    }
+    
+    /**
+     * Gets the module soft dependencies as an array of strings
+     * @deprecated Use {@link #getOptionalDependencies()} instead
+     * @return The module soft dependencies
+     */
+    @Deprecated
+    default String[] getSoftDependencies() {
+        return getOptionalDependencies().keySet().toArray(new String[0]);
+    }
 } 

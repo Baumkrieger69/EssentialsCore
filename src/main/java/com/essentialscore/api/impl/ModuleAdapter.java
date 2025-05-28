@@ -1,27 +1,21 @@
 package com.essentialscore.api.impl;
 
-import com.essentialscore.ApiCore;
-import com.essentialscore.api.Module;
-import com.essentialscore.api.ModuleAPI;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+import com.essentialscore.ApiCore;
+import com.essentialscore.api.Module;
+import com.essentialscore.api.ModuleAPI;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
-=======
-import java.util.List;
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-import java.util.List;
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 
 /**
- * Adapter that wraps a Module instance to present it as a legacy module.
- * This provides backward compatibility for systems that expect the old interface structure.
+ * Adapter class that wraps a module to provide compatibility with different API versions.
+ * This class serves as a bridge between the core system and modules, ensuring that 
+ * modules can continue to function even as the API evolves.
  */
 public class ModuleAdapter {
     private final Module module;
@@ -44,23 +38,10 @@ public class ModuleAdapter {
     /**
      * Legacy initialization method
      * 
-<<<<<<< HEAD
-<<<<<<< HEAD
-     * @param apiCore The ApiCore instance
-     * @param config The module configuration
-     */
-    public void init(ApiCore apiCore, FileConfiguration config) {
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * @param core The ApiCore instance
      * @param config The module configuration
      */
     public void init(ApiCore core, FileConfiguration config) {
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         // The module should already be initialized with ModuleAPI
         // No need to re-assign apiCore as it's now final
     }
@@ -69,8 +50,6 @@ public class ModuleAdapter {
      * Called when the module is disabled
      */
     public void onDisable() {
-<<<<<<< HEAD
-<<<<<<< HEAD
         try {
             module.onDisable();
         } catch (Exception e) {
@@ -79,12 +58,6 @@ public class ModuleAdapter {
                 e.printStackTrace();
             }
         }
-=======
-        module.onDisable();
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-        module.onDisable();
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
@@ -137,8 +110,6 @@ public class ModuleAdapter {
     public ModuleAPI getModuleAPI() {
         return moduleAPI;
     }
-<<<<<<< HEAD
-<<<<<<< HEAD
     
     /**
      * Gibt den Modulnamen zurück
@@ -217,8 +188,4 @@ public class ModuleAdapter {
     public void fireModuleEvent(String eventName, Map<String, Object> data) {
         moduleAPI.fireModuleEvent(eventName, data);
     }
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 } 

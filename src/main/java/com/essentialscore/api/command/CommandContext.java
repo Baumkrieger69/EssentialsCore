@@ -53,7 +53,6 @@ public class CommandContext {
     }
     
     /**
-<<<<<<< HEAD
      * Gets the sender as a Player, or null if not a player.
      * 
      * @return The player or null
@@ -63,8 +62,6 @@ public class CommandContext {
     }
     
     /**
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Checks if the sender is a player.
      *
      * @return true if the sender is a player
@@ -92,7 +89,6 @@ public class CommandContext {
     }
     
     /**
-<<<<<<< HEAD
      * Gets the arguments.
      * This is a compatibility method for older code.
      *
@@ -124,22 +120,15 @@ public class CommandContext {
     }
     
     /**
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gets the parsed arguments.
      *
      * @return The parsed arguments
      */
-<<<<<<< HEAD
     public ParsedArguments getParsedArgs() {
-=======
-    public ParsedArguments getArgs() {
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         return parsedArgs;
     }
     
     /**
-<<<<<<< HEAD
      * Checks if the sender has a permission.
      *
      * @param permission The permission to check
@@ -150,8 +139,6 @@ public class CommandContext {
     }
     
     /**
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Gets a metadata value.
      *
      * @param key The metadata key

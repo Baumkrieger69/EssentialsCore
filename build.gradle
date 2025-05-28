@@ -17,21 +17,15 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
-<<<<<<< HEAD
     maven {
         name = "jitpack"
         url = "https://jitpack.io"
     }
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
-<<<<<<< HEAD
     compileOnly("com.github.MilkBowl:VaultAPI:1.7")
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     // Weitere Abhängigkeiten hier einfügen
 }
 
