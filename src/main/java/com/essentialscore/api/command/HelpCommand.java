@@ -1,6 +1,8 @@
 package com.essentialscore.api.command;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -14,10 +16,6 @@ import java.util.stream.Collectors;
 /**
  * Command that provides help information for other commands.
  */
-<<<<<<< HEAD
-@SuppressWarnings("deprecation") // Suppress ChatColor deprecation warnings
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 public class HelpCommand extends AbstractCommand {
     
     private static final int COMMANDS_PER_PAGE = 8;
@@ -42,24 +40,15 @@ public class HelpCommand extends AbstractCommand {
     @Override
     public boolean execute(CommandContext context) {
         CommandSender sender = context.getSender();
-<<<<<<< HEAD
-        List<String> args = context.getParsedArgs().getAll();
+        List<String> args = context.getArgs();
         
         if (args.isEmpty()) {
-=======
-        
-        if (context.getArgs().isEmpty()) {
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             // Show first page of commands
             showCommandList(sender, 1);
             return true;
         }
         
-<<<<<<< HEAD
         String arg = args.get(0);
-=======
-        String arg = context.getArgs().get(0);
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         // Check if it's a page number
         try {
@@ -86,15 +75,24 @@ public class HelpCommand extends AbstractCommand {
         
         // Try to find a command with a similar name
         List<String> suggestions = findSimilarCommands(arg);
-        sender.sendMessage(ChatColor.RED + "Unknown command or category: " + arg);
+        sender.sendMessage(Component.text("Unknown command or category: " + arg)
+                .color(NamedTextColor.RED));
         
         if (!suggestions.isEmpty()) {
-            sender.sendMessage(ChatColor.YELLOW + "Did you mean: " + ChatColor.WHITE + 
-                              String.join(ChatColor.GRAY + ", " + ChatColor.WHITE, suggestions));
+            sender.sendMessage(Component.text("Did you mean: ")
+                .color(NamedTextColor.YELLOW)
+                .append(Component.join(
+                    Component.text(", ").color(NamedTextColor.GRAY),
+                    suggestions.stream()
+                        .map(s -> Component.text(s).color(NamedTextColor.WHITE))
+                        .collect(Collectors.toList())
+                )));
         }
         
-        sender.sendMessage(ChatColor.YELLOW + "Use " + ChatColor.WHITE + "/help" + 
-                           ChatColor.YELLOW + " to see all available commands.");
+        sender.sendMessage(Component.text("Use ")
+                .color(NamedTextColor.YELLOW)
+                .append(Component.text("/help").color(NamedTextColor.WHITE))
+                .append(Component.text(" to see all available commands.").color(NamedTextColor.YELLOW)));
         
         return true;
     }
@@ -151,31 +149,51 @@ public class HelpCommand extends AbstractCommand {
         int startIndex = (page - 1) * COMMANDS_PER_PAGE;
         int endIndex = Math.min(startIndex + COMMANDS_PER_PAGE, commands.size());
         
-        sender.sendMessage(ChatColor.GOLD + "=== " + ChatColor.YELLOW + "Help: Commands " + 
-                          ChatColor.GOLD + "(" + ChatColor.YELLOW + page + ChatColor.GOLD + "/" + 
-                          ChatColor.YELLOW + totalPages + ChatColor.GOLD + ") ===");
+        sender.sendMessage(Component.text("=== ")
+                .color(NamedTextColor.GOLD)
+                .append(Component.text("Help: Commands ").color(NamedTextColor.YELLOW))
+                .append(Component.text("(").color(NamedTextColor.GOLD))
+                .append(Component.text(page).color(NamedTextColor.YELLOW))
+                .append(Component.text("/").color(NamedTextColor.GOLD))
+                .append(Component.text(totalPages).color(NamedTextColor.YELLOW))
+                .append(Component.text(") ===").color(NamedTextColor.GOLD)));
         
         for (int i = startIndex; i < endIndex; i++) {
             Command command = commands.get(i);
-            sender.sendMessage(ChatColor.GOLD + "/" + command.getName() + ChatColor.GRAY + ": " + 
-                              ChatColor.WHITE + command.getDescription());
+            sender.sendMessage(Component.text("/")
+                .color(NamedTextColor.GOLD)
+                .append(Component.text(command.getName()).color(NamedTextColor.GOLD))
+                .append(Component.text(": ").color(NamedTextColor.GRAY))
+                .append(Component.text(command.getDescription()).color(NamedTextColor.WHITE)));
         }
         
-        sender.sendMessage(ChatColor.YELLOW + "Use " + ChatColor.WHITE + "/help <command>" + 
-                          ChatColor.YELLOW + " for details on a command.");
+        sender.sendMessage(Component.text("Use ")
+                .color(NamedTextColor.YELLOW)
+                .append(Component.text("/help <command>").color(NamedTextColor.WHITE))
+                .append(Component.text(" for details on a command.").color(NamedTextColor.YELLOW)));
         
         if (totalPages > 1) {
-            sender.sendMessage(ChatColor.YELLOW + "Use " + ChatColor.WHITE + "/help <page>" + 
-                              ChatColor.YELLOW + " to see other pages.");
+            sender.sendMessage(Component.text("Use ")
+                    .color(NamedTextColor.YELLOW)
+                    .append(Component.text("/help <page>").color(NamedTextColor.WHITE))
+                    .append(Component.text(" to see other pages.").color(NamedTextColor.YELLOW)));
         }
         
         // Show categories
         List<String> categories = commandManager.getHelpCategories();
         if (categories.size() > 1) {
-            sender.sendMessage(ChatColor.YELLOW + "Categories: " + ChatColor.WHITE + 
-                              String.join(ChatColor.GRAY + ", " + ChatColor.WHITE, categories));
-            sender.sendMessage(ChatColor.YELLOW + "Use " + ChatColor.WHITE + "/help <category>" + 
-                              ChatColor.YELLOW + " to see commands in a category.");
+                sender.sendMessage(Component.text("Categories: ")
+                    .color(NamedTextColor.YELLOW)
+                    .append(Component.join(
+                        Component.text(", ").color(NamedTextColor.GRAY),
+                        categories.stream()
+                            .map(cat -> Component.text(cat).color(NamedTextColor.WHITE))
+                            .collect(Collectors.toList())
+                    )));
+            sender.sendMessage(Component.text("Use ")
+                    .color(NamedTextColor.YELLOW)
+                    .append(Component.text("/help <category>").color(NamedTextColor.WHITE))
+                    .append(Component.text(" to see commands in a category.").color(NamedTextColor.YELLOW)));
         }
     }
     
@@ -195,17 +213,25 @@ public class HelpCommand extends AbstractCommand {
             })
             .collect(Collectors.toList());
         
-        sender.sendMessage(ChatColor.GOLD + "=== " + ChatColor.YELLOW + "Help: " + category + 
-                          " Commands " + ChatColor.GOLD + "(" + ChatColor.YELLOW + topics.size() + 
-                          ChatColor.GOLD + ") ===");
+        sender.sendMessage(Component.text("=== ")
+                .color(NamedTextColor.GOLD)
+                .append(Component.text("Help: " + category + " Commands ").color(NamedTextColor.YELLOW))
+                .append(Component.text("(").color(NamedTextColor.GOLD))
+                .append(Component.text(topics.size()).color(NamedTextColor.YELLOW))
+                .append(Component.text(") ===").color(NamedTextColor.GOLD)));
         
         for (CommandManager.HelpTopic topic : topics) {
-            sender.sendMessage(ChatColor.GOLD + "/" + topic.getName() + ChatColor.GRAY + ": " + 
-                              ChatColor.WHITE + topic.getDescription());
+            sender.sendMessage(Component.text("/")
+                .color(NamedTextColor.GOLD)
+                .append(Component.text(topic.getName()).color(NamedTextColor.GOLD))
+                .append(Component.text(": ").color(NamedTextColor.GRAY))
+                .append(Component.text(topic.getDescription()).color(NamedTextColor.WHITE)));
         }
         
-        sender.sendMessage(ChatColor.YELLOW + "Use " + ChatColor.WHITE + "/help <command>" + 
-                          ChatColor.YELLOW + " for details on a command.");
+        sender.sendMessage(Component.text("Use ")
+                .color(NamedTextColor.YELLOW)
+                .append(Component.text("/help <command>").color(NamedTextColor.WHITE))
+                .append(Component.text(" for details on a command.").color(NamedTextColor.YELLOW)));
     }
     
     /**
@@ -218,45 +244,56 @@ public class HelpCommand extends AbstractCommand {
         // Check permission
         String permission = topic.getPermission();
         if (permission != null && !permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage(ChatColor.RED + "You don't have permission to view help for this command.");
+            sender.sendMessage(Component.text("You don't have permission to view help for this command.")
+                    .color(NamedTextColor.RED));
             return;
         }
         
         if (sender instanceof Player) {
             // For players, use a more compact format
-            sender.sendMessage(ChatColor.GOLD + "=== " + ChatColor.YELLOW + "Help: " + 
-                              topic.getName() + ChatColor.GOLD + " ===");
-            sender.sendMessage(ChatColor.GRAY + "Description: " + ChatColor.WHITE + topic.getDescription());
-            sender.sendMessage(ChatColor.GRAY + "Usage: " + ChatColor.WHITE + topic.getUsage());
+            sender.sendMessage(Component.text("=== ")
+                    .color(NamedTextColor.GOLD)
+                    .append(Component.text("Help: " + topic.getName()).color(NamedTextColor.YELLOW))
+                    .append(Component.text(" ===").color(NamedTextColor.GOLD)));
+            sender.sendMessage(Component.text("Description: ")
+                    .color(NamedTextColor.GRAY)
+                    .append(Component.text(topic.getDescription()).color(NamedTextColor.WHITE)));
+            sender.sendMessage(Component.text("Usage: ")
+                    .color(NamedTextColor.GRAY)
+                    .append(Component.text(topic.getUsage()).color(NamedTextColor.WHITE)));
             
             if (permission != null && !permission.isEmpty()) {
-                sender.sendMessage(ChatColor.GRAY + "Permission: " + ChatColor.WHITE + permission);
+                sender.sendMessage(Component.text("Permission: ")
+                        .color(NamedTextColor.GRAY)
+                        .append(Component.text(permission).color(NamedTextColor.WHITE)));
             }
             
             if (topic.getDetailedHelp() != null && !topic.getDetailedHelp().isEmpty()) {
-                sender.sendMessage(ChatColor.GRAY + "Details:");
+                sender.sendMessage(Component.text("Details:").color(NamedTextColor.GRAY));
                 for (String line : topic.getDetailedHelp().split("\n")) {
-                    sender.sendMessage(ChatColor.WHITE + "  " + line);
+                    sender.sendMessage(Component.text("  " + line).color(NamedTextColor.WHITE));
                 }
             }
             
             if (!topic.getExamples().isEmpty()) {
-                sender.sendMessage(ChatColor.GRAY + "Examples:");
+                sender.sendMessage(Component.text("Examples:").color(NamedTextColor.GRAY));
                 for (String example : topic.getExamples()) {
-                    sender.sendMessage(ChatColor.WHITE + "  " + example);
+                    sender.sendMessage(Component.text("  " + example).color(NamedTextColor.WHITE));
                 }
             }
             
             if (!topic.getSubTopics().isEmpty()) {
-                sender.sendMessage(ChatColor.GRAY + "Sub-commands:");
+                sender.sendMessage(Component.text("Sub-commands:").color(NamedTextColor.GRAY));
                 for (CommandManager.HelpTopic subTopic : topic.getSubTopics()) {
-                    sender.sendMessage(ChatColor.GOLD + "  " + subTopic.getName() + ChatColor.GRAY + ": " + 
-                                      ChatColor.WHITE + subTopic.getDescription());
+                    sender.sendMessage(Component.text("  ")
+                            .append(Component.text(subTopic.getName()).color(NamedTextColor.GOLD))
+                            .append(Component.text(": ").color(NamedTextColor.GRAY))
+                            .append(Component.text(subTopic.getDescription()).color(NamedTextColor.WHITE)));
                 }
             }
         } else {
-            // For console, use the pre-formatted help
-            sender.sendMessage(topic.format());
+            // For console, convert the pre-formatted help to components
+            sender.sendMessage(Component.text(topic.format()));
         }
     }
     
@@ -323,4 +360,4 @@ public class HelpCommand extends AbstractCommand {
         
         return dp[s1.length()][s2.length()];
     }
-} 
+}

@@ -36,45 +36,23 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import com.essentialscore.util.BloomFilter;
 import com.essentialscore.util.JvmOptimizer;
 import com.essentialscore.util.ObjectPool;
 import com.essentialscore.util.OffHeapCache;
+import com.essentialscore.util.LRUCacheMap;
 import com.essentialscore.threading.AdvancedWorkStealingPool;
 import com.essentialscore.util.ModuleResourceManager;
 import com.essentialscore.api.Module;
@@ -127,19 +105,13 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     private final ConcurrentHashMap<String, Object> sharedData = new ConcurrentHashMap<>(32, 0.75f, 2);
     
     // Caching reflection methods for performance with LRU eviction policy
-    private final Map<String, Method> methodCache = Collections.synchronizedMap(new LinkedHashMap<String, Method>(128, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Method> eldest) {
-            return size() > getConfig().getInt("performance.cache-size.methods", 500);
-        }
-    });
+    private final Map<String, Method> methodCache = Collections.synchronizedMap(
+        new LRUCacheMap<>(128, 0.75f, getConfig().getInt("performance.cache-size.methods", 500))
+    );
     
-    private final Map<String, MethodHandle> methodHandleCache = Collections.synchronizedMap(new LinkedHashMap<String, MethodHandle>(64, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, MethodHandle> eldest) {
-            return size() > getConfig().getInt("performance.cache-size.reflection", 200);
-        }
-    });
+    private final Map<String, MethodHandle> methodHandleCache = Collections.synchronizedMap(
+        new LRUCacheMap<>(64, 0.75f, getConfig().getInt("performance.cache-size.reflection", 200))
+    );
     
     @SuppressWarnings("unused")
     private final MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -1518,4 +1490,3 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         return commandManager;
     }
 }
-        

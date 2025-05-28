@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * Provider for backing up module state data.
@@ -55,8 +56,9 @@ public class ModuleStateBackupProvider implements BackupProvider {
      */
     public boolean backupModuleState(String moduleName, File stateFile) {
         try {
-            // Get the module's state (in a real implementation, you'd get this from the actual module)
-            Object state = moduleStates.getOrDefault(moduleName, "No state available");
+            // Get the module's state from the registry
+            ModuleRegistry.ModuleInfo moduleInfo = moduleRegistry.getModule(moduleName);
+            Object state = moduleInfo != null ? moduleInfo.getState() : "No state available";
             
             // Serialize the state to the file
             try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(stateFile))) {
@@ -85,10 +87,18 @@ public class ModuleStateBackupProvider implements BackupProvider {
                 state = ois.readObject();
             }
             
-            // Store the state (in a real implementation, you'd apply this to the actual module)
-            moduleStates.put(moduleName, state);
-            
-            return true;
+            // Get the module from the registry and restore its state
+            ModuleRegistry.ModuleInfo moduleInfo = moduleRegistry.getModule(moduleName);
+            if (moduleInfo != null) {
+                moduleInfo.setState(state);
+                LOGGER.info("Successfully restored state for module: " + moduleName);
+                return true;
+            } else {
+                LOGGER.warning("Module not found in registry: " + moduleName);
+                // Store the state temporarily in case the module is loaded later
+                moduleStates.put(moduleName, state);
+                return false;
+            }
         } catch (IOException | ClassNotFoundException e) {
             LOGGER.log(Level.WARNING, "Failed to restore state for module: " + moduleName, e);
             return false;
@@ -125,18 +135,13 @@ public class ModuleStateBackupProvider implements BackupProvider {
     
     /**
      * Gets a list of loaded module names.
-     * This is a simplified implementation.
      * 
      * @return List of loaded module names
      */
     private Set<String> getLoadedModules() {
-        // This would normally come from moduleRegistry.getLoadedModules()
-        // But since we don't have that method, we'll use a placeholder
-        Set<String> modules = new HashSet<>();
-        modules.add("example-module-1");
-        modules.add("example-module-2");
-        modules.add("example-module-3");
-        return modules;
+        return moduleRegistry.getLoadedModules().stream()
+                .map(ModuleRegistry.ModuleInfo::getId)
+                .collect(Collectors.toSet());
     }
     
     @Override
@@ -178,4 +183,4 @@ public class ModuleStateBackupProvider implements BackupProvider {
             }
         }
     }
-} 
+}

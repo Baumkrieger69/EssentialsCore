@@ -32,15 +32,11 @@ public class EventBus {
         
         // Create formatter for nice console output
         String rawPrefix = "&8[&5&lEventBus&8]";
-<<<<<<< HEAD
-        this.console = new ConsoleFormatter(logger, rawPrefix, true);
-=======
         this.console = new ConsoleFormatter(
             logger,
             rawPrefix,
             true, false, true, "default"
         );
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
@@ -51,13 +47,10 @@ public class EventBus {
      * @param plugin The plugin/module that owns this listener
      */
     public void registerEvents(Object listener, String plugin) {
-<<<<<<< HEAD
         if (listener == null) {
             throw new IllegalArgumentException("Listener cannot be null");
         }
         
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         List<RegisteredListener> registeredListeners = new ArrayList<>();
         
         // Find all methods annotated with @EventHandler
@@ -69,23 +62,15 @@ public class EventBus {
             
             // Check method signature
             if (method.getParameterCount() != 1) {
-<<<<<<< HEAD
-                logger.warning("Invalid event handler method signature: " + method);
-=======
                 logger.warning("Method " + method.getName() + " in " + listener.getClass().getName() + 
                               " has @EventHandler but has incorrect parameter count");
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 continue;
             }
             
             Class<?> paramType = method.getParameterTypes()[0];
             if (!Event.class.isAssignableFrom(paramType)) {
-<<<<<<< HEAD
-                logger.warning("Invalid event type: " + paramType);
-=======
                 logger.warning("Method " + method.getName() + " in " + listener.getClass().getName() + 
                               " has @EventHandler but parameter is not an Event type");
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                 continue;
             }
             
@@ -97,11 +82,7 @@ public class EventBus {
             @SuppressWarnings("unchecked")
             Class<? extends Event> eventClass = (Class<? extends Event>) paramType;
             
-<<<<<<< HEAD
-            // Create registered listener with the correct parameter types
-=======
             // Create registered listener
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             RegisteredListener registeredListener = new RegisteredListener(
                 listener, method, annotation.priority(), plugin, annotation.ignoreCancelled());
                 
@@ -289,4 +270,4 @@ public class EventBus {
             return ignoreCancelled;
         }
     }
-} 
+}

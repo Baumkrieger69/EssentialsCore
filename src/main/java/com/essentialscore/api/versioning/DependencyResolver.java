@@ -1,7 +1,12 @@
 package com.essentialscore.api.versioning;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Resolves module dependencies, detects conflicts, and determines optimal load order.

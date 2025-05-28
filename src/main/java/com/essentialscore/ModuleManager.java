@@ -16,42 +16,21 @@ import org.bukkit.plugin.Plugin;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-<<<<<<< HEAD
-<<<<<<< HEAD
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-<<<<<<< HEAD
-<<<<<<< HEAD
 import java.text.SimpleDateFormat;
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
-<<<<<<< HEAD
-<<<<<<< HEAD
-import java.util.zip.ZipEntry;
-=======
 import java.lang.management.ThreadMXBean;
 import java.lang.management.ThreadInfo;
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-import java.lang.management.ThreadMXBean;
-import java.lang.management.ThreadInfo;
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
 import java.util.regex.Pattern;
 
 // Add these imports at the top of the file
@@ -80,8 +59,6 @@ public class ModuleManager {
     private BukkitTask watcherTask;
     private ConsoleFormatter console;
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     // Performance-Tracking für Module
     private final Map<String, ModulePerformanceData> modulePerformanceMap = new ConcurrentHashMap<>();
     private final ScheduledExecutorService performanceTrackerService;
@@ -91,11 +68,6 @@ public class ModuleManager {
     public static final int MEMORY_THRESHOLD_CRITICAL = 50; // 50MB Speichernutzung = Rot
     public static final int EXECUTION_THRESHOLD_WARNING = 100; // 100ms durchschnittliche Ausführungszeit = Gelb
     public static final int EXECUTION_THRESHOLD_CRITICAL = 250; // 250ms durchschnittliche Ausführungszeit = Rot
-    
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     public ModuleManager(ApiCore apiCore, File modulesDir, File configDir, 
                          Map<String, Object> loadedModules, 
                          Map<String, List<DynamicCommand>> moduleCommands,
@@ -107,17 +79,11 @@ public class ModuleManager {
         this.moduleCommands = moduleCommands;
         this.executorService = executorService;
         this.bufferCache = ThreadLocal.withInitial(() -> new byte[BUFFER_SIZE]);
-<<<<<<< HEAD
-<<<<<<< HEAD
         this.performanceTrackerService = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "ModulePerformanceTracker");
             thread.setDaemon(true); // Hintergrund-Thread, der den Server nicht am Herunterfahren hindert
             return thread;
         });
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         // Erweiterte Konsolen-Formatter Konfiguration
         boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
@@ -132,18 +98,12 @@ public class ModuleManager {
             rawPrefix,
             useColors, showTimestamps, useUnicodeSymbols, stylePreset
         );
-<<<<<<< HEAD
-<<<<<<< HEAD
-        
+    
         // Performance-Tracking starten, falls aktiviert
         if (apiCore.getConfig().getBoolean("performance.module-tracking.enabled", true)) {
             // Verzögert starten, damit der Server erst vollständig geladen ist
             Bukkit.getScheduler().runTaskLater(apiCore, this::startPerformanceTracking, 100L);
         }
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
     
     /**
@@ -1128,8 +1088,6 @@ public class ModuleManager {
 
                 // Modul initialisieren - mit robuster Initialisierung unabhängig vom Interface
                 try {
-<<<<<<< HEAD
-<<<<<<< HEAD
                     // Verwende die bereits geladene Konfiguration
                     final FileConfiguration finalConfig = config;
                     final Object finalModuleInstance = moduleInstance;
@@ -1140,6 +1098,22 @@ public class ModuleManager {
                         if (finalModuleInstance instanceof com.essentialscore.api.Module) {
                             // Get or create ModuleAPI
                             ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
+                        } else {
+                            // Legacy-Modul-Initialisierung
+                            try {
+                                Method initMethod = finalModuleInstance.getClass().getMethod("init", ApiCore.class, FileConfiguration.class);
+                                initMethod.invoke(finalModuleInstance, apiCore, finalConfig);
+                                console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
+                                    "Modul " + moduleName + " erfolgreich initialisiert über Legacy-Interface");
+                            } catch (Exception e) {
+                                console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                                    "Fehler bei Legacy-Initialisierung von Modul " + moduleName + ": " + e.getMessage());
+                                if (apiCore.isDebugMode()) {
+                                    e.printStackTrace();
+                                }
+                                return;
+                            }
+                        }
                             
                             // Initialize using the Module interface in a sandbox if enabled
                             if (sandbox != null && sandbox.isSandboxEnabled()) {
@@ -1164,35 +1138,6 @@ public class ModuleManager {
                             // Create an adapter that presents the Module as a legacy module
                             ModuleAdapter adapter = new ModuleAdapter(
                                 (com.essentialscore.api.Module) finalModuleInstance, 
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-                    // Versuche zuerst den direkten Weg über das Module-Interface
-                    if (moduleInstance instanceof com.essentialscore.api.Module) {
-                        console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Initialisiere Modul " + moduleName + " über Module-Interface");
-                        // Get ModuleAPI instance for this module
-                        ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
-                        // Initialize module
-                        ((com.essentialscore.api.Module) moduleInstance).init(moduleAPI, config);
-                        
-                        // Nach der Initialisierung onEnable aufrufen
-                        try {
-                            ((com.essentialscore.api.Module) moduleInstance).onEnable();
-                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für " + moduleName + " aufgerufen");
-                        } catch (Exception e) {
-                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                "Fehler beim Aufrufen von onEnable für " + moduleName + ": " + e.getMessage());
-                        }
-                        
-                        // Create adapter for legacy systems if needed
-                        if (implementsModuleInterface) {
-                            // Create an adapter that presents the Module as a legacy module
-                            ModuleAdapter adapter = new ModuleAdapter(
-                                (com.essentialscore.api.Module) moduleInstance, 
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                                 moduleAPI, 
                                 apiCore
                             );
@@ -1201,72 +1146,15 @@ public class ModuleManager {
                             moduleInfo = new ApiCore.ModuleInfo(moduleName, version, description, jarFile, loader, adapter);
                             loadedModules.put(moduleName, moduleInfo);
                         }
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    }
-                } catch (Exception e) {
-                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Initialisieren von Modul " + moduleName + ": " + e.getMessage());
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-                    } else {
-                        // Fallback auf Reflection für Legacy-Module
-                        console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Initialisiere Modul " + moduleName + " über Reflection");
-                        try {
-                            // Versuche zunächst, die Methode mit ModuleAPI zu finden
-                            try {
-                                Method initMethod = moduleMainClass.getMethod("init", ModuleAPI.class, FileConfiguration.class);
-                                ModuleAPI moduleAPI = apiCore.getModuleAPI(moduleName);
-                                initMethod.invoke(moduleInstance, moduleAPI, config);
-                                console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Initialisierung mit ModuleAPI erfolgreich", apiCore.isDebugMode());
-                                
-                                // Nach der Initialisierung onEnable aufrufen, falls vorhanden
-                                try {
-                                    Method onEnableMethod = moduleMainClass.getMethod("onEnable");
-                                    onEnableMethod.invoke(moduleInstance);
-                                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für " + moduleName + " aufgerufen");
-                                } catch (NoSuchMethodException e) {
-                                    // onEnable nicht gefunden, ist okay für Legacy-Module
-                                } catch (Exception e) {
-                                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                        "Fehler beim Aufrufen von onEnable für " + moduleName + ": " + e.getMessage());
-                                }
-                            } catch (NoSuchMethodException e) {
-                                // Wenn nicht gefunden, versuche die alte Methode mit ApiCore
-                            try {
-                                Method initMethod = moduleMainClass.getMethod("init", ApiCore.class, FileConfiguration.class);
-                                initMethod.invoke(moduleInstance, apiCore, config);
-                                console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Legacy-Initialisierung erfolgreich", apiCore.isDebugMode());
-                                
-                                // Nach der Initialisierung onEnable aufrufen, falls vorhanden
-                                try {
-                                    Method onEnableMethod = moduleMainClass.getMethod("onEnable");
-                                    onEnableMethod.invoke(moduleInstance);
-                                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "onEnable für Legacy-Modul " + moduleName + " aufgerufen");
-                                } catch (NoSuchMethodException ex) {
-                                    // onEnable nicht gefunden, ist okay für Legacy-Module
-                                } catch (Exception ex) {
-                                    console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                        "Fehler beim Aufrufen von onEnable für Legacy-Modul " + moduleName + ": " + ex.getMessage());
-                                }
-                                } catch (NoSuchMethodException ex) {
-                                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Konnte keine init-Methode finden. Das Modul " + moduleName + " wird nicht initialisiert!");
-                                }
-                            }
-                        } catch (Exception e) {
-                            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler bei der Modulinitialisierung für " + moduleName + ": " + e.getMessage());
-                            if (apiCore.isDebugMode()) {
-                                e.printStackTrace();
-                            }
-                            return;
+                    } catch (Exception e) {
+                        console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Initialisieren von Modul " + moduleName + ": " + e.getMessage());
+                        if (apiCore.isDebugMode()) {
+                            e.printStackTrace();
                         }
+                        return;
                     }
                 } catch (Exception e) {
                     console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler bei der Initialisierung von Modul " + moduleName + ": " + e.getMessage());
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
                     if (apiCore.isDebugMode()) {
                         e.printStackTrace();
                     }
@@ -1323,7 +1211,7 @@ public class ModuleManager {
                 Thread.currentThread().setContextClassLoader(previousClassLoader);
             }
         }
-    }
+    
     
     /**
      * Optimierte Modul-Instanzerstellung mit Caching von Konstruktoren
@@ -2310,8 +2198,6 @@ public class ModuleManager {
             return null;
         }
     }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
     /**
      * Führt eine private Methode eines Moduls sicher aus
@@ -2950,8 +2836,4 @@ public class ModuleManager {
         // Clean up other resources if needed
         modulePerformanceMap.clear();
     }
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-} 
+}

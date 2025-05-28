@@ -1,59 +1,23 @@
 package com.essentialscore.api.impl;
 
 import com.essentialscore.ApiCore;
-<<<<<<< HEAD
-<<<<<<< HEAD
-import com.essentialscore.ModuleSandbox;
-import com.essentialscore.api.ModuleAPI;
-import com.essentialscore.api.ModuleEventListener;
-import org.bukkit.command.CommandSender;
+import com.essentialscore.api.*;
+import com.essentialscore.api.integration.*;
+import com.essentialscore.api.security.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-import com.essentialscore.DynamicCommand;
-import com.essentialscore.api.CommandDefinition;
-import com.essentialscore.api.ModuleAPI;
-import com.essentialscore.api.ModuleEventListener;
-import org.bukkit.entity.Player;
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
-<<<<<<< HEAD
-<<<<<<< HEAD
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-import java.util.logging.Level;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * Implementation of the ModuleAPI interface that bridges between the ApiCore and modules.
@@ -62,15 +26,249 @@ import java.util.logging.Level;
 public class CoreModuleAPI implements ModuleAPI {
     private final ApiCore core;
     private final String moduleName;
+    private final Map<String, ModuleEventListener> eventListeners;
+    private final ReentrantReadWriteLock eventLock;
     
     public CoreModuleAPI(ApiCore core, String moduleName) {
+        if (core == null) throw new IllegalArgumentException("ApiCore instance cannot be null");
+        if (moduleName == null || moduleName.isEmpty()) throw new IllegalArgumentException("Module name cannot be null or empty");
+        
         this.core = core;
         this.moduleName = moduleName;
+        this.eventListeners = new ConcurrentHashMap<>();
+        this.eventLock = new ReentrantReadWriteLock();
     }
     
     @Override
-<<<<<<< HEAD
-<<<<<<< HEAD
+    public String getModuleName() {
+        return moduleName;
+    }
+    
+    @Override
+    public FileConfiguration getConfig() {
+        FileConfiguration config = core.getModuleConfig(moduleName);
+        if (config == null) {
+            logWarning("Configuration for module " + moduleName + " could not be loaded. Using empty configuration.");
+            return new YamlConfiguration();
+        }
+        return config;
+    }
+    
+    @Override
+    public void saveConfig() {
+        try {
+            core.saveModuleConfig(moduleName);
+        } catch (Exception e) {
+            logError("Failed to save configuration: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    @Override
+    public void reloadConfig() {
+        try {
+            core.reloadModuleConfig(moduleName);
+        } catch (Exception e) {
+            logError("Failed to reload configuration: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    @Override
+    public File getDataFolder() {
+        File folder = core.getModuleDataFolder(moduleName);
+        if (!folder.exists() && !folder.mkdirs()) {
+            logWarning("Failed to create data folder for module " + moduleName);
+        }
+        return folder;
+    }
+    
+    @Override
+    public File getResourcesFolder() {
+        File folder = core.getModuleResourcesFolder(moduleName);
+        if (!folder.exists() && !folder.mkdirs()) {
+            logWarning("Failed to create resources folder for module " + moduleName);
+        }
+        return folder;
+    }
+    
+    @Override
+    public void registerModuleListener(String eventName, ModuleEventListener listener) {
+        if (eventName == null || eventName.isEmpty()) throw new IllegalArgumentException("Event name cannot be null or empty");
+        if (listener == null) throw new IllegalArgumentException("Event listener cannot be null");
+        
+        eventLock.writeLock().lock();
+        try {
+            eventListeners.put(eventName, listener);
+            core.registerModuleListener(eventName, listener);
+        } finally {
+            eventLock.writeLock().unlock();
+        }
+    }
+    
+    @Override
+    public void unregisterModuleListener(String eventName, ModuleEventListener listener) {
+        if (eventName == null || eventName.isEmpty()) return;
+        if (listener == null) return;
+        
+        eventLock.writeLock().lock();
+        try {
+            if (eventListeners.remove(eventName, listener)) {
+                core.unregisterModuleListener(eventName, listener);
+            }
+        } finally {
+            eventLock.writeLock().unlock();
+        }
+    }
+    
+    @Override
+    public <T> T executeInSandbox(String moduleId, ModuleSandbox.SandboxedTask<T> task) {
+        if (moduleId == null || moduleId.isEmpty()) {
+            throw new IllegalArgumentException("Module ID cannot be null or empty");
+        }
+        if (task == null) {
+            throw new IllegalArgumentException("Task cannot be null");
+        }
+        
+        ModuleSandbox sandbox = getModuleSandbox(moduleId);
+        if (sandbox == null || !sandbox.isSandboxEnabled()) {
+            logWarning("Sandbox disabled or not available, executing task without isolation");
+            try {
+                return task.execute();
+            } catch (Exception e) {
+                logError("Error executing task: " + e.getMessage());
+                e.printStackTrace();
+                return null;
+            }
+        }
+        
+        try {
+            return sandbox.executeTask(moduleId, task);
+        } catch (SecurityException e) {
+            logError("Security violation in sandbox execution: " + e.getMessage());
+            return null;
+        } catch (Exception e) {
+            logError("Error executing in sandbox: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+    
+    @Override
+    public void logInfo(String message) {
+        if (message == null) return;
+        core.getLogger().info("[" + moduleName + "] " + message);
+    }
+    
+    @Override
+    public void logWarning(String message) {
+        if (message == null) return;
+        core.getLogger().warning("[" + moduleName + "] " + message);
+    }
+    
+    @Override
+    public void logError(String message) {
+        if (message == null) return;
+        core.getLogger().severe("[" + moduleName + "] " + message);
+    }
+    
+    @Override
+    public void logDebug(String message) {
+        if (message == null || !core.isDebugMode()) return;
+        core.getLogger().info("[DEBUG: " + moduleName + "] " + message);
+    }
+    
+    // Neue Hilfsmethode für Builder-Validierung
+    private void validateBuilderParameters(String title, int size) {
+        if (title == null) throw new IllegalArgumentException("Title cannot be null");
+        if (size < 0 || size > 54 || size % 9 != 0) {
+            throw new IllegalArgumentException("Invalid inventory size: " + size + ". Must be a multiple of 9 between 0 and 54");
+        }
+    }
+    
+    @Override
+    public void registerCommands(List<? extends CommandDefinition> commands) {
+        core.getCommandManager().registerModuleCommands(moduleName, commands);
+    }
+    
+    @Override
+    public void unregisterCommands(List<? extends CommandDefinition> commands) {
+        core.getCommandManager().unregisterModuleCommands(moduleName, commands);
+    }
+    
+    @Override
+    public IntegrationManager getIntegrationManager() {
+        return core.getIntegrationManager();
+    }
+    
+    @Override
+    public <T extends PluginIntegration> Optional<T> getIntegration(Class<T> integrationClass) {
+        return core.getIntegrationManager().getIntegration(integrationClass);
+    }
+    
+    @Override
+    public Optional<PluginIntegration> getIntegrationByPlugin(String pluginName) {
+        return core.getIntegrationManager().getIntegrationByPlugin(pluginName);
+    }
+    
+    @Override
+    public String registerModulePermission(Module module, String permissionName, String description) {
+        return core.getPermissionManager().registerModulePermission(moduleName, permissionName, description);
+    }
+    
+    @Override
+    public String formatPlaceholders(String text, Player player) {
+        return core.getPlaceholderManager().formatPlaceholders(text, player);
+    }
+    
+    @Override
+    public SecurityManager getSecurityManager() {
+        SecurityManager securityManager = core.getSecurityManager();
+        if (securityManager == null) {
+            logWarning("Security manager is not available");
+            return null;
+        }
+        return securityManager;
+    }
+    
+    @Override
+    public ModuleSandbox getModuleSandbox(String moduleId) {
+        if (moduleId == null || moduleId.isEmpty()) {
+            throw new IllegalArgumentException("Module ID cannot be null or empty");
+        }
+        
+        ModuleSandbox sandbox = core.getModuleSandbox();
+        if (sandbox == null) {
+            logWarning("Sandbox is not available for module: " + moduleId);
+            return null;
+        }
+        return sandbox;
+    }
+    
+    /**
+     * Prüft, ob ein Modul eine bestimmte Sicherheitsberechtigung hat.
+     */
+    @Override 
+    public boolean hasModuleSecurityPermission(String moduleId, SecurityPermission permission, String target) {
+        if (moduleId == null || permission == null) {
+            return false;
+        }
+        
+        SecurityManager securityManager = getSecurityManager();
+        if (securityManager == null) {
+            logWarning("Security manager not available, denying permission: " + permission);
+            return false;
+        }
+        
+        try {
+            return securityManager.hasPermission(moduleId, permission, target);
+        } catch (Exception e) {
+            logError("Error checking security permission: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    @Override
     public <T> T executeInSandbox(Callable<T> action, T defaultValue) {
         ModuleSandbox sandbox = core.getModuleSandbox();
         if (sandbox != null && sandbox.isSandboxEnabled()) {
@@ -87,29 +285,95 @@ public class CoreModuleAPI implements ModuleAPI {
     
     @Override
     public long measurePerformance(Runnable block) {
-        long start = System.currentTimeMillis();
-        block.run();
-        return System.currentTimeMillis() - start;
+        if (block == null) {
+            throw new IllegalArgumentException("Block cannot be null");
+        }
+        
+        long startTime = System.nanoTime();
+        try {
+            block.run();
+            return (System.nanoTime() - startTime) / 1_000_000; // Convert to milliseconds
+        } catch (Exception e) {
+            logError("Error measuring performance: " + e.getMessage());
+            return -1;
+        }
     }
     
     @Override
-    public PerformanceResult checkModulePerformance(String moduleName) {
-        return new PerformanceResult(0.0, 0L, 0.0, "OK");
+    public PerformanceResult analyzePerformance(Runnable block) {
+        if (block == null) {
+            throw new IllegalArgumentException("Block cannot be null");
+        }
+        
+        long startMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        long startTime = System.nanoTime();
+        double cpuTime = 0;
+        
+        try {
+            ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+            if (threadBean.isCurrentThreadCpuTimeSupported()) {
+                cpuTime = threadBean.getCurrentThreadCpuTime();
+            }
+            
+            block.run();
+            
+            long endTime = System.nanoTime();
+            long endMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            
+            double executionTime = (endTime - startTime) / 1_000_000.0; // ms
+            long memoryUsed = endMemory - startMemory;
+            double cpuUsage = 0;
+            
+            if (threadBean.isCurrentThreadCpuTimeSupported()) {
+                cpuUsage = (threadBean.getCurrentThreadCpuTime() - cpuTime) / 1_000_000.0;
+            }
+            
+            String status = determinePerformanceStatus(executionTime, memoryUsed, cpuUsage);
+            return new PerformanceResult(cpuUsage, memoryUsed, executionTime, status);
+            
+        } catch (Exception e) {
+            logError("Error analyzing performance: " + e.getMessage());
+            return new PerformanceResult(0, 0, 0, "ERROR");
+        }
+    }
+    
+    private String determinePerformanceStatus(double executionTime, long memoryUsed, double cpuUsage) {
+        // Schwellenwerte für Warnungen und kritische Zustände
+        final double CRITICAL_EXECUTION_TIME = 1000.0; // 1 Sekunde
+        final double WARNING_EXECUTION_TIME = 500.0;   // 500ms
+        final long CRITICAL_MEMORY = 50 * 1024 * 1024; // 50MB
+        final long WARNING_MEMORY = 10 * 1024 * 1024;  // 10MB
+        final double CRITICAL_CPU = 90.0; // 90%
+        final double WARNING_CPU = 70.0;  // 70%
+        
+        if (executionTime > CRITICAL_EXECUTION_TIME ||
+            memoryUsed > CRITICAL_MEMORY ||
+            cpuUsage > CRITICAL_CPU) {
+            return "CRITICAL";
+        }
+        
+        if (executionTime > WARNING_EXECUTION_TIME ||
+            memoryUsed > WARNING_MEMORY ||
+            cpuUsage > WARNING_CPU) {
+            return "WARNING";
+        }
+        
+        return "OK";
     }
     
     @Override
-    public void removePlayerData(UUID playerUUID, String key) {
-        // Dummy-Implementierung
+    public GUIBuilder createGUI(String moduleId, String title, int rows) {
+        return new DummyGUIBuilder();
     }
     
     @Override
-    public Object getPlayerData(UUID playerUUID, String key) {
-        return null;
+    public void openGUI(Player player, GUI gui) {
+        player.openInventory(gui.getInventory());
     }
     
     @Override
-    public void setPlayerData(UUID playerUUID, String key, Object value) {
-        // Dummy-Implementierung
+    public InventoryBuilder createInventory(String title, int size) {
+        return new DummyInventoryBuilder(title, size);
     }
     
     @Override
@@ -117,558 +381,231 @@ public class CoreModuleAPI implements ModuleAPI {
         return new DummyItemBuilder();
     }
     
-    @Override
-    public InventoryBuilder createInventory(String title, int size) {
-        return new DummyInventoryBuilder();
+    // Dummy-Implementierungen der Builder-Klassen
+    private class DummyGUIBuilder implements GUIBuilder {
+        @Override
+        public GUI build() {
+            return null;
+        }
     }
     
-    @Override
-    public <T> CompletableFuture<T> runDatabaseOperation(String database, DatabaseOperation<T> operation) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        future.completeExceptionally(new UnsupportedOperationException("Database operations not implemented"));
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-    public Plugin getPlugin() {
-        return core;
-    }
-    
-    @Override
-    public File getModuleDataFolder(String moduleName) {
-        return core.getModuleDataFolder(moduleName != null ? moduleName : this.moduleName);
-    }
-    
-    @Override
-    public File getModuleConfigFile(String moduleName) {
-        return core.getModuleConfigFile(moduleName != null ? moduleName : this.moduleName);
-    }
-    
-    @Override
-    public File getModuleResourcesFolder(String moduleName) {
-        return core.getModuleResourcesFolder(moduleName != null ? moduleName : this.moduleName);
-    }
-    
-    @Override
-    public void registerModuleListener(String eventName, ModuleEventListener listener) {
-        // We can now pass the listener directly without casting
-        core.registerModuleListener(eventName, listener);
-    }
-    
-    @Override
-    public void unregisterModuleListener(String eventName, ModuleEventListener listener) {
-        // We can now pass the listener directly without casting
-        core.unregisterModuleListener(eventName, listener);
-    }
-    
-    @Override
-    public void fireModuleEvent(String eventName, Map<String, Object> data) {
-        core.fireModuleEvent(eventName, data);
-    }
-    
-    @Override
-    public void registerCommands(List<? extends CommandDefinition> commands) {
-        if (commands == null || commands.isEmpty()) {
-            return;
+    private class DummyInventoryBuilder implements ModuleAPI.InventoryBuilder {
+        private final String title;
+        private final int size;
+        private final Map<Integer, ItemStack> items = new HashMap<>();
+        private Consumer<InventoryClickEvent> clickHandler;
+        private Consumer<InventoryCloseEvent> closeHandler;
+        
+        public DummyInventoryBuilder(String title, int size) {
+            validateBuilderParameters(title, size);
+            this.title = title;
+            this.size = size;
         }
         
-        List<DynamicCommand> coreCommands = new ArrayList<>(commands.size());
+        @Override
+        public ModuleAPI.InventoryBuilder item(int slot, ItemStack item) {
+            if (slot < 0 || slot >= size) {
+                throw new IllegalArgumentException("Invalid slot: " + slot);
+            }
+            items.put(slot, item);
+            return this;
+        }
         
-        for (CommandDefinition command : commands) {
-            DynamicCommand dynamicCommand = new DynamicCommand(
-                command.getName(),
-                command.getDescription(),
-                command.getUsage(),
-                command.getAliases(),
-                moduleName,
-                command.getPermission(),
-                core
-            );
-            
-            // Add tab completion options if available
-            for (int i = 0; i < 10; i++) { // Assuming max 10 arguments
-                List<String> options = command.getTabCompletionOptions(i);
-                if (options != null && !options.isEmpty()) {
-                    dynamicCommand.addTabCompletionOptions(i, options);
+        @Override
+        public ModuleAPI.InventoryBuilder onClick(Consumer<InventoryClickEvent> handler) {
+            this.clickHandler = handler;
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.InventoryBuilder onClose(Consumer<InventoryCloseEvent> handler) {
+            this.closeHandler = handler;
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.InventoryBuilder fillBorder(ItemStack item) {
+            for (int i = 0; i < size; i++) {
+                if (i < 9 || i >= size - 9 || i % 9 == 0 || i % 9 == 8) {
+                    items.put(i, item);
                 }
             }
-            
-            coreCommands.add(dynamicCommand);
+            return this;
         }
         
-        core.registerCommands(coreCommands);
-    }
-    
-    @Override
-    public void unregisterCommands(List<? extends CommandDefinition> commands) {
-        if (commands == null || commands.isEmpty()) {
-            return;
-        }
-        
-        List<DynamicCommand> coreCommands = new ArrayList<>(commands.size());
-        
-        for (CommandDefinition command : commands) {
-            DynamicCommand dynamicCommand = new DynamicCommand(
-                command.getName(),
-                command.getDescription(),
-                command.getUsage(),
-                command.getAliases(),
-                moduleName,
-                command.getPermission(),
-                core
-            );
-            coreCommands.add(dynamicCommand);
-        }
-        
-        core.unregisterCommands(coreCommands);
-    }
-    
-    @Override
-    public boolean hasPermission(Player player, String permission) {
-        return core.getPermissionManager().hasPermission(player, permission);
-    }
-    
-    @Override
-    public void setSharedData(String key, Object value) {
-        // Use a prefix for module-specific data to avoid collisions
-        String prefixedKey = moduleName + ":" + key;
-        core.setSharedData(prefixedKey, value);
-    }
-    
-    @Override
-    public Object getSharedData(String key) {
-        // Check for module-specific data first
-        String prefixedKey = moduleName + ":" + key;
-        Object data = core.getSharedData(prefixedKey);
-        
-        // If not found, try the global key (for cross-module shared data)
-        if (data == null) {
-            data = core.getSharedData(key);
-        }
-        
-        return data;
-    }
-    
-    @Override
-    public String formatHex(String message) {
-        return core.formatHex(message);
-    }
-    
-    @Override
-    public <T> CompletableFuture<T> runAsync(java.util.function.Supplier<T> task) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        
-        core.getServer().getScheduler().runTaskAsynchronously(core, () -> {
-            try {
-                T result = task.get();
-                future.complete(result);
-            } catch (Exception e) {
-                future.completeExceptionally(e);
-                core.getLogger().log(Level.WARNING, "Error in async task for module " + moduleName, e);
+        @Override
+        public ModuleAPI.InventoryBuilder fillEmpty(ItemStack item) {
+            for (int i = 0; i < size; i++) {
+                if (!items.containsKey(i)) {
+                    items.put(i, item);
+                }
             }
-        });
-        
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-        return future;
-    }
-    
-    @Override
-<<<<<<< HEAD
-<<<<<<< HEAD
-    public void releaseDatabaseConnection(Connection connection) {
-        // Dummy-Implementierung
-    }
-    
-    @Override
-    public Connection getDatabaseConnection(String database) {
-        return null;
-    }
-    
-    @Override
-    public Plugin getPlugin() {
-        return core;
-    }
-
-    @Override
-    public boolean isDebugMode() {
-        return false;
-    }
-
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-    public void runAsync(Runnable task) {
-        core.getServer().getScheduler().runTaskAsynchronously(core, () -> {
-            try {
-                task.run();
-            } catch (Exception e) {
-                core.getLogger().log(Level.WARNING, "Error in async task for module " + moduleName, e);
-            }
-        });
-    }
-    
-    @Override
-    public int scheduleTask(Runnable task, long delayTicks) {
-        BukkitTask bukkitTask = core.getServer().getScheduler().runTaskLater(core, task, delayTicks);
-        return bukkitTask.getTaskId();
-    }
-    
-    @Override
-    public int scheduleRepeatingTask(Runnable task, long delayTicks, long periodTicks) {
-        BukkitTask bukkitTask = core.getServer().getScheduler().runTaskTimer(core, task, delayTicks, periodTicks);
-        return bukkitTask.getTaskId();
-    }
-    
-    @Override
-    public void cancelTask(int taskId) {
-        core.getServer().getScheduler().cancelTask(taskId);
-    }
-    
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-    @Override
-    public void logInfo(String message) {
-        core.getLogger().info("[" + moduleName + "] " + message);
-    }
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-    
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-    @Override
-    public void logWarning(String message) {
-        core.getLogger().warning("[" + moduleName + "] " + message);
-    }
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-    @Override
-    public void logError(String message, Throwable throwable) {
-        core.getLogger().severe("[" + moduleName + "] " + message + ": " + (throwable != null ? throwable.getMessage() : "null"));
-=======
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-    
-    @Override
-    public void logError(String message, Throwable throwable) {
-        if (throwable != null) {
-            core.getLogger().log(Level.SEVERE, "[" + moduleName + "] " + message, throwable);
-        } else {
-            core.getLogger().severe("[" + moduleName + "] " + message);
-        }
-<<<<<<< HEAD
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-    }
-    
-    @Override
-    public void logDebug(String message) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if (isDebugMode()) {
-=======
-        if (core.isDebugMode()) {
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-        if (core.isDebugMode()) {
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
-            core.getLogger().info("[" + moduleName + "] [DEBUG] " + message);
-        }
-    }
-    
-    @Override
-<<<<<<< HEAD
-<<<<<<< HEAD
-    public void log(LogLevel level, String message) {
-        switch (level) {
-            case INFO:
-                logInfo(message);
-                break;
-            case WARNING:
-                logWarning(message);
-                break;
-            case ERROR:
-                logError(message, null);
-                break;
-            case DEBUG:
-                logDebug(message);
-                break;
-            default:
-                logInfo(message);
-        }
-    }
-    
-    @Override
-    public void log(String message) {
-        logInfo(message);
-    }
-
-    // Die korrekte Signatur aus dem ModuleAPI-Interface
-    @Override
-    public boolean registerCommand(String command, String description, String usage, CommandExecutor executor, TabCompleter tabCompleter, String permission) {
-        // Dummy-Implementierung
-        return false;
-    }
-    
-    // Diese Methode ist wahrscheinlich nicht Teil des Interfaces
-    public void registerCommand(String name, Object definition) {
-        // Dummy-Implementierung
-    }
-
-    @Override
-    public void registerListener(Listener listener) {
-        // Dummy-Implementierung
-    }
-
-    @Override
-    public void registerPermission(String permission, String description, PermissionDefault defaultValue) {
-        // Dummy-Implementierung
-    }
-    
-    @Override
-    public boolean hasPermission(Player player, String permission) {
-        return player != null && player.hasPermission(permission);
-    }
-
-    @Override
-    public void sendMessage(CommandSender target, String message) {
-        if (target != null) {
-            target.sendMessage(message);
-        }
-    }
-
-    @Override
-    public FileConfiguration getConfig() {
-        return null;
-    }
-
-    @Override
-    public void saveConfig() {
-        // Dummy-Implementierung
-    }
-
-    @Override
-    public void reloadConfig() {
-        // Dummy-Implementierung
-    }
-
-    // Diese Methode ist in der Linterfehlermeldung als nicht überschreibend markiert
-    // Wir behalten sie, aber es könnte sein, dass sie in der Interface-Definition anders benannt ist
-    public String formatHex(String message) {
-        return message;
-    }
-
-    @Override
-    public String formatColor(String message) {
-        return message;
-    }
-
-    @Override
-    public BukkitTask runTask(Runnable runnable) {
-        return core.getServer().getScheduler().runTask(core, runnable);
-    }
-
-    @Override
-    public BukkitTask runTaskAsync(Runnable runnable) {
-        return core.getServer().getScheduler().runTaskAsynchronously(core, runnable);
-    }
-
-    @Override
-    public BukkitTask runTaskLater(Runnable runnable, long delay) {
-        return core.getServer().getScheduler().runTaskLater(core, runnable, delay);
-    }
-
-    @Override
-    public BukkitTask runTaskTimer(Runnable runnable, long delay, long period) {
-        return core.getServer().getScheduler().runTaskTimer(core, runnable, delay, period);
-    }
-
-    @Override
-    public File getDataFolder() {
-        return new File(core.getDataFolder(), "modules/" + moduleName);
-    }
-
-    @Override
-    public File getResourcesFolder() {
-        return new File(getDataFolder(), "resources");
-    }
-
-    @Override
-    public int extractResources(String directory, boolean replace) {
-        return 0;
-    }
-
-    @Override
-    public boolean extractResource(String resourcePath, boolean replace) {
-        return false;
-    }
-
-    @Override
-    public String getModuleName() {
-        return moduleName;
-    }
-
-    @Override
-    public List<String> getLoadedModules() {
-        return new ArrayList<>();
-    }
-
-    @Override
-    public boolean isModuleLoaded(String moduleName) {
-        return false;
-    }
-
-    @Override
-    public Object getModuleData(String key) {
-        return null;
-    }
-    
-    @Override
-    public void setModuleData(String key, Object value) {
-        // Dummy-Implementierung
-    }
-
-    @Override
-    public void setSharedData(String key, Object value) {
-        // Dummy-Implementierung
-    }
-    
-    @Override
-    public Object getSharedData(String key) {
-        return null;
-    }
-
-    // Diese Methode ist in der Linterfehlermeldung als nicht überschreibend markiert
-    // Wir behalten sie, aber es könnte sein, dass sie in der Interface-Definition anders benannt ist
-    public Map<String, Object> getSharedData() {
-        return Collections.emptyMap();
-    }
-    
-    @Override
-    public void fireModuleEvent(String eventName, Map<String, Object> data) {
-        // Dummy-Implementierung
-    }
-
-    @Override
-    public void registerModuleEventListener(String eventName, ModuleEventListener listener) {
-        // Dummy-Implementierung
-    }
-
-    @Override
-    public void unregisterModuleEventListener(String eventName, ModuleEventListener listener) {
-        // Dummy-Implementierung
-    }
-
-    // Innere Dummy-Klassen für Builder
-    
-    private static class DummyItemBuilder implements ItemBuilder {
-        @Override
-        public ItemBuilder name(String name) {
             return this;
         }
         
         @Override
-        public ItemBuilder lore(String... lore) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder amount(int amount) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder data(short data) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder enchant(String enchantment, int level) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder glow(boolean glow) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder unbreakable(boolean unbreakable) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder addFlag(String flag) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder removeFlag(String flag) {
-            return this;
-        }
-        
-        @Override
-        public ItemBuilder addNBT(String key, Object value) {
-            return this;
-        }
-        
-        @Override
-        public ItemStack build() {
-            return new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE);
-        }
-    }
-    
-    private class DummyInventoryBuilder implements InventoryBuilder {
-        @Override
-        public InventoryBuilder item(int slot, ItemStack item) {
-            return this;
-        }
-        
-        @Override
-        public InventoryBuilder onClick(Consumer<InventoryClickEvent> handler) {
-            return this;
-        }
-        
-        @Override
-        public InventoryBuilder onClose(Consumer<InventoryCloseEvent> handler) {
-            return this;
-        }
-        
-        @Override
-        public InventoryBuilder fillBorder(ItemStack item) {
-            return this;
-        }
-        
-        @Override
-        public InventoryBuilder fillEmpty(ItemStack item) {
-            return this;
-        }
-        
-        @Override
-        public InventoryBuilder paginated(boolean paginated) {
+        public ModuleAPI.InventoryBuilder paginated(boolean paginated) {
+            // Pagination not implemented in dummy builder
             return this;
         }
         
         @Override
         public Inventory build() {
-            return core.getServer().createInventory(null, 9, "Dummy Inventory");
+            Inventory inv = core.getServer().createInventory(null, size, title);
+            items.forEach((slot, item) -> inv.setItem(slot, item));
+            
+            // Register click handler if provided
+            if (clickHandler != null) {
+                core.getServer().getPluginManager().registerEvents(new Listener() {
+                    @EventHandler
+                    public void onInventoryClick(InventoryClickEvent event) {
+                        if (event.getInventory().equals(inv)) {
+                            clickHandler.accept(event);
+                        }
+                    }
+                }, core);
+            }
+            
+            // Register close handler if provided
+            if (closeHandler != null) {
+                core.getServer().getPluginManager().registerEvents(new Listener() {
+                    @EventHandler
+                    public void onInventoryClose(InventoryCloseEvent event) {
+                        if (event.getInventory().equals(inv)) {
+                            closeHandler.accept(event);
+                        }
+                    }
+                }, core);
+            }
+            
+            return inv;
         }
-=======
-    public boolean isDebugMode() {
-        return core.isDebugMode();
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-    public boolean isDebugMode() {
-        return core.isDebugMode();
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     }
-} 
+    
+    private class DummyItemBuilder implements ModuleAPI.ItemBuilder {
+        private final ItemStack item;
+        private final ItemMeta meta;
+        
+        public DummyItemBuilder(String material) {
+            if (material == null || material.isEmpty()) {
+                throw new IllegalArgumentException("Material cannot be null or empty");
+            }
+            
+            Material mat = Material.matchMaterial(material);
+            if (mat == null) {
+                throw new IllegalArgumentException("Invalid material: " + material);
+            }
+            
+            this.item = new ItemStack(mat);
+            this.meta = item.getItemMeta();
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder name(String name) {
+            if (meta != null && name != null) {
+                meta.setDisplayName(name);
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder lore(String... lore) {
+            if (meta != null && lore != null) {
+                meta.setLore(Arrays.asList(lore));
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder amount(int amount) {
+            if (amount > 0) {
+                item.setAmount(amount);
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder data(short data) {
+            item.setDurability(data);
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder enchant(String enchantment, int level) {
+            if (meta != null && enchantment != null) {
+                try {
+                    Enchantment ench = Enchantment.getByName(enchantment.toUpperCase());
+                    if (ench != null) {
+                        meta.addEnchant(ench, level, true);
+                    }
+                } catch (Exception e) {
+                    core.getLogger().warning("Failed to add enchantment: " + enchantment);
+                }
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder glow(boolean glow) {
+            if (meta != null) {
+                if (glow) {
+                    meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                } else {
+                    meta.removeEnchant(Enchantment.DURABILITY);
+                    meta.removeItemFlags(ItemFlag.HIDE_ENCHANTS);
+                }
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder unbreakable(boolean unbreakable) {
+            if (meta != null) {
+                meta.setUnbreakable(unbreakable);
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder addFlag(String flag) {
+            if (meta != null && flag != null) {
+                try {
+                    ItemFlag itemFlag = ItemFlag.valueOf(flag.toUpperCase());
+                    meta.addItemFlags(itemFlag);
+                } catch (Exception e) {
+                    core.getLogger().warning("Invalid item flag: " + flag);
+                }
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder removeFlag(String flag) {
+            if (meta != null && flag != null) {
+                try {
+                    ItemFlag itemFlag = ItemFlag.valueOf(flag.toUpperCase());
+                    meta.removeItemFlags(itemFlag);
+                } catch (Exception e) {
+                    core.getLogger().warning("Invalid item flag: " + flag);
+                }
+            }
+            return this;
+        }
+        
+        @Override
+        public ModuleAPI.ItemBuilder addNBT(String key, Object value) {
+            // NBT-Daten-Unterstützung ist in der Dummy-Implementierung nicht verfügbar
+            logWarning("NBT data support not available in dummy implementation");
+            return this;
+        }
+        
+        @Override
+        public ItemStack build() {
+            if (meta != null) {
+                item.setItemMeta(meta);
+            }
+            return item;
+        }
+    }
+}

@@ -10,8 +10,10 @@ import org.bukkit.command.TabCompleter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -22,11 +24,20 @@ public class ModuleCommand implements CommandExecutor, TabCompleter {
     private final ConsoleFormatter console;
     
     public ModuleCommand(ApiCore apiCore) {
+        if (apiCore == null) {
+            throw new IllegalArgumentException("ApiCore darf nicht null sein");
+        }
         this.apiCore = apiCore;
+        
+        String prefix = apiCore.getConfig().getString("console.prefixes.module-command", "&8[&a&lModules&8]");
+        boolean useColors = apiCore.getConfig().getBoolean("console.use-colors", true);
+        boolean showTimestamps = apiCore.getConfig().getBoolean("console.show-timestamps", true);
+        
         this.console = new ConsoleFormatter(
             apiCore.getLogger(),
-            apiCore.getConfig().getString("console.prefixes.module-command", "&8[&a&lModules&8]"),
-            apiCore.getConfig().getBoolean("console.use-colors", true)
+            prefix,
+            useColors,
+            showTimestamps
         );
     }
     
@@ -147,44 +158,73 @@ public class ModuleCommand implements CommandExecutor, TabCompleter {
      * Enables a module
      */
     private void enableModule(CommandSender sender, String moduleName) {
-        // Check if module is already loaded
+        if (moduleName == null || moduleName.trim().isEmpty()) {
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cUngültiger Modulname"));
+            return;
+        }
+
+        // Prüfe ob das Modul bereits geladen ist
         if (apiCore.getModuleInfo(moduleName) != null) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModule is already enabled: &e" + moduleName));
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModul ist bereits aktiviert: &e" + moduleName));
             return;
         }
         
-        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Enabling module &e" + moduleName + "&7..."));
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Aktiviere Modul &e" + moduleName + "&7..."));
         
         try {
+            Object moduleManager = apiCore.getModuleManager();
             boolean success = false;
             
-            // Try to find an enableModule method
+            // Versuche zuerst die enableModule Methode
             try {
-                success = (boolean) apiCore.getModuleManager().getClass().getMethod("enableModule", String.class)
-                    .invoke(apiCore.getModuleManager(), moduleName);
+                success = (boolean) moduleManager.getClass()
+                    .getMethod("enableModule", String.class)
+                    .invoke(moduleManager, moduleName);
             } catch (NoSuchMethodException e) {
-                // If no specific method exists, try to load the module from the modules directory
+                // Fallback: Versuche das Modul direkt zu laden
                 java.io.File modulesDir = new java.io.File(apiCore.getDataFolder(), "modules");
                 java.io.File moduleFile = new java.io.File(modulesDir, moduleName + ".jar");
                 
-                if (moduleFile.exists()) {
-                    apiCore.getModuleManager().getClass().getMethod("loadModule", java.io.File.class)
-                        .invoke(apiCore.getModuleManager(), moduleFile);
-                    success = apiCore.getModuleInfo(moduleName) != null;
-                } else {
-                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModule file not found: &e" + moduleName + ".jar"));
+                if (!moduleFile.exists()) {
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                        "&cModuldatei nicht gefunden: &e" + moduleName + ".jar"));
                     return;
                 }
+                
+                if (!moduleFile.canRead()) {
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                        "&cKeine Leserechte für Moduldatei: &e" + moduleName + ".jar"));
+                    return;
+                }
+                
+                moduleManager.getClass()
+                    .getMethod("loadModule", java.io.File.class)
+                    .invoke(moduleManager, moduleFile);
+                    
+                success = apiCore.getModuleInfo(moduleName) != null;
             }
             
             if (success) {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aSuccessfully enabled module: &e" + moduleName));
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&aModul erfolgreich aktiviert: &e" + moduleName));
+                
+                // Registriere Befehle und Listener neu
+                try {
+                    moduleManager.getClass()
+                        .getMethod("synchronizeCommands")
+                        .invoke(moduleManager);
+                } catch (Exception e) {
+                    console.warning("Fehler beim Synchronisieren der Befehle: " + e.getMessage());
+                }
             } else {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cFailed to enable module: &e" + moduleName));
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&cModul konnte nicht aktiviert werden: &e" + moduleName));
             }
         } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cError enabling module: &e" + e.getMessage()));
-            console.error("Error enabling module " + moduleName + ": " + e.getMessage());
+            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                "&cFehler beim Aktivieren des Moduls: &e" + errorMsg));
+            console.error("Fehler beim Aktivieren von Modul " + moduleName + ": " + e.getMessage());
             if (apiCore.isDebugMode()) {
                 e.printStackTrace();
             }
@@ -195,25 +235,69 @@ public class ModuleCommand implements CommandExecutor, TabCompleter {
      * Disables a module
      */
     private void disableModule(CommandSender sender, String moduleName) {
-        // Check if module is loaded
-        if (apiCore.getModuleInfo(moduleName) == null) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModule is not enabled: &e" + moduleName));
+        if (moduleName == null || moduleName.trim().isEmpty()) {
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cUngültiger Modulname"));
+            return;
+        }
+
+        // Prüfe ob das Modul geladen ist
+        Object moduleInfo = apiCore.getModuleInfo(moduleName);
+        if (moduleInfo == null) {
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModul ist nicht aktiviert: &e" + moduleName));
             return;
         }
         
-        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Disabling module &e" + moduleName + "&7..."));
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Deaktiviere Modul &e" + moduleName + "&7..."));
         
         try {
-            boolean success = apiCore.disableModule(moduleName);
+            // Speichere wichtige Informationen vor dem Entladen
+            java.io.File jarFile = (java.io.File) moduleInfo.getClass()
+                .getMethod("getJarFile")
+                .invoke(moduleInfo);
+                
+            // Entlade das Modul
+            Object moduleManager = apiCore.getModuleManager();
+            moduleManager.getClass()
+                .getMethod("unloadModule", String.class)
+                .invoke(moduleManager, moduleName);
+            
+            // Prüfe ob das Entladen erfolgreich war
+            boolean success = apiCore.getModuleInfo(moduleName) == null;
             
             if (success) {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aSuccessfully disabled module: &e" + moduleName));
+                // Aktualisiere Konfiguration
+                java.io.File configFile = new java.io.File(apiCore.getDataFolder(), "modules/" + moduleName + ".yml");
+                if (configFile.exists()) {
+                    try {
+                        org.bukkit.configuration.file.YamlConfiguration config = 
+                            org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(configFile);
+                        config.set("enabled", false);
+                        config.save(configFile);
+                    } catch (Exception e) {
+                        console.warning("Fehler beim Aktualisieren der Modulkonfiguration: " + e.getMessage());
+                    }
+                }
+                
+                // Synchronisiere Befehle
+                try {
+                    moduleManager.getClass()
+                        .getMethod("synchronizeCommands")
+                        .invoke(moduleManager);
+                } catch (Exception e) {
+                    console.warning("Fehler beim Synchronisieren der Befehle: " + e.getMessage());
+                }
+                
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&aModul erfolgreich deaktiviert: &e" + moduleName));
             } else {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cFailed to disable module: &e" + moduleName));
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&cModul konnte nicht deaktiviert werden: &e" + moduleName));
             }
         } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cError disabling module: &e" + e.getMessage()));
-            console.error("Error disabling module " + moduleName + ": " + e.getMessage());
+            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                "&cFehler beim Deaktivieren des Moduls: &e" + errorMsg));
+            console.error("Fehler beim Deaktivieren von Modul " + moduleName + ": " + e.getMessage());
             if (apiCore.isDebugMode()) {
                 e.printStackTrace();
             }
@@ -224,38 +308,98 @@ public class ModuleCommand implements CommandExecutor, TabCompleter {
      * Reloads a module
      */
     private void reloadModule(CommandSender sender, String moduleName) {
-        // Check if module is loaded
+        if (moduleName == null || moduleName.trim().isEmpty()) {
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cUngültiger Modulname"));
+            return;
+        }
+
+        // Prüfe ob das Modul geladen ist
         Object moduleInfo = apiCore.getModuleInfo(moduleName);
         if (moduleInfo == null) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModule is not enabled: &e" + moduleName));
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cModul ist nicht aktiviert: &e" + moduleName));
             return;
         }
         
-        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Reloading module &e" + moduleName + "&7..."));
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Lade Modul &e" + moduleName + "&7 neu..."));
         
         try {
-            // Store JAR file reference
-            java.io.File jarFile = (java.io.File) moduleInfo.getClass().getMethod("getJarFile").invoke(moduleInfo);
+            // Speichere wichtige Informationen vor dem Neuladen
+            java.io.File jarFile = (java.io.File) moduleInfo.getClass()
+                .getMethod("getJarFile")
+                .invoke(moduleInfo);
+                
+            // Hole aktuelle Version für Vergleich
+            String oldVersion = (String) moduleInfo.getClass()
+                .getMethod("getVersion")
+                .invoke(moduleInfo);
             
-            // Unload module
-            apiCore.getModuleManager().getClass().getMethod("unloadModule", String.class)
-                .invoke(apiCore.getModuleManager(), moduleName);
+            Object moduleManager = apiCore.getModuleManager();
             
-            // Load module again
-            apiCore.getModuleManager().getClass().getMethod("loadModule", java.io.File.class)
-                .invoke(apiCore.getModuleManager(), jarFile);
+            // Entlade das Modul
+            moduleManager.getClass()
+                .getMethod("unloadModule", String.class)
+                .invoke(moduleManager, moduleName);
             
-            // Check if reload was successful
-            if (apiCore.getModuleInfo(moduleName) != null) {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aSuccessfully reloaded module: &e" + moduleName));
+            // Kurze Pause für Ressourcenfreigabe
+            Thread.sleep(100);
+            
+            // Lade das Modul neu
+            moduleManager.getClass()
+                .getMethod("loadModule", java.io.File.class)
+                .invoke(moduleManager, jarFile);
+            
+            // Prüfe ob das Neuladen erfolgreich war
+            moduleInfo = apiCore.getModuleInfo(moduleName);
+            if (moduleInfo != null) {
+                // Prüfe auf Versionsänderung
+                String newVersion = (String) moduleInfo.getClass()
+                    .getMethod("getVersion")
+                    .invoke(moduleInfo);
+                    
+                if (!oldVersion.equals(newVersion)) {
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                        "&aModul erfolgreich neu geladen: &e" + moduleName + 
+                        " &7(&e" + oldVersion + " &7→ &e" + newVersion + "&7)"));
+                } else {
+                    sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                        "&aModul erfolgreich neu geladen: &e" + moduleName));
+                }
+                
+                // Synchronisiere Befehle
+                try {
+                    moduleManager.getClass()
+                        .getMethod("synchronizeCommands")
+                        .invoke(moduleManager);
+                } catch (Exception e) {
+                    console.warning("Fehler beim Synchronisieren der Befehle: " + e.getMessage());
+                }
             } else {
-                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cFailed to reload module: &e" + moduleName));
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&cModul konnte nicht neu geladen werden: &e" + moduleName));
             }
         } catch (Exception e) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cError reloading module: &e" + e.getMessage()));
-            console.error("Error reloading module " + moduleName + ": " + e.getMessage());
+            String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                "&cFehler beim Neuladen des Moduls: &e" + errorMsg));
+            console.error("Fehler beim Neuladen von Modul " + moduleName + ": " + e.getMessage());
             if (apiCore.isDebugMode()) {
                 e.printStackTrace();
+            }
+            
+            // Versuche das Modul im Fehlerfall wiederherzustellen
+            try {
+                Object moduleManager = apiCore.getModuleManager();
+                moduleManager.getClass()
+                    .getMethod("loadModule", java.io.File.class)
+                    .invoke(moduleManager, moduleInfo.getClass()
+                        .getMethod("getJarFile")
+                        .invoke(moduleInfo));
+                        
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&eModul wurde wiederhergestellt"));
+            } catch (Exception recovery) {
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&cModul konnte nicht wiederhergestellt werden!"));
             }
         }
     }
@@ -267,116 +411,213 @@ public class ModuleCommand implements CommandExecutor, TabCompleter {
         Map<String, ModuleManager.ModuleInfo> modules = apiCore.getLoadedModules();
         
         if (modules.isEmpty()) {
-            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7No modules to reload."));
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Keine Module zum Neuladen."));
             return;
         }
         
-        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&7Reloading all modules..."));
-        
+        sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+            "&7Lade &e" + modules.size() + " &7Module neu..."));
+            
+        // Erstelle eine Kopie der Module-Map um ConcurrentModification zu vermeiden
+        Map<String, ModuleManager.ModuleInfo> modulesCopy = new HashMap<>(modules);
         int success = 0;
         int failed = 0;
+        List<String> failedModules = new ArrayList<>();
         
-        for (Map.Entry<String, ModuleManager.ModuleInfo> entry : modules.entrySet()) {
-            String moduleName = entry.getKey();
-            Object moduleInfo = entry.getValue();
-            
+        // Sammle Abhängigkeitsinformationen
+        Map<String, List<String>> moduleDependencies = new HashMap<>();
+        for (Map.Entry<String, ModuleManager.ModuleInfo> entry : modulesCopy.entrySet()) {
             try {
-                // Store JAR file reference
-                java.io.File jarFile = (java.io.File) moduleInfo.getClass().getMethod("getJarFile").invoke(moduleInfo);
+                ModuleManager.ModuleInfo info = entry.getValue();
+                String moduleName = entry.getKey();
                 
-                // Unload module
-                apiCore.getModuleManager().getClass().getMethod("unloadModule", String.class)
-                    .invoke(apiCore.getModuleManager(), moduleName);
+                // Versuche Abhängigkeiten zu laden
+                java.lang.reflect.Method getDependenciesMethod = info.getClass()
+                    .getMethod("getDependencies");
+                List<String> dependencies = (List<String>) getDependenciesMethod.invoke(info);
                 
-                // Load module again
-                apiCore.getModuleManager().getClass().getMethod("loadModule", java.io.File.class)
-                    .invoke(apiCore.getModuleManager(), jarFile);
+                if (dependencies != null && !dependencies.isEmpty()) {
+                    moduleDependencies.put(moduleName, dependencies);
+                }
+            } catch (Exception e) {
+                console.warning("Konnte Abhängigkeiten für Modul " + entry.getKey() + 
+                    " nicht laden: " + e.getMessage());
+            }
+        }
+        
+        // Sortiere Module basierend auf Abhängigkeiten
+        List<String> orderedModules = new ArrayList<>();
+        Set<String> processed = new java.util.HashSet<>();
+        
+        // Hilfsfunktion zum rekursiven Verarbeiten von Modulen
+        class DependencyResolver {
+            void resolve(String moduleName) {
+                if (processed.contains(moduleName)) return;
+                processed.add(moduleName);
                 
-                // Check if reload was successful
+                List<String> dependencies = moduleDependencies.get(moduleName);
+                if (dependencies != null) {
+                    for (String dep : dependencies) {
+                        if (modulesCopy.containsKey(dep)) {
+                            resolve(dep);
+                        }
+                    }
+                }
+                orderedModules.add(moduleName);
+            }
+        }
+        
+        // Verarbeite alle Module in der richtigen Reihenfolge
+        DependencyResolver resolver = new DependencyResolver();
+        for (String moduleName : modulesCopy.keySet()) {
+            resolver.resolve(moduleName);
+        }
+        
+        // Lade Module in der sortierten Reihenfolge neu
+        Object moduleManager = apiCore.getModuleManager();
+        
+        for (String moduleName : orderedModules) {
+            ModuleManager.ModuleInfo moduleInfo = modulesCopy.get(moduleName);
+            sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                "&7Verarbeite Modul: &e" + moduleName));
+                
+            try {
+                // Speichere JAR-Datei-Referenz
+                java.io.File jarFile = (java.io.File) moduleInfo.getClass()
+                    .getMethod("getJarFile")
+                    .invoke(moduleInfo);
+                
+                // Entlade Modul
+                moduleManager.getClass()
+                    .getMethod("unloadModule", String.class)
+                    .invoke(moduleManager, moduleName);
+                
+                // Kurze Pause für Ressourcenfreigabe
+                Thread.sleep(50);
+                
+                // Lade Modul neu
+                moduleManager.getClass()
+                    .getMethod("loadModule", java.io.File.class)
+                    .invoke(moduleManager, jarFile);
+                
+                // Prüfe Erfolg
                 if (apiCore.getModuleInfo(moduleName) != null) {
                     success++;
                 } else {
                     failed++;
+                    failedModules.add(moduleName);
+                    console.error("Modul " + moduleName + " konnte nicht neu geladen werden");
                 }
             } catch (Exception e) {
                 failed++;
-                console.error("Error reloading module " + moduleName + ": " + e.getMessage());
+                failedModules.add(moduleName);
+                console.error("Fehler beim Neuladen von Modul " + moduleName + ": " + e.getMessage());
                 if (apiCore.isDebugMode()) {
                     e.printStackTrace();
                 }
             }
         }
         
+        // Synchronisiere Befehle nach dem Neuladen
+        try {
+            moduleManager.getClass()
+                .getMethod("synchronizeCommands")
+                .invoke(moduleManager);
+        } catch (Exception e) {
+            console.warning("Fehler beim Synchronisieren der Befehle: " + e.getMessage());
+        }
+        
+        // Zeige Ergebnis
         if (failed == 0) {
             sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                "&aSuccessfully reloaded all modules (&e" + success + "&a)."));
+                "&aAlle Module erfolgreich neu geladen (&e" + success + "&a)."));
         } else {
             sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
-                "&eReloaded modules: &a" + success + " &esucceeded, &c" + failed + " &efailed."));
+                "&eModule neu geladen: &a" + success + " &eerfolgreich, &c" + failed + " &efehlgeschlagen."));
+                
+            if (!failedModules.isEmpty()) {
+                sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + 
+                    "&cFehlgeschlagene Module: &e" + String.join(", ", failedModules)));
+            }
         }
     }
     
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args == null) {
+            return new ArrayList<>();
+        }
+
         List<String> completions = new ArrayList<>();
         
-        if (args.length == 1) {
-            List<String> subCommands = Arrays.asList("list", "info", "enable", "disable", "reload");
-            String prefix = args[0].toLowerCase();
-            
-            for (String subCommand : subCommands) {
-                if (subCommand.startsWith(prefix)) {
-                    completions.add(subCommand);
-                }
-            }
-        } else if (args.length == 2) {
-            String subCommand = args[0].toLowerCase();
-            String prefix = args[1].toLowerCase();
-            
-            if (subCommand.equals("info") || subCommand.equals("disable") || subCommand.equals("reload")) {
-                // Suggest loaded module names
-                for (String moduleName : apiCore.getLoadedModules().keySet()) {
-                    if (moduleName.toLowerCase().startsWith(prefix)) {
-                        completions.add(moduleName);
-                    }
-                }
+        try {
+            if (args.length == 1) {
+                // Cache der Unterbefehle für bessere Performance
+                final List<String> SUB_COMMANDS = Arrays.asList("list", "info", "enable", "disable", "reload");
+                String prefix = args[0].toLowerCase();
                 
-                // Add 'all' option for reload
-                if (subCommand.equals("reload") && "all".startsWith(prefix)) {
-                    completions.add("all");
-                }
-            } else if (subCommand.equals("enable")) {
-                try {
-                    // Try to get available but not loaded modules list
-                    Object moduleManager = apiCore.getModuleManager();
-                    java.lang.reflect.Method method = moduleManager.getClass().getMethod("getAvailableModules");
-                    List<String> availableModules = (List<String>) method.invoke(moduleManager);
-                    
-                    if (availableModules != null) {
-                        for (String moduleName : availableModules) {
-                            if (moduleName.toLowerCase().startsWith(prefix)) {
-                                completions.add(moduleName);
-                            }
+                return SUB_COMMANDS.stream()
+                    .filter(cmd -> cmd.startsWith(prefix))
+                    .collect(Collectors.toList());
+            } 
+            
+            if (args.length == 2) {
+                String subCommand = args[0].toLowerCase();
+                String prefix = args[1].toLowerCase();
+                
+                switch (subCommand) {
+                    case "info":
+                    case "disable":
+                    case "reload":
+                        // Vorgeladene Module vorschlagen
+                        completions.addAll(apiCore.getLoadedModules().keySet().stream()
+                            .filter(name -> name.toLowerCase().startsWith(prefix))
+                            .collect(Collectors.toList()));
+                        
+                        // 'all' Option für reload
+                        if (subCommand.equals("reload") && "all".startsWith(prefix)) {
+                            completions.add("all");
                         }
-                    }
-                } catch (Exception e) {
-                    // Fall back to scanning modules directory
-                    java.io.File modulesDir = new java.io.File(apiCore.getDataFolder(), "modules");
-                    if (modulesDir.exists() && modulesDir.isDirectory()) {
-                        java.io.File[] files = modulesDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".jar"));
-                        if (files != null) {
-                            for (java.io.File file : files) {
-                                String moduleName = file.getName().replace(".jar", "");
-                                if (moduleName.toLowerCase().startsWith(prefix)) {
-                                    completions.add(moduleName);
+                        break;
+                        
+                    case "enable":
+                        try {
+                            // Versuche verfügbare aber nicht geladene Module zu finden
+                            Object moduleManager = apiCore.getModuleManager();
+                            List<String> availableModules = (List<String>) moduleManager.getClass()
+                                .getMethod("getAvailableButNotLoadedModules")
+                                .invoke(moduleManager);
+                            
+                            if (availableModules != null) {
+                                completions.addAll(availableModules.stream()
+                                    .filter(name -> name.toLowerCase().startsWith(prefix))
+                                    .collect(Collectors.toList()));
+                            }
+                        } catch (Exception e) {
+                            // Fallback: Durchsuche das Module-Verzeichnis
+                            java.io.File modulesDir = new java.io.File(apiCore.getDataFolder(), "modules");
+                            if (modulesDir.exists() && modulesDir.isDirectory()) {
+                                java.io.File[] files = modulesDir.listFiles((dir, name) -> 
+                                    name.toLowerCase().endsWith(".jar") && 
+                                    name.toLowerCase().replace(".jar", "").startsWith(prefix));
+                                
+                                if (files != null) {
+                                    completions.addAll(Arrays.stream(files)
+                                        .map(f -> f.getName().replace(".jar", ""))
+                                        .collect(Collectors.toList()));
                                 }
                             }
                         }
-                    }
+                        break;
                 }
+            }
+        } catch (Exception e) {
+            console.error("Fehler bei Tab-Completion: " + e.getMessage());
+            if (apiCore.isDebugMode()) {
+                e.printStackTrace();
             }
         }
         
         return completions;
     }
-} 
+}

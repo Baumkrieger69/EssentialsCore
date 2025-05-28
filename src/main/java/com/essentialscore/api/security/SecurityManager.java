@@ -1,6 +1,6 @@
 package com.essentialscore.api.security;
 
-<<<<<<< HEAD
+import com.essentialscore.api.integration.PluginIntegration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.event.EventHandler;
@@ -11,31 +11,22 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
+import java.security.cert.Certificate;
 import java.time.Duration;
 import java.util.UUID;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-=======
-import com.essentialscore.api.integration.PluginIntegration;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-
-import java.io.File;
-import java.security.cert.Certificate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
-<<<<<<< HEAD
  * Manages all security-related components and serves as the main security API.
+ * The SecurityManager is responsible for enforcing security policies,
+ * sandboxing modules, and controlling access to system resources.
  */
 public class SecurityManager implements Listener {
     private static final Logger LOGGER = Logger.getLogger(SecurityManager.class.getName());
@@ -47,35 +38,27 @@ public class SecurityManager implements Listener {
     private final TwoFactorAuthentication twoFactor;
     private final SessionManager sessionManager;
     private final GDPRComplianceManager gdprManager;
-    private final Map<String, Object> securitySettings;
-    private final File configFile;
-=======
- * The SecurityManager is responsible for enforcing security policies,
- * sandboxing modules, and controlling access to system resources.
- */
-public class SecurityManager {
-    private static final Logger LOGGER = Logger.getLogger(SecurityManager.class.getName());
-    
-    private final Plugin plugin;
-    private final PermissionManager permissionManager;
-    private final AuditLogger auditLogger;
     private final Map<String, ModuleSandbox> moduleSandboxes;
     private final Map<String, Certificate> trustedCertificates;
     private final VulnerabilityScanner vulnerabilityScanner;
     private final Set<String> blockedOperations;
-    private boolean strictMode = false;
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+    private final Map<String, Object> securitySettings;
+    private final File configFile;
+    private boolean strictMode;
     
     /**
      * Creates a new security manager.
      *
-<<<<<<< HEAD
      * @param plugin The plugin
      */
     public SecurityManager(Plugin plugin) {
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), "security/config.yml");
-        this.securitySettings = new HashMap<>();
+        this.securitySettings = new ConcurrentHashMap<>();
+        this.moduleSandboxes = new ConcurrentHashMap<>();
+        this.trustedCertificates = new ConcurrentHashMap<>();
+        this.blockedOperations = ConcurrentHashMap.newKeySet();
+        this.strictMode = false;
         
         // Load security settings first
         loadSettings();
@@ -100,11 +83,10 @@ public class SecurityManager {
                 Duration.ofMinutes(getSettingAsInt("session.timeoutMinutes", 15)),
                 auditLogger
         );
+
+        this.gdprManager = new GDPRComplianceManager(plugin, encryption);
         
-        this.gdprManager = new GDPRComplianceManager(plugin, auditLogger);
-        
-        // Save settings if they were modified (e.g., generated password)
-        saveSettings();
+        this.vulnerabilityScanner = new VulnerabilityScanner(plugin);
     }
     
     /**
@@ -126,46 +108,11 @@ public class SecurityManager {
         
         // Register this class as an event listener
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-=======
-     * @param plugin The EssentialsCore plugin
-     */
-    public SecurityManager(Plugin plugin) {
-        this.plugin = plugin;
-        this.permissionManager = new PermissionManager(plugin);
-        this.auditLogger = new AuditLogger(plugin);
-        this.moduleSandboxes = new ConcurrentHashMap<>();
-        this.trustedCertificates = new ConcurrentHashMap<>();
-        this.vulnerabilityScanner = new VulnerabilityScanner(plugin);
-        this.blockedOperations = ConcurrentHashMap.newKeySet();
-    }
-    
-    /**
-     * Initializes the security manager.
-     */
-    public void initialize() {
-        LOGGER.info("Initializing security manager...");
-        
-        // Initialize permission manager
-        permissionManager.initialize();
-        
-        // Initialize audit logger
-        auditLogger.initialize();
-        
-        // Initialize vulnerability scanner
-        vulnerabilityScanner.initialize();
-        
-        // Load trusted certificates
-        loadTrustedCertificates();
-        
-        // Load blocked operations
-        loadBlockedOperations();
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         LOGGER.info("Security manager initialized");
     }
     
     /**
-<<<<<<< HEAD
      * Shuts down the security manager and all components.
      */
     public void shutdown() {
@@ -175,29 +122,11 @@ public class SecurityManager {
         gdprManager.processDeletionRequests(); // Process any pending deletion requests
         sessionManager.shutdown();
         auditLogger.shutdown();
-=======
-     * Shuts down the security manager.
-     */
-    public void shutdown() {
-        LOGGER.info("Shutting down security manager...");
-        
-        // Shutdown all sandboxes
-        for (ModuleSandbox sandbox : moduleSandboxes.values()) {
-            sandbox.shutdown();
-        }
-        moduleSandboxes.clear();
-        
-        // Shutdown components
-        permissionManager.shutdown();
-        auditLogger.shutdown();
-        vulnerabilityScanner.shutdown();
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         
         LOGGER.info("Security manager shut down");
     }
     
     /**
-<<<<<<< HEAD
      * Gets the role-based access control component.
      *
      * @return The RBAC component
@@ -208,192 +137,6 @@ public class SecurityManager {
     
     /**
      * Gets the audit logger component.
-=======
-     * Creates a sandbox for a module.
-     *
-     * @param moduleId The module ID
-     * @param moduleName The module name
-     * @param moduleFile The module file
-     * @return The module sandbox
-     */
-    public ModuleSandbox createSandbox(String moduleId, String moduleName, File moduleFile) {
-        // Check if module is verified
-        boolean verified = verifyModuleSignature(moduleFile);
-        
-        // Scan for vulnerabilities
-        boolean vulnerabilitiesFound = vulnerabilityScanner.scanModule(moduleFile);
-        
-        if (vulnerabilitiesFound) {
-            auditLogger.logSecurity(moduleId, "Module failed vulnerability scan: " + moduleName);
-            throw new SecurityException("Module failed vulnerability scan: " + moduleName);
-        }
-        
-        // Create security policy
-        SecurityPolicy policy = createSecurityPolicy(moduleId, verified);
-        
-        // Create and register sandbox
-        ModuleSandbox sandbox = new ModuleSandbox(plugin, moduleId, moduleName, policy);
-        moduleSandboxes.put(moduleId, sandbox);
-        
-        auditLogger.logSecurity(moduleId, "Created sandbox for module: " + moduleName);
-        return sandbox;
-    }
-    
-    /**
-     * Gets a module sandbox.
-     *
-     * @param moduleId The module ID
-     * @return The module sandbox, or null if not found
-     */
-    public ModuleSandbox getSandbox(String moduleId) {
-        return moduleSandboxes.get(moduleId);
-    }
-    
-    /**
-     * Destroys a module sandbox.
-     *
-     * @param moduleId The module ID
-     */
-    public void destroySandbox(String moduleId) {
-        ModuleSandbox sandbox = moduleSandboxes.remove(moduleId);
-        
-        if (sandbox != null) {
-            sandbox.shutdown();
-            auditLogger.logSecurity(moduleId, "Destroyed sandbox for module: " + sandbox.getModuleName());
-        }
-    }
-    
-    /**
-     * Verifies a module signature.
-     *
-     * @param moduleFile The module file
-     * @return true if the module signature is valid
-     */
-    public boolean verifyModuleSignature(File moduleFile) {
-        try {
-            // This would implement actual signature verification
-            // For now, just log the attempt
-            auditLogger.logSecurity("system", "Verifying module signature: " + moduleFile.getName());
-            return true;
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to verify module signature: " + moduleFile.getName(), e);
-            auditLogger.logSecurity("system", "Failed to verify module signature: " + moduleFile.getName());
-            return false;
-        }
-    }
-    
-    /**
-     * Checks if an operation is allowed for a module.
-     *
-     * @param moduleId The module ID
-     * @param operationType The operation type
-     * @param target The operation target
-     * @return true if the operation is allowed
-     */
-    public boolean isOperationAllowed(String moduleId, String operationType, String target) {
-        ModuleSandbox sandbox = getSandbox(moduleId);
-        
-        if (sandbox == null) {
-            auditLogger.logSecurity(moduleId, "Operation denied (no sandbox): " + operationType + " -> " + target);
-            return false;
-        }
-        
-        boolean allowed = sandbox.getSecurityPolicy().isOperationAllowed(operationType, target);
-        
-        if (!allowed) {
-            auditLogger.logSecurity(moduleId, "Operation denied: " + operationType + " -> " + target);
-        }
-        
-        return allowed;
-    }
-    
-    /**
-     * Checks if a file operation is allowed for a module.
-     *
-     * @param moduleId The module ID
-     * @param file The file
-     * @param operation The operation (read, write, execute)
-     * @return true if the file operation is allowed
-     */
-    public boolean isFileOperationAllowed(String moduleId, File file, String operation) {
-        ModuleSandbox sandbox = getSandbox(moduleId);
-        
-        if (sandbox == null) {
-            auditLogger.logSecurity(moduleId, "File operation denied (no sandbox): " + operation + " -> " + file.getPath());
-            return false;
-        }
-        
-        boolean allowed = sandbox.getSecurityPolicy().isFileOperationAllowed(file, operation);
-        
-        if (!allowed) {
-            auditLogger.logSecurity(moduleId, "File operation denied: " + operation + " -> " + file.getPath());
-        }
-        
-        return allowed;
-    }
-    
-    /**
-     * Checks if a network operation is allowed for a module.
-     *
-     * @param moduleId The module ID
-     * @param host The host
-     * @param port The port
-     * @param operation The operation (connect, listen)
-     * @return true if the network operation is allowed
-     */
-    public boolean isNetworkOperationAllowed(String moduleId, String host, int port, String operation) {
-        ModuleSandbox sandbox = getSandbox(moduleId);
-        
-        if (sandbox == null) {
-            auditLogger.logSecurity(moduleId, "Network operation denied (no sandbox): " + operation + " -> " + host + ":" + port);
-            return false;
-        }
-        
-        boolean allowed = sandbox.getSecurityPolicy().isNetworkOperationAllowed(host, port, operation);
-        
-        if (!allowed) {
-            auditLogger.logSecurity(moduleId, "Network operation denied: " + operation + " -> " + host + ":" + port);
-        }
-        
-        return allowed;
-    }
-    
-    /**
-     * Checks if a plugin interaction is allowed for a module.
-     *
-     * @param moduleId The module ID
-     * @param pluginName The plugin name
-     * @return true if the plugin interaction is allowed
-     */
-    public boolean isPluginInteractionAllowed(String moduleId, String pluginName) {
-        ModuleSandbox sandbox = getSandbox(moduleId);
-        
-        if (sandbox == null) {
-            auditLogger.logSecurity(moduleId, "Plugin interaction denied (no sandbox): " + pluginName);
-            return false;
-        }
-        
-        boolean allowed = sandbox.getSecurityPolicy().isPluginInteractionAllowed(pluginName);
-        
-        if (!allowed) {
-            auditLogger.logSecurity(moduleId, "Plugin interaction denied: " + pluginName);
-        }
-        
-        return allowed;
-    }
-    
-    /**
-     * Gets the permission manager.
-     *
-     * @return The permission manager
-     */
-    public PermissionManager getPermissionManager() {
-        return permissionManager;
-    }
-    
-    /**
-     * Gets the audit logger.
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      *
      * @return The audit logger
      */
@@ -402,7 +145,6 @@ public class SecurityManager {
     }
     
     /**
-<<<<<<< HEAD
      * Gets the data encryption component.
      *
      * @return The encryption component
@@ -835,256 +577,113 @@ public class SecurityManager {
     }
     
     /**
-     * Loads security settings from disk.
-     */
-    private void loadSettings() {
-        try {
-            // Create security directory if it doesn't exist
-            File securityDir = new File(plugin.getDataFolder(), "security");
-            if (!securityDir.exists()) {
-                securityDir.mkdirs();
-            }
-            
-            // Load settings if the file exists
-            if (configFile.exists()) {
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-                
-                // Load all settings
-                for (String key : config.getKeys(true)) {
-                    securitySettings.put(key, config.get(key));
-                }
-                
-                LOGGER.info("Loaded security settings");
-            } else {
-                // Initialize with default settings
-                securitySettings.put("audit.retentionDays", 90);
-                securitySettings.put("session.timeoutMinutes", 15);
-                securitySettings.put("twoFactor.requiredPermissions", new String[]{
-                        "essentials.roles.manage",
-                        "essentials.gdpr.admin",
-                        "essentials.admin"
-                });
-                
-                LOGGER.info("Initialized default security settings");
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error loading security settings", e);
-            
-            // Use default settings
-            securitySettings.put("audit.retentionDays", 90);
-            securitySettings.put("session.timeoutMinutes", 15);
-        }
-    }
-    
-    /**
-     * Saves security settings to disk.
-     */
-    private void saveSettings() {
-        try {
-            YamlConfiguration config = new YamlConfiguration();
-            
-            // Save all settings
-            for (Map.Entry<String, Object> entry : securitySettings.entrySet()) {
-                config.set(entry.getKey(), entry.getValue());
-            }
-            
-            // Save to file
-            config.save(configFile);
-            
-            LOGGER.info("Saved security settings");
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error saving security settings", e);
-        }
-    }
-    
-    /**
-     * Gets a setting as a string.
+     * Creates and configures a new sandbox for a module.
      *
-     * @param key The setting key
-     * @param defaultValue The default value
-     * @return The setting value
+     * @param moduleId The unique identifier of the module
+     * @return The configured sandbox
      */
-    private String getSettingAsString(String key, String defaultValue) {
-        Object value = securitySettings.get(key);
-        
-        if (value instanceof String) {
-            return (String) value;
-        }
-        
-        // Use default and update settings
-        securitySettings.put(key, defaultValue);
-        return defaultValue;
+    public ModuleSandbox createModuleSandbox(String moduleId) {
+        ModuleSandbox sandbox = new ModuleSandbox(moduleId, strictMode);
+        moduleSandboxes.put(moduleId, sandbox);
+        return sandbox;
     }
-    
+
     /**
-     * Gets a setting as an integer.
+     * Adds a trusted certificate for module validation.
      *
-     * @param key The setting key
-     * @param defaultValue The default value
-     * @return The setting value
+     * @param alias The certificate alias
+     * @param certificate The certificate to trust
      */
-    private int getSettingAsInt(String key, int defaultValue) {
-        Object value = securitySettings.get(key);
-        
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        }
-        
-        // Use default and update settings
-        securitySettings.put(key, defaultValue);
-        return defaultValue;
+    public void addTrustedCertificate(String alias, Certificate certificate) {
+        trustedCertificates.put(alias, certificate);
+        auditLogger.logSecurityEvent("Added trusted certificate: " + alias);
     }
-    
+
     /**
-     * Checks if a permission requires two-factor authentication.
+     * Blocks a specific operation type across all modules.
      *
-     * @param permission The permission to check
-     * @return True if 2FA is required
+     * @param operation The operation to block
      */
-    private boolean requiresTwoFactor(String permission) {
-        Object value = securitySettings.get("twoFactor.requiredPermissions");
-        
-        if (value instanceof String[]) {
-            String[] requiredPermissions = (String[]) value;
-            
-            for (String requiredPermission : requiredPermissions) {
-                if (permission.startsWith(requiredPermission)) {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
+    public void blockOperation(String operation) {
+        blockedOperations.add(operation);
+        auditLogger.logSecurityEvent("Blocked operation: " + operation);
     }
-    
+
     /**
-     * Generates a random password for the keystore.
+     * Checks if an operation is blocked.
      *
-     * @return The generated password
+     * @param operation The operation to check
+     * @return True if the operation is blocked
      */
-    private String generateRandomPassword() {
-        // Since encryption isn't initialized yet, use a simple method
-        StringBuilder password = new StringBuilder();
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+";
-        
-        for (int i = 0; i < 32; i++) {
-            int index = (int) (Math.random() * chars.length());
-            password.append(chars.charAt(index));
-        }
-        
-        return password.toString();
+    public boolean isOperationBlocked(String operation) {
+        return blockedOperations.contains(operation);
     }
-    
+
     /**
-     * Handles player join events.
+     * Sets the strict mode for sandboxing.
      *
-     * @param event The event
+     * @param strict True to enable strict mode
      */
-    @EventHandler(priority = EventPriority.MONITOR)
+    public void setStrictMode(boolean strict) {
+        this.strictMode = strict;
+        moduleSandboxes.values().forEach(sandbox -> sandbox.setStrictMode(strict));
+        auditLogger.logSecurityEvent("Strict mode set to: " + strict);
+    }
+
+    /**
+     * Runs a security scan on all loaded modules.
+     */
+    public void runSecurityScan() {
+        vulnerabilityScanner.scanAll(moduleSandboxes.values());
+        auditLogger.logSecurityEvent("Completed security scan");
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        sessionManager.initializeSession(player);
         
-        // Log player join
-        auditLogger.logPlayerAction(
-                AuditLogger.Categories.USER,
-                AuditLogger.Actions.LOGIN,
-                player,
-                "Player joined the server"
-        );
-    }
-    
-    /**
-     * Handles player quit events.
-     *
-     * @param event The event
-     */
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        UUID playerId = player.getUniqueId();
-        
-        // Log player quit
-        auditLogger.logPlayerAction(
-                AuditLogger.Categories.USER,
-                AuditLogger.Actions.LOGOUT,
-                player,
-                "Player left the server"
-        );
-        
-        // Invalidate player's session
-        sessionManager.invalidateSession(playerId);
-=======
-     * Gets the vulnerability scanner.
-     *
-     * @return The vulnerability scanner
-     */
-    public VulnerabilityScanner getVulnerabilityScanner() {
-        return vulnerabilityScanner;
-    }
-    
-    /**
-     * Sets strict mode.
-     *
-     * @param strictMode true to enable strict mode
-     */
-    public void setStrictMode(boolean strictMode) {
-        this.strictMode = strictMode;
-        LOGGER.info("Security strict mode: " + strictMode);
-    }
-    
-    /**
-     * Checks if strict mode is enabled.
-     *
-     * @return true if strict mode is enabled
-     */
-    public boolean isStrictMode() {
-        return strictMode;
-    }
-    
-    /**
-     * Creates a security policy for a module.
-     *
-     * @param moduleId The module ID
-     * @param verified true if the module is verified
-     * @return The security policy
-     */
-    private SecurityPolicy createSecurityPolicy(String moduleId, boolean verified) {
-        SecurityPolicy policy = new SecurityPolicy(moduleId);
-        
-        // Add default permissions based on verification status
-        if (verified) {
-            policy.addPermission(SecurityPermission.FILE_READ, plugin.getDataFolder().getPath() + "/*");
-            policy.addPermission(SecurityPermission.FILE_WRITE, plugin.getDataFolder().getPath() + "/modules/" + moduleId + "/*");
-            policy.addPermission(SecurityPermission.NETWORK_CONNECT, "api.example.com:443");
-        } else {
-            // Unverified modules get minimal permissions
-            policy.addPermission(SecurityPermission.FILE_READ, plugin.getDataFolder().getPath() + "/modules/" + moduleId + "/*");
-            policy.addPermission(SecurityPermission.FILE_WRITE, plugin.getDataFolder().getPath() + "/modules/" + moduleId + "/data/*");
+        // Check for required security updates
+        if (vulnerabilityScanner.hasSecurityUpdates()) {
+            if (player.hasPermission("essentialscore.admin")) {
+                player.sendMessage("§c[Security] There are pending security updates!");
+            }
         }
-        
-        return policy;
     }
-    
-    /**
-     * Loads trusted certificates.
-     */
-    private void loadTrustedCertificates() {
-        // This would load certificates from a keystore
-        // For now, just log the attempt
-        LOGGER.info("Loading trusted certificates...");
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        sessionManager.terminateSession(event.getPlayer());
     }
-    
-    /**
-     * Loads blocked operations.
-     */
-    private void loadBlockedOperations() {
-        // This would load blocked operations from configuration
-        // For now, add some default blocked operations
-        blockedOperations.add("system.exit");
-        blockedOperations.add("java.lang.Runtime.exec");
-        blockedOperations.add("java.lang.System.setSecurityManager");
-        
-        LOGGER.info("Loaded " + blockedOperations.size() + " blocked operations");
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+
+    private void loadSettings() {
+        if (!configFile.exists()) {
+            plugin.saveResource("security/config.yml", false);
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+        for (String key : config.getKeys(true)) {
+            securitySettings.put(key, config.get(key));
+        }
     }
-} 
+
+    private String getSettingAsString(String key, String defaultValue) {
+        return (String) securitySettings.getOrDefault(key, defaultValue);
+    }
+
+    private int getSettingAsInt(String key, int defaultValue) {
+        Object value = securitySettings.get(key);
+        return value instanceof Number ? ((Number) value).intValue() : defaultValue;
+    }
+
+    private boolean requiresTwoFactor(String permission) {
+        return securitySettings.containsKey("2fa.required." + permission) &&
+               (boolean) securitySettings.get("2fa.required." + permission);
+    }
+
+    private String generateRandomPassword() {
+        // Implementation of secure random password generation
+        // This is just a placeholder - implement proper secure random generation
+        return UUID.randomUUID().toString();
+    }
+}

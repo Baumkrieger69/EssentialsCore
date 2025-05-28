@@ -11,6 +11,7 @@ import com.essentialscore.api.ModuleAPI;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Adapter class that wraps a module to provide compatibility with different API versions.
@@ -21,45 +22,171 @@ public class ModuleAdapter {
     private final Module module;
     private final ModuleAPI moduleAPI;
     private final ApiCore apiCore;
-    
+    private final ModuleStateManager stateManager;
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final AtomicBoolean enabled = new AtomicBoolean(false);
+
     /**
      * Creates a new module adapter
-     * 
-     * @param module The module to adapt
-     * @param moduleAPI The module API instance
-     * @param apiCore The ApiCore instance
      */
     public ModuleAdapter(Module module, ModuleAPI moduleAPI, ApiCore apiCore) {
+        if (module == null) throw new IllegalArgumentException("Module cannot be null");
+        if (moduleAPI == null) throw new IllegalArgumentException("ModuleAPI cannot be null");
+        if (apiCore == null) throw new IllegalArgumentException("ApiCore cannot be null");
+        
         this.module = module;
         this.moduleAPI = moduleAPI;
         this.apiCore = apiCore;
+        this.stateManager = apiCore.getModuleStateManager();
     }
-    
+
     /**
-     * Legacy initialization method
-     * 
-     * @param core The ApiCore instance
-     * @param config The module configuration
+     * Initializes the module safely
      */
-    public void init(ApiCore core, FileConfiguration config) {
-        // The module should already be initialized with ModuleAPI
-        // No need to re-assign apiCore as it's now final
-    }
-    
-    /**
-     * Called when the module is disabled
-     */
-    public void onDisable() {
+    public void initialize(FileConfiguration config) {
+        String moduleName = moduleAPI.getModuleName();
+        if (!initialized.compareAndSet(false, true)) {
+            moduleAPI.logWarning("Module already initialized: " + moduleName);
+            return;
+        }
+
         try {
-            module.onDisable();
+            stateManager.transitionState(moduleName, ModuleState.LOADING);
+            
+            // Pre-initialization phase
+            module.onPreLoad(moduleAPI);
+            stateManager.transitionState(moduleName, ModuleState.PRE_INITIALIZED);
+            
+            // Main initialization
+            stateManager.transitionState(moduleName, ModuleState.INITIALIZING);
+            module.init(moduleAPI, config);
+            stateManager.transitionState(moduleName, ModuleState.INITIALIZED);
+            
+            // Post-initialization phase
+            module.onPostLoad();
+            
         } catch (Exception e) {
-            apiCore.getLogger().severe("Fehler beim Deaktivieren des Moduls " + module.getClass().getName() + ": " + e.getMessage());
-            if (apiCore.isDebugMode()) {
-                e.printStackTrace();
-            }
+            moduleAPI.logError("Failed to initialize module: " + e.getMessage());
+            e.printStackTrace();
+            stateManager.transitionState(moduleName, ModuleState.ERROR);
+            throw new ModuleInitializationException("Failed to initialize module: " + moduleName, e);
         }
     }
-    
+
+    /**
+     * Enables the module safely
+     */
+    public void enable() {
+        String moduleName = moduleAPI.getModuleName();
+        if (!initialized.get()) {
+            throw new IllegalStateException("Module must be initialized before enabling: " + moduleName);
+        }
+        
+        if (!enabled.compareAndSet(false, true)) {
+            moduleAPI.logWarning("Module already enabled: " + moduleName);
+            return;
+        }
+
+        try {
+            stateManager.transitionState(moduleName, ModuleState.ENABLING);
+            module.onEnable();
+            stateManager.transitionState(moduleName, ModuleState.ENABLED);
+            
+        } catch (Exception e) {
+            moduleAPI.logError("Failed to enable module: " + e.getMessage());
+            e.printStackTrace();
+            stateManager.transitionState(moduleName, ModuleState.ERROR);
+            enabled.set(false);
+            throw new ModuleEnableException("Failed to enable module: " + moduleName, e);
+        }
+    }
+
+    /**
+     * Disables the module safely
+     */
+    public void disable() {
+        String moduleName = moduleAPI.getModuleName();
+        if (!enabled.compareAndSet(true, false)) {
+            return; // Already disabled
+        }
+
+        try {
+            stateManager.transitionState(moduleName, ModuleState.DISABLING);
+            module.onDisable();
+            stateManager.transitionState(moduleName, ModuleState.DISABLED);
+            
+        } catch (Exception e) {
+            moduleAPI.logError("Failed to disable module: " + e.getMessage());
+            e.printStackTrace();
+            stateManager.transitionState(moduleName, ModuleState.ERROR);
+            throw new ModuleDisableException("Failed to disable module: " + moduleName, e);
+        }
+    }
+
+    /**
+     * Reloads the module safely
+     */
+    public void reload() {
+        String moduleName = moduleAPI.getModuleName();
+        boolean wasEnabled = enabled.get();
+        
+        try {
+            stateManager.transitionState(moduleName, ModuleState.RELOADING);
+            
+            // Disable if necessary
+            if (wasEnabled) {
+                disable();
+            }
+            
+            // Reload configuration
+            moduleAPI.reloadConfig();
+            
+            // Re-initialize
+            module.init(moduleAPI, moduleAPI.getConfig());
+            
+            // Re-enable if it was enabled before
+            if (wasEnabled) {
+                enable();
+            }
+            
+            stateManager.transitionState(moduleName, 
+                wasEnabled ? ModuleState.ENABLED : ModuleState.DISABLED);
+            
+        } catch (Exception e) {
+            moduleAPI.logError("Failed to reload module: " + e.getMessage());
+            e.printStackTrace();
+            stateManager.transitionState(moduleName, ModuleState.ERROR);
+            throw new ModuleReloadException("Failed to reload module: " + moduleName, e);
+        }
+    }
+
+    /**
+     * Unloads the module completely
+     */
+    public void unload() {
+        String moduleName = moduleAPI.getModuleName();
+        
+        try {
+            // Disable first if necessary
+            if (enabled.get()) {
+                disable();
+            }
+            
+            // Call unload hook
+            module.onUnload();
+            
+            // Clean up resources
+            initialized.set(false);
+            stateManager.transitionState(moduleName, ModuleState.UNLOADED);
+            
+        } catch (Exception e) {
+            moduleAPI.logError("Failed to unload module: " + e.getMessage());
+            e.printStackTrace();
+            stateManager.transitionState(moduleName, ModuleState.ERROR);
+            throw new ModuleUnloadException("Failed to unload module: " + moduleName, e);
+        }
+    }
+
     /**
      * Called when a player joins the server
      * 
@@ -94,98 +221,70 @@ public class ModuleAdapter {
     }
     
     /**
-     * Gets the wrapped module
-     * 
-     * @return The adapted module
+     * Gets the module instance
      */
     public Module getModule() {
         return module;
     }
-    
+
     /**
      * Gets the module API instance
-     * 
-     * @return The module API
      */
     public ModuleAPI getModuleAPI() {
         return moduleAPI;
     }
-    
+
     /**
-     * Gibt den Modulnamen zurück
-     * 
-     * @return Der Name des Moduls
+     * Checks if the module is initialized
      */
-    public String getName() {
-        return moduleAPI.getModuleName();
+    public boolean isInitialized() {
+        return initialized.get();
     }
-    
+
     /**
-     * Gibt die Modulkonfiguration zurück
-     * 
-     * @return Die Konfiguration
+     * Checks if the module is enabled
      */
-    public FileConfiguration getConfig() {
-        return moduleAPI.getConfig();
+    public boolean isEnabled() {
+        return enabled.get();
     }
-    
+
     /**
-     * Gibt das Datenverzeichnis des Moduls zurück
-     * 
-     * @return Das Datenverzeichnis
+     * Gets the current state of the module
      */
-    public File getDataFolder() {
-        return moduleAPI.getDataFolder();
+    public ModuleState getState() {
+        return stateManager.getModuleState(moduleAPI.getModuleName());
     }
-    
+
     /**
-     * Prüft, ob ein Spieler eine Berechtigung hat
-     * 
-     * @param player Der Spieler
-     * @param permission Die zu prüfende Berechtigung
-     * @return true, wenn der Spieler die Berechtigung hat
+     * Custom exceptions for module lifecycle events
      */
-    public boolean hasPermission(Player player, String permission) {
-        return moduleAPI.hasPermission(player, permission);
+    public static class ModuleInitializationException extends RuntimeException {
+        public ModuleInitializationException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
-    
-    /**
-     * Speichert einen gemeinsam genutzten Datenwert
-     * 
-     * @param key Der Schlüssel
-     * @param value Der Wert
-     */
-    public void setSharedData(String key, Object value) {
-        moduleAPI.setSharedData(key, value);
+
+    public static class ModuleEnableException extends RuntimeException {
+        public ModuleEnableException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
-    
-    /**
-     * Holt einen gemeinsam genutzten Datenwert
-     * 
-     * @param key Der Schlüssel
-     * @return Der Wert oder null, wenn nicht gefunden
-     */
-    public Object getSharedData(String key) {
-        return moduleAPI.getSharedData(key);
+
+    public static class ModuleDisableException extends RuntimeException {
+        public ModuleDisableException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
-    
-    /**
-     * Sendet einem Spieler oder CommandSender eine formatierte Nachricht
-     * 
-     * @param target Der Empfänger
-     * @param message Die Nachricht
-     */
-    public void sendMessage(CommandSender target, String message) {
-        moduleAPI.sendMessage(target, message);
+
+    public static class ModuleReloadException extends RuntimeException {
+        public ModuleReloadException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
-    
-    /**
-     * Löst ein Modul-Event aus
-     * 
-     * @param eventName Der Name des Events
-     * @param data Die Event-Daten
-     */
-    public void fireModuleEvent(String eventName, Map<String, Object> data) {
-        moduleAPI.fireModuleEvent(eventName, data);
+
+    public static class ModuleUnloadException extends RuntimeException {
+        public ModuleUnloadException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
-} 
+}

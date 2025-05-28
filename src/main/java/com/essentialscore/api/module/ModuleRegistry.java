@@ -5,7 +5,6 @@ import org.bukkit.plugin.Plugin;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,7 +19,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * Central registry system for all modules.
@@ -157,7 +155,6 @@ public class ModuleRegistry {
     }
     
     /**
-<<<<<<< HEAD
      * Gets all registered modules as a map.
      *
      * @return A map of module IDs to module information
@@ -167,8 +164,6 @@ public class ModuleRegistry {
     }
     
     /**
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Finds modules with a specific capability.
      *
      * @param capability The capability

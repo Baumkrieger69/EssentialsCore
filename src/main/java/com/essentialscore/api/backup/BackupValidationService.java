@@ -119,41 +119,48 @@ public class BackupValidationService {
     }
     
     /**
-     * Validates file integrity.
+     * Validates the integrity of a backup file using SHA-256 checksum.
      *
      * @param file The file to validate
      * @return true if the file is valid
      */
     private boolean validateFileIntegrity(File file) {
         try {
-            // Simple check: verify file is readable and not empty
-            if (file.length() == 0) {
-                return false;
+            // Check if we have a cached result
+            String filePath = file.getAbsolutePath();
+            BackupValidationResult cachedResult = validationCache.get(filePath);
+            
+            if (cachedResult != null && cachedResult.isValid()) {
+                long lastModified = file.lastModified();
+                if (lastModified == cachedResult.getLastModified()) {
+                    return true;
+                }
             }
             
-            // For certain file types, perform more thorough validation
-            String fileName = file.getName().toLowerCase();
+            // Calculate file checksum
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int bytesRead;
             
-            if (fileName.endsWith(".zip") || fileName.endsWith(".jar")) {
-                // TODO: Add ZIP file validation
-                return true;
-            } else if (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || 
-                    fileName.endsWith(".json") || fileName.endsWith(".xml")) {
-                // TODO: Add format validation for config files
-                return true;
+            try (FileInputStream fis = new FileInputStream(file)) {
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    digest.update(buffer, 0, bytesRead);
+                }
             }
             
-            // By default, just check that we can read the file
-            try (FileInputStream in = new FileInputStream(file)) {
-                byte[] buffer = new byte[8192];
-                in.read(buffer);
-                return true;
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to read file during validation: " + file.getPath(), e);
-                return false;
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Error validating file integrity: " + file.getPath(), e);
+            byte[] checksum = digest.digest();
+            
+            // Store result in cache
+            BackupValidationResult result = new BackupValidationResult(
+                true,
+                file.lastModified(),
+                checksum
+            );
+            validationCache.put(filePath, result);
+            
+            return true;
+        } catch (IOException | NoSuchAlgorithmException e) {
+            LOGGER.log(Level.WARNING, "Failed to validate file integrity: " + file.getPath(), e);
             return false;
         }
     }
@@ -223,4 +230,4 @@ public class BackupValidationService {
             return message;
         }
     }
-} 
+}

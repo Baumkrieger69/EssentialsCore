@@ -328,7 +328,6 @@ public class ParsedArguments {
         return count % 2 == 0;
     }
     
-<<<<<<< HEAD
     /**
      * Gets all positional arguments as an array.
      *
@@ -347,8 +346,6 @@ public class ParsedArguments {
         return rawArgs.clone();
     }
 
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String toString() {
         return "ParsedArguments{" +

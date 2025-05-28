@@ -10,11 +10,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
-<<<<<<< HEAD
- * A basic command implementation that modules can use directly.
-=======
  * A simple command implementation that modules can use directly.
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
  */
 public class SimpleCommand implements CommandDefinition {
     private final String name;

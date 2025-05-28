@@ -3,7 +3,6 @@ package com.essentialscore;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Klasse zur Erfassung und Speicherung von Performance-Daten für Module

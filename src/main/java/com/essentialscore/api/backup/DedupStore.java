@@ -22,7 +22,6 @@ import java.util.logging.Logger;
  */
 public class DedupStore {
     private static final Logger LOGGER = Logger.getLogger(DedupStore.class.getName());
-    private static final int BUFFER_SIZE = 8192;
     private static final int CHUNK_SIZE = 1024 * 1024; // 1MB chunks
     
     private final File storeDirectory;

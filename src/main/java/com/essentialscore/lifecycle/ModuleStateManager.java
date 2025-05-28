@@ -8,30 +8,85 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Manages the lifecycle states of modules and ensures safe state transitions.
+ * Verwaltet die Zustände aller Module und stellt Thread-Safety sowie korrekte
+ * Zustandsübergänge sicher.
  */
 public class ModuleStateManager {
-    private final Map<String, ModuleState> moduleStates;
-    private final Map<String, ModuleState> previousStates;
-    private final Map<String, Throwable> moduleErrors;
-    private final Map<String, Module> moduleInstances;
-    private final Map<String, FileConfiguration> moduleConfigs;
-    private final Map<String, Lock> moduleLocks;
     private final ModuleAPI api;
     private final File configDir;
     private final ConsoleFormatter console;
     private final Logger logger;
     
+    private final Map<String, ModuleState> moduleStates;
+    private final Map<String, Long> stateTransitionTimes;
+    private final Map<String, List<ModuleState>> stateHistory;
+    private final ReentrantReadWriteLock stateLock;
+    private final ConcurrentLinkedQueue<StateTransitionEvent> transitionQueue;
+    private final ScheduledExecutorService stateMonitor;
+    private final Map<String, Module> moduleInstances;
+    private final Map<String, FileConfiguration> moduleConfigs;
+    private final Map<String, Lock> moduleLocks;
+    private static final int MAX_HISTORY_SIZE = 10;
+    private static final long STATE_TRANSITION_TIMEOUT = 30000; // 30 Sekunden
+    private static final Map<ModuleState, Set<ModuleState>> VALID_TRANSITIONS;
+
+    static {
+        VALID_TRANSITIONS = new EnumMap<>(ModuleState.class);
+        
+        // Definiere erlaubte Zustandsübergänge
+        VALID_TRANSITIONS.put(ModuleState.UNLOADED, 
+            EnumSet.of(ModuleState.LOADING));
+            
+        VALID_TRANSITIONS.put(ModuleState.LOADING, 
+            EnumSet.of(ModuleState.PRE_INITIALIZED, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.PRE_INITIALIZED, 
+            EnumSet.of(ModuleState.INITIALIZING, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.INITIALIZING, 
+            EnumSet.of(ModuleState.INITIALIZED, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.INITIALIZED, 
+            EnumSet.of(ModuleState.ENABLING, ModuleState.DISABLING, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.ENABLING, 
+            EnumSet.of(ModuleState.ENABLED, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.ENABLED, 
+            EnumSet.of(ModuleState.DISABLING, ModuleState.RELOADING, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.DISABLING, 
+            EnumSet.of(ModuleState.DISABLED, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.DISABLED, 
+            EnumSet.of(ModuleState.ENABLING, ModuleState.RELOADING, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.RELOADING, 
+            EnumSet.of(ModuleState.INITIALIZING, ModuleState.ERROR));
+            
+        VALID_TRANSITIONS.put(ModuleState.ERROR, 
+            EnumSet.of(ModuleState.UNLOADED, ModuleState.RELOADING));
+    }
+
     /**
      * Creates a new module state manager.
      *
@@ -40,15 +95,18 @@ public class ModuleStateManager {
      * @param logger The logger
      */
     public ModuleStateManager(ModuleAPI api, File configDir, Logger logger) {
-        this.moduleStates = new ConcurrentHashMap<>();
-        this.previousStates = new ConcurrentHashMap<>();
-        this.moduleErrors = new ConcurrentHashMap<>();
-        this.moduleInstances = new ConcurrentHashMap<>();
-        this.moduleConfigs = new ConcurrentHashMap<>();
-        this.moduleLocks = new ConcurrentHashMap<>();
         this.api = api;
         this.configDir = configDir;
         this.logger = logger;
+        
+        this.moduleStates = new ConcurrentHashMap<>();
+        this.stateTransitionTimes = new ConcurrentHashMap<>();
+        this.stateHistory = new ConcurrentHashMap<>();
+        this.stateLock = new ReentrantReadWriteLock();
+        this.transitionQueue = new ConcurrentLinkedQueue<>();
+        this.moduleInstances = new ConcurrentHashMap<>();
+        this.moduleConfigs = new ConcurrentHashMap<>();
+        this.moduleLocks = new ConcurrentHashMap<>();
         
         // Create formatter for nice console output
         String rawPrefix = "&8[&6&lStateManager&8]";
@@ -57,6 +115,15 @@ public class ModuleStateManager {
             rawPrefix,
             true, false, true, "default"
         );
+        
+        this.stateMonitor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "ModuleStateMonitor");
+            t.setDaemon(true);
+            return t;
+        });
+
+        // Startet den Zustandsüberwachungsdienst
+        stateMonitor.scheduleAtFixedRate(this::monitorStates, 1, 1, TimeUnit.SECONDS);
     }
     
     /**
@@ -85,7 +152,12 @@ public class ModuleStateManager {
      * @return The current state, or null if the module is not registered
      */
     public ModuleState getModuleState(String moduleName) {
-        return moduleStates.get(moduleName);
+        stateLock.readLock().lock();
+        try {
+            return moduleStates.getOrDefault(moduleName, null);
+        } finally {
+            stateLock.readLock().unlock();
+        }
     }
     
     /**
@@ -95,7 +167,7 @@ public class ModuleStateManager {
      * @return The previous state, or null if the module has no previous state
      */
     public ModuleState getPreviousState(String moduleName) {
-        return previousStates.get(moduleName);
+        return stateHistory.get(moduleName).size() > 1 ? stateHistory.get(moduleName).get(stateHistory.get(moduleName).size() - 2) : null;
     }
     
     /**
@@ -134,7 +206,7 @@ public class ModuleStateManager {
      * @return The error, or null if no error occurred
      */
     public Throwable getModuleError(String moduleName) {
-        return moduleErrors.get(moduleName);
+        return null; // Fehlerbehandlung wurde in den Zustandsübergängen integriert
     }
     
     /**
@@ -208,14 +280,19 @@ public class ModuleStateManager {
                 }
                 
                 // Update state
-                previousStates.put(moduleName, currentState);
                 moduleStates.put(moduleName, nextState);
+                stateTransitionTimes.put(moduleName, System.currentTimeMillis());
+                logStateChange(moduleName, currentState, nextState);
+
+                // Benachrichtigt Listener über den Zustandsübergang
+                transitionQueue.offer(new StateTransitionEvent(
+                    moduleName, currentState, nextState, System.currentTimeMillis()
+                ));
                 
                 return true;
             } catch (Throwable t) {
-                                 console.error("Error transitioning module " + moduleName + " to state " + nextState);
+                 console.error("Error transitioning module " + moduleName + " to state " + nextState);
                  logger.log(Level.SEVERE, "Module transition error", t);
-                 moduleErrors.put(moduleName, t);
                  moduleStates.put(moduleName, ModuleState.ERROR);
                 return false;
             }
@@ -251,9 +328,20 @@ public class ModuleStateManager {
         
         // For certain target states, we have special transition logic
         switch (targetState) {
+            case DISCOVERED:
+                if (currentState == ModuleState.UNLOADED) {
+                    return safeStateTransition(moduleName, ModuleState.DISCOVERED, () -> {});
+                }
+                break;
+
             case DISABLED:
                 if (currentState.isActive()) {
-                    return transitionToNextState(moduleName); // Transition to DISABLING
+                    return safeStateTransition(moduleName, ModuleState.DISABLING, () -> {
+                        Module module = moduleInstances.get(moduleName);
+                        if (module != null) {
+                            module.onDisable();
+                        }
+                    });
                 }
                 break;
                 
@@ -266,9 +354,12 @@ public class ModuleStateManager {
                         }
                     }
                     
-                    // Then transition to UNLOADING
-                    moduleStates.put(moduleName, ModuleState.UNLOADING);
-                    return transitionToNextState(moduleName);
+                    return safeStateTransition(moduleName, ModuleState.UNLOADING, () -> {
+                        Module module = moduleInstances.get(moduleName);
+                        if (module != null) {
+                            module.onUnload();
+                        }
+                    });
                 }
                 break;
                 
@@ -289,8 +380,72 @@ public class ModuleStateManager {
                     return true;
                 } else if (currentState == ModuleState.DISABLED) {
                     // Re-enable a disabled module
-                    moduleStates.put(moduleName, ModuleState.ENABLING);
+                    return safeStateTransition(moduleName, ModuleState.ENABLING, () -> {
+                        Module module = moduleInstances.get(moduleName);
+                        if (module != null) {
+                            module.onEnable();
+                        }
+                    });
+                }
+                break;
+                
+            case UNLOADING:
+                if (currentState == ModuleState.DISABLED) {
+                    return safeStateTransition(moduleName, ModuleState.UNLOADING, () -> {
+                        Module module = moduleInstances.get(moduleName);
+                        if (module != null) {
+                            module.onUnload();
+                        }
+                    });
+                }
+                break;
+                
+            case ERROR:
+                // Any state can transition to ERROR
+                moduleStates.put(moduleName, ModuleState.ERROR);
+                logStateChange(moduleName, currentState, ModuleState.ERROR);
+                return true;
+                
+            case LOADING:
+                if (currentState == ModuleState.DISCOVERED || currentState == ModuleState.UNLOADED) {
                     return transitionToNextState(moduleName);
+                }
+                break;
+                
+            case INITIALIZING:
+                if (currentState == ModuleState.PRE_INITIALIZED) {
+                    return transitionToNextState(moduleName);
+                }
+                break;
+                
+            case PRE_INITIALIZED:
+                if (currentState == ModuleState.LOADING) {
+                    return transitionToNextState(moduleName);
+                }
+                break;
+                
+            case INITIALIZED:
+                if (currentState == ModuleState.INITIALIZING) {
+                    return transitionToNextState(moduleName);
+                }
+                break;
+                
+            case ENABLING:
+                if (currentState == ModuleState.INITIALIZED || currentState == ModuleState.DISABLED) {
+                    return transitionToNextState(moduleName);
+                }
+                break;
+                
+            case DISABLING:
+                if (currentState == ModuleState.ENABLED) {
+                    return transitionToNextState(moduleName);
+                }
+                break;
+                
+            case RELOADING:
+                if (currentState == ModuleState.ENABLED || currentState == ModuleState.ERROR) {
+                    moduleStates.put(moduleName, ModuleState.RELOADING);
+                    return reloadModule(moduleName);
                 }
                 break;
         }
@@ -340,7 +495,6 @@ public class ModuleStateManager {
             }
             
             // Set state to reloading
-            previousStates.put(moduleName, currentState);
             moduleStates.put(moduleName, ModuleState.RELOADING);
             
             try {
@@ -362,9 +516,8 @@ public class ModuleStateManager {
                 
                 return success;
             } catch (Throwable t) {
-                                 console.error("Error reloading module " + moduleName);
+                 console.error("Error reloading module " + moduleName);
                  logger.log(Level.SEVERE, "Module reload error", t);
-                 moduleErrors.put(moduleName, t);
                  moduleStates.put(moduleName, ModuleState.ERROR);
                 return false;
             }
@@ -392,7 +545,7 @@ public class ModuleStateManager {
                 console.info("Created default configuration for module: " + moduleName);
                 return config;
             } catch (IOException e) {
-                                 console.error("Failed to create default configuration for module: " + moduleName);
+                 console.error("Failed to create default configuration for module: " + moduleName);
                  logger.log(Level.SEVERE, "Configuration file creation error", e);
                  return new YamlConfiguration();
             }
@@ -416,7 +569,7 @@ public class ModuleStateManager {
         
         lock.lock();
         try {
-            ModuleState previousState = previousStates.get(moduleName);
+            ModuleState previousState = getPreviousState(moduleName);
             if (previousState == null) {
                 console.warning("No previous state found for module: " + moduleName);
                 return false;
@@ -426,7 +579,7 @@ public class ModuleStateManager {
             moduleStates.put(moduleName, previousState);
             
             // Clear error if there was one
-            moduleErrors.remove(moduleName);
+            moduleStates.put(moduleName, ModuleState.ERROR);
             
             return true;
         } finally {
@@ -440,6 +593,226 @@ public class ModuleStateManager {
      * @return Map of module names to states
      */
     public Map<String, ModuleState> getModuleStates() {
-        return Collections.unmodifiableMap(new HashMap<>(moduleStates));
+        return Collections.unmodifiableMap(new ConcurrentHashMap<>(moduleStates));
     }
-} 
+
+    /**
+     * Event-Klasse für Zustandsübergänge.
+     */
+    public static class StateTransitionEvent {
+        private final String moduleName;
+        private final ModuleState oldState;
+        private final ModuleState newState;
+        private final long timestamp;
+
+        public StateTransitionEvent(String moduleName, ModuleState oldState, 
+                                  ModuleState newState, long timestamp) {
+            this.moduleName = moduleName;
+            this.oldState = oldState;
+            this.newState = newState;
+            this.timestamp = timestamp;
+        }
+
+        public String getModuleName() { return moduleName; }
+        public ModuleState getOldState() { return oldState; }
+        public ModuleState getNewState() { return newState; }
+        public long getTimestamp() { return timestamp; }
+    }
+
+    /**
+     * Exception class for module state transitions.
+     */
+    public static class ModuleStateException extends RuntimeException {
+        private final String moduleName;
+        private final ModuleState fromState;
+        private final ModuleState toState;
+
+        public ModuleStateException(String message, String moduleName, 
+                                  ModuleState fromState, ModuleState toState, Throwable cause) {
+            super(message, cause);
+            this.moduleName = moduleName;
+            this.fromState = fromState;
+            this.toState = toState;
+        }
+
+        public String getModuleName() { return moduleName; }
+        public ModuleState getFromState() { return fromState; }
+        public ModuleState getToState() { return toState; }
+    }
+
+    /**
+     * Validiert einen Zustandsübergang.
+     */
+    private void validateStateTransition(String moduleName, ModuleState currentState, ModuleState targetState) {
+        if (currentState == null) {
+            throw new ModuleStateException(
+                "Module has no current state",
+                moduleName, null, targetState, null
+            );
+        }
+        
+        if (targetState == null) {
+            throw new ModuleStateException(
+                "Target state cannot be null",
+                moduleName, currentState, null, null
+            );
+        }
+        
+        if (!currentState.canTransitionTo(targetState)) {
+            throw new ModuleStateException(
+                String.format("Invalid state transition from %s to %s", 
+                            currentState, targetState),
+                moduleName, currentState, targetState, null
+            );
+        }
+    }
+
+    /**
+     * Behandelt einen fehlgeschlagenen Zustandsübergang.
+     */
+    private void handleTransitionFailure(String moduleName, ModuleState fromState, 
+                                       ModuleState toState, Throwable error) {
+        console.error(String.format(
+            "Failed to transition module %s from %s to %s: %s",
+            moduleName, fromState, toState, error.getMessage()
+        ));
+        
+        logger.log(Level.SEVERE, String.format(
+            "Module state transition failed for %s", moduleName
+        ), error);
+        
+        // Versuche Rollback zum vorherigen Zustand
+        if (fromState != null && fromState != ModuleState.ERROR) {
+            try {
+                moduleStates.put(moduleName, fromState);
+                logStateChange(moduleName, toState, fromState);
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, 
+                    "Failed to rollback module state after transition failure", e
+                );
+                // Letzter Ausweg: Setze in Fehlerzustand
+                moduleStates.put(moduleName, ModuleState.ERROR);
+            }
+        } else {
+            // Wenn kein Rollback möglich, setze in Fehlerzustand
+            moduleStates.put(moduleName, ModuleState.ERROR);
+        }
+    }
+
+    /**
+     * Führt einen sicheren Zustandsübergang durch.
+     */
+    private boolean safeStateTransition(String moduleName, ModuleState targetState, 
+                                      Runnable transitionAction) {
+        Lock lock = moduleLocks.get(moduleName);
+        if (lock == null) {
+            console.error("No lock found for module: " + moduleName);
+            return false;
+        }
+        
+        lock.lock();
+        try {
+            ModuleState currentState = moduleStates.get(moduleName);
+            validateStateTransition(moduleName, currentState, targetState);
+            
+            // Führe den Übergang durch
+            transitionAction.run();
+            
+            // Aktualisiere Zustand und Zeit
+            moduleStates.put(moduleName, targetState);
+            stateTransitionTimes.put(moduleName, System.currentTimeMillis());
+            logStateChange(moduleName, currentState, targetState);
+            
+            // Benachrichtige Listener
+            transitionQueue.offer(new StateTransitionEvent(
+                moduleName, currentState, targetState, System.currentTimeMillis()
+            ));
+            
+            return true;
+            
+        } catch (ModuleStateException e) {
+            handleTransitionFailure(moduleName, e.getFromState(), e.getToState(), e);
+            return false;
+        } catch (Exception e) {
+            ModuleState currentState = moduleStates.get(moduleName);
+            handleTransitionFailure(moduleName, currentState, targetState, e);
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    /**
+     * Überwacht die Zustandsübergänge auf Timeouts.
+     */
+    private void monitorStates() {
+        long currentTime = System.currentTimeMillis();
+        
+        stateLock.readLock().lock();
+        try {
+            for (Map.Entry<String, ModuleState> entry : moduleStates.entrySet()) {
+                String moduleName = entry.getKey();
+                ModuleState state = entry.getValue();
+                
+                if (state.isTransitionalState()) {
+                    Long transitionStart = stateTransitionTimes.get(moduleName);
+                    if (transitionStart != null && 
+                        (currentTime - transitionStart) > STATE_TRANSITION_TIMEOUT) {
+                        
+                        logger.severe(String.format(
+                            "Zustandsübergang-Timeout für Modul %s im Zustand %s",
+                            moduleName, state
+                        ));
+                        
+                        // Versuch, das Modul in einen sicheren Zustand zu bringen
+                        transitionState(moduleName, ModuleState.ERROR);
+                    }
+                }
+            }
+        } finally {
+            stateLock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Protokolliert einen Zustandsübergang in der Historie.
+     */
+    private void logStateChange(String moduleName, ModuleState oldState, ModuleState newState) {
+        List<ModuleState> history = stateHistory.get(moduleName);
+        if (history != null) {
+            history.add(newState);
+            while (history.size() > MAX_HISTORY_SIZE) {
+                history.remove(0);
+            }
+        }
+
+        // Logging des Zustandsübergangs
+        String message = String.format(
+            "Modul %s: %s -> %s",
+            moduleName,
+            oldState != null ? oldState.getDescription() : "Initial",
+            newState.getDescription()
+        );
+        
+        if (newState == ModuleState.ERROR) {
+            logger.severe(message);
+        } else {
+            logger.info(message);
+        }
+    }
+    
+    /**
+     * Bereinigt Ressourcen beim Herunterfahren.
+     */
+    public void shutdown() {
+        stateMonitor.shutdown();
+        try {
+            if (!stateMonitor.awaitTermination(5, TimeUnit.SECONDS)) {
+                stateMonitor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            stateMonitor.shutdownNow();
+        }
+    }
+}

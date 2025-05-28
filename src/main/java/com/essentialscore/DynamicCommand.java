@@ -34,8 +34,6 @@ public class DynamicCommand extends Command implements TabCompleter {
     // Präkompilierte RegEx für häufige Befehlsmuster
     private static final Pattern COMMAND_ARGS_PATTERN = Pattern.compile("\"([^\"]*)\"|([^\\s]+)");
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     // Command executor implementation
     private org.bukkit.command.CommandExecutor executor;
     private org.bukkit.command.TabCompleter customTabCompleter;
@@ -79,11 +77,6 @@ public class DynamicCommand extends Command implements TabCompleter {
     public org.bukkit.command.TabCompleter getCustomTabCompleter() {
         return customTabCompleter;
     }
-    
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     // Optimierte Command-Instance-Erstellung
     public DynamicCommand(String name, String description, String usageMessage, List<String> aliases, 
                           String moduleName, String permission, ApiCore apiCore) {
@@ -123,17 +116,10 @@ public class DynamicCommand extends Command implements TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-<<<<<<< HEAD
-<<<<<<< HEAD
         // Check if we have a custom tab completer
         if (customTabCompleter != null) {
             return customTabCompleter.onTabComplete(sender, command, alias, args);
         }
-        
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         // Schnellprüfung für wesentliche Bedingungen
         ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
         if (moduleInfo == null || !hasPermission(sender)) {
@@ -219,11 +205,7 @@ public class DynamicCommand extends Command implements TabCompleter {
 
     @Override
     public boolean execute(CommandSender sender, String commandLabel, String[] args) {
-        long startTime = System.nanoTime();
-        
-        try {
-<<<<<<< HEAD
-<<<<<<< HEAD
+        long startTime = System.nanoTime();            try {
             // Check if the command is deactivated
             if (apiCore.getCommandManager().isCommandDeactivated(getName())) {
                 sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&cDieser Befehl wurde deaktiviert!"));
@@ -236,10 +218,6 @@ public class DynamicCommand extends Command implements TabCompleter {
             }
             
             // Otherwise, use the module-based execution
-=======
->>>>>>> 1cd13da (Das ist Dumm)
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
             if (moduleName != null && !moduleName.equalsIgnoreCase("apicore")) {
                 ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
                 if (moduleInfo != null && moduleInfo.getInstance() != null) {
