@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 
 /**
- * A simple command implementation that modules can use directly.
+ * A basic command implementation that modules can use directly.
  */
 public class SimpleCommand implements CommandDefinition {
     private final String name;

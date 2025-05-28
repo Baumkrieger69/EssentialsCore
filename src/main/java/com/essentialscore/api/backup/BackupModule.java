@@ -2,6 +2,7 @@ package com.essentialscore.api.backup;
 
 import com.essentialscore.api.command.CommandContext;
 import com.essentialscore.api.command.CommandManager;
+import com.essentialscore.api.command.CommandUtil;
 import com.essentialscore.api.command.SimpleCommand;
 import com.essentialscore.api.module.ModuleRegistry;
 import org.bukkit.ChatColor;
@@ -24,6 +25,7 @@ import java.util.logging.Logger;
 /**
  * Module for backup and disaster recovery functionality.
  */
+@SuppressWarnings("deprecation") // Suppress ChatColor deprecation warnings
 public class BackupModule {
     private static final Logger LOGGER = Logger.getLogger(BackupModule.class.getName());
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm");
@@ -60,7 +62,7 @@ public class BackupModule {
      */
     private void registerCommands() {
         // Main backup command
-        SimpleCommand backupCommand = SimpleCommand.builder("backup", "core")
+        SimpleCommand backupCommand = CommandUtil.createCommandBuilder("backup", "core")
             .description("Backup and disaster recovery commands")
             .permission("essentials.backup")
             .build(context -> {
@@ -69,28 +71,28 @@ public class BackupModule {
             });
         
         // Create backup command
-        SimpleCommand createCommand = SimpleCommand.builder("create", "core")
+        SimpleCommand createCommand = CommandUtil.createCommandBuilder("create", "core")
             .description("Create a backup")
             .permission("essentials.backup.create")
             .parent(backupCommand)
             .build(this::handleCreateCommand);
         
         // List backups command
-        SimpleCommand listCommand = SimpleCommand.builder("list", "core")
+        SimpleCommand listCommand = CommandUtil.createCommandBuilder("list", "core")
             .description("List available backups")
             .permission("essentials.backup.list")
             .parent(backupCommand)
             .build(this::handleListCommand);
         
         // Restore backup command
-        SimpleCommand restoreCommand = SimpleCommand.builder("restore", "core")
+        SimpleCommand restoreCommand = CommandUtil.createCommandBuilder("restore", "core")
             .description("Restore a backup")
             .permission("essentials.backup.restore")
             .parent(backupCommand)
             .build(this::handleRestoreCommand);
         
         // Validate backup command
-        SimpleCommand validateCommand = SimpleCommand.builder("validate", "core")
+        SimpleCommand validateCommand = CommandUtil.createCommandBuilder("validate", "core")
             .description("Validate a backup")
             .permission("essentials.backup.validate")
             .parent(backupCommand)
@@ -128,35 +130,27 @@ public class BackupModule {
      */
     private boolean handleCreateCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        List<String> args = context.getArgs().getAll();
+        List<String> args = context.getParsedArgs().getAll();
         
-        String type = "full";
-        String description = "Manual backup";
+        final String[] typeRef = {args.size() >= 1 ? args.get(0).toLowerCase() : "full"};
+        final String[] descriptionRef = {args.size() >= 2 ? String.join(" ", args.subList(1, args.size())) : "Manual backup"};
         
-        if (args.size() >= 1) {
-            type = args.get(0).toLowerCase();
-            
-            if (!type.equals("full") && !type.equals("incremental")) {
-                sender.sendMessage(ChatColor.RED + "Invalid backup type. Use 'full' or 'incremental'.");
-                return true;
-            }
+        if (!typeRef[0].equals("full") && !typeRef[0].equals("incremental")) {
+            sender.sendMessage(ChatColor.RED + "Invalid backup type. Use 'full' or 'incremental'.");
+            return true;
         }
         
-        if (args.size() >= 2) {
-            description = String.join(" ", args.subList(1, args.size()));
-        }
-        
-        sender.sendMessage(ChatColor.YELLOW + "Creating " + type + " backup: " + description);
+        sender.sendMessage(ChatColor.YELLOW + "Creating " + typeRef[0] + " backup: " + descriptionRef[0]);
         
         // Execute backup in a separate thread
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 BackupMetadata metadata;
                 
-                if (type.equals("full")) {
-                    metadata = backupSystem.createFullBackup(description);
+                if (typeRef[0].equals("full")) {
+                    metadata = backupSystem.createFullBackup(descriptionRef[0]);
                 } else {
-                    metadata = backupSystem.createIncrementalBackup(description);
+                    metadata = backupSystem.createIncrementalBackup(descriptionRef[0]);
                 }
                 
                 if (metadata != null) {
@@ -182,7 +176,7 @@ public class BackupModule {
      */
     private boolean handleListCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        List<String> args = context.getArgs().getAll();
+        List<String> args = context.getParsedArgs().getAll();
         
         int page = 1;
         if (args.size() >= 1) {
@@ -251,7 +245,7 @@ public class BackupModule {
      */
     private boolean handleRestoreCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        List<String> args = context.getArgs().getAll();
+        List<String> args = context.getParsedArgs().getAll();
         
         if (args.isEmpty()) {
             sender.sendMessage(ChatColor.RED + "Usage: /backup restore <id|time> [component1,component2,...]");
@@ -348,10 +342,10 @@ public class BackupModule {
      */
     private boolean handleValidateCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        List<String> args = context.getArgs().getAll();
+        List<String> args = context.getParsedArgs().getAll();
         
         if (args.isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "Usage: /backup validate <id|all>");
+            sender.sendMessage(ChatColor.RED + "Usage: /backup validate <id>");
             return true;
         }
         

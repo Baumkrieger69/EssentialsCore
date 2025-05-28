@@ -328,6 +328,24 @@ public class ParsedArguments {
         return count % 2 == 0;
     }
     
+    /**
+     * Gets all positional arguments as an array.
+     *
+     * @return An array of arguments
+     */
+    public String[] getAllAsArray() {
+        return arguments.toArray(new String[0]);
+    }
+    
+    /**
+     * Gets the raw arguments array that was originally passed.
+     *
+     * @return The raw arguments
+     */
+    public String[] getRawArgs() {
+        return rawArgs.clone();
+    }
+
     @Override
     public String toString() {
         return "ParsedArguments{" +

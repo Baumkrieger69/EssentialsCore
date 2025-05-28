@@ -8,34 +8,104 @@ import java.util.List;
 import java.util.Map;
 
 /**
-<<<<<<< HEAD
- * Hauptschnittstelle für Module des ApiCore
- * Jedes Modul sollte dieses Interface implementieren, um mit dem ApiCore zu funktionieren.
+ * Interface for plugin modules.
  */
 public interface Module {
     
     /**
-     * Wird beim Laden des Moduls aufgerufen
-     * 
-     * @param moduleAPI Die API für dieses Modul
-     * @param config Die Konfiguration des Moduls
+     * Called when the module is loaded.
+     *
+     * @param plugin The base plugin
+     * @param logger The module logger
+     * @param config The module configuration
      */
-    void init(ModuleAPI moduleAPI, FileConfiguration config);
+    void onLoad(BasePlugin plugin, ModuleLogger logger, FileConfiguration config);
     
     /**
-     * Wird beim Aktivieren des Moduls aufgerufen (nach der Initialisierung)
+     * Called when the module is enabled.
      */
-    default void onEnable() {
-        // Standardmäßig keine Aktion notwendig
-    }
+    void onEnable();
     
     /**
-     * Wird beim Deaktivieren des Moduls aufgerufen
-=======
- * Main interface for EssentialsCore modules.
- * All modules should implement this interface to be properly loaded by the core.
- */
-public interface Module {
+     * Called when the module is disabled.
+     */
+    void onDisable();
+    
+    /**
+     * Called when the module is reloaded.
+     */
+    void onReload();
+    
+    /**
+     * Gets the module ID.
+     *
+     * @return The module ID
+     */
+    String getId();
+    
+    /**
+     * Gets the module name.
+     *
+     * @return The module name
+     */
+    String getName();
+    
+    /**
+     * Gets the module version.
+     *
+     * @return The module version
+     */
+    String getVersion();
+    
+    /**
+     * Gets the module description.
+     *
+     * @return The module description
+     */
+    String getDescription();
+    
+    /**
+     * Gets the module author.
+     *
+     * @return The module author
+     */
+    String getAuthor();
+    
+    /**
+     * Gets the module dependencies.
+     *
+     * @return The module dependencies
+     */
+    String[] getDependencies();
+    
+    /**
+     * Gets the module soft dependencies.
+     *
+     * @return The module soft dependencies
+     */
+    String[] getSoftDependencies();
+    
+    /**
+     * Gets the module's base plugin.
+     *
+     * @return The base plugin
+     */
+    BasePlugin getPlugin();
+    
+    /**
+     * Gets the module logger.
+     *
+     * @return The module logger
+     */
+    ModuleLogger getLogger();
+    
+    /**
+     * Gets the module configuration.
+     *
+     * @return The module configuration
+     */
+    FileConfiguration getConfig();
+    
     /**
      * Called before the module is initialized, allowing setup of early resources
      * 
@@ -57,93 +127,6 @@ public interface Module {
     default void onPostLoad() {}
     
     /**
-     * Called when the module is enabled or re-enabled after a reload
-     * This is called after init() and can be used to start tasks or register listeners
-     */
-    default void onEnable() {}
-    
-    /**
-     * Called when the module is disabled
->>>>>>> 1cd13da (Das ist Dumm)
-     */
-    void onDisable();
-    
-    /**
-<<<<<<< HEAD
-     * Wird aufgerufen, wenn ein Befehl dieses Moduls ausgeführt wird
-     * 
-     * @param command Das verwendete Kommando
-     * @param sender Der Absender des Befehls
-     * @param args Die Argumente des Befehls
-     * @return true, wenn der Befehl erfolgreich ausgeführt wurde
-     */
-    default boolean onCommand(String command, CommandSender sender, String[] args) {
-        return false;
-    }
-    
-    /**
-     * Wird aufgerufen, wenn eine Tab-Vervollständigung für einen Befehl dieses Moduls angefordert wird
-     * 
-     * @param command Das verwendete Kommando
-     * @param sender Der Absender des Befehls
-     * @param args Die aktuellen Argumente des Befehls
-     * @return Liste möglicher Vervollständigungen oder null
-     */
-    default List<String> onTabComplete(String command, CommandSender sender, String[] args) {
-        return null;
-    }
-    
-    /**
-     * Wird aufgerufen, wenn ein Spieler dem Server beitritt
-     * 
-     * @param player Der Spieler, der dem Server beigetreten ist
-     */
-    default void onPlayerJoin(Player player) {
-        // Standardmäßig keine Aktion notwendig
-    }
-    
-    /**
-     * Wird aufgerufen, wenn das Modul neu geladen werden soll
-     * 
-     * @return true, wenn das Neuladen erfolgreich war
-     */
-    default boolean onReload() {
-=======
-     * Called when the module is being unloaded completely
-     * This allows the module to clean up resources before being removed
-     */
-    default void onUnload() {}
-    
-    /**
-     * Called when the module is being reloaded
-     * 
-     * @param config The new configuration for the module
-     * @return true if reload was successful, false otherwise
-     */
-    default boolean onReload(FileConfiguration config) {
->>>>>>> 1cd13da (Das ist Dumm)
-        return true;
-    }
-    
-    /**
-<<<<<<< HEAD
-     * Wird aufgerufen, um den Status des Moduls abzurufen
-     * 
-     * @return Eine Map mit Statusinformationen
-     */
-    default Map<String, Object> getStatus() {
-        return new java.util.HashMap<>();
-    }
-    
-    /**
-     * Wird aufgerufen, um die Berechtigungen des Moduls zu registrieren
-     * 
-     * @param api Die ModuleAPI-Instanz
-     */
-    default void registerPermissions(ModuleAPI api) {
-        // Standardmäßig keine Aktion notwendig
-    }
-=======
      * Called when a player joins the server
      * 
      * @param player The player who joined
@@ -169,42 +152,14 @@ public interface Module {
      * @return A list of tab completion options, or null for default behavior
      */
     default List<String> onTabComplete(String commandName, CommandSender sender, String[] args) { return null; }
->>>>>>> 1cd13da (Das ist Dumm)
-    
-    /**
-     * Gets the name of the module
-     * 
-     * @return The module name
-     */
-    String getName();
-    
-    /**
-     * Gets the version of the module
-     * 
-     * @return The module version
-     */
-    String getVersion();
-    
-    /**
-     * Gets the description of the module
-     * 
-     * @return The module description
-     */
-    String getDescription();
     
     /**
      * Gets the list of module dependencies
-<<<<<<< HEAD
-     * 
-     * @return List of dependencies
-     */
-    default List<String> getDependencies() { return List.of(); }
-=======
      * Dependencies are required for the module to function
      * 
      * @return Map of dependency names to version range requirements
      */
-    default Map<String, String> getDependencies() { return Map.of(); }
+    default Map<String, String> getDependenciesMap() { return Map.of(); }
     
     /**
      * Gets the list of optional module dependencies
@@ -213,5 +168,4 @@ public interface Module {
      * @return Map of dependency names to version range requirements
      */
     default Map<String, String> getOptionalDependencies() { return Map.of(); }
->>>>>>> 1cd13da (Das ist Dumm)
 } 

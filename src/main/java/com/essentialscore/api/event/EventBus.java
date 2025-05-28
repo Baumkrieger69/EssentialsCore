@@ -32,11 +32,7 @@ public class EventBus {
         
         // Create formatter for nice console output
         String rawPrefix = "&8[&5&lEventBus&8]";
-        this.console = new ConsoleFormatter(
-            logger,
-            rawPrefix,
-            true, false, true, "default"
-        );
+        this.console = new ConsoleFormatter(logger, rawPrefix, true);
     }
     
     /**
@@ -47,6 +43,10 @@ public class EventBus {
      * @param plugin The plugin/module that owns this listener
      */
     public void registerEvents(Object listener, String plugin) {
+        if (listener == null) {
+            throw new IllegalArgumentException("Listener cannot be null");
+        }
+        
         List<RegisteredListener> registeredListeners = new ArrayList<>();
         
         // Find all methods annotated with @EventHandler
@@ -58,15 +58,13 @@ public class EventBus {
             
             // Check method signature
             if (method.getParameterCount() != 1) {
-                logger.warning("Method " + method.getName() + " in " + listener.getClass().getName() + 
-                              " has @EventHandler but has incorrect parameter count");
+                logger.warning("Invalid event handler method signature: " + method);
                 continue;
             }
             
             Class<?> paramType = method.getParameterTypes()[0];
             if (!Event.class.isAssignableFrom(paramType)) {
-                logger.warning("Method " + method.getName() + " in " + listener.getClass().getName() + 
-                              " has @EventHandler but parameter is not an Event type");
+                logger.warning("Invalid event type: " + paramType);
                 continue;
             }
             
@@ -78,7 +76,7 @@ public class EventBus {
             @SuppressWarnings("unchecked")
             Class<? extends Event> eventClass = (Class<? extends Event>) paramType;
             
-            // Create registered listener
+            // Create registered listener with the correct parameter types
             RegisteredListener registeredListener = new RegisteredListener(
                 listener, method, annotation.priority(), plugin, annotation.ignoreCancelled());
                 

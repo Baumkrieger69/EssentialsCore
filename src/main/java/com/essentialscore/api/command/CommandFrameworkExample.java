@@ -1,6 +1,7 @@
 package com.essentialscore.api.command;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -35,7 +36,7 @@ public class CommandFrameworkExample {
         commandProcessor.registerCommandClass("example", this);
         
         // Register a command manually
-        SimpleCommand testCommand = SimpleCommand.builder("test", "example")
+        SimpleCommand testCommand = CommandUtil.createCommandBuilder("test", "example")
             .description("A test command")
             .usage("[args...]")
             .aliases(Collections.singletonList("t"))
@@ -43,11 +44,11 @@ public class CommandFrameworkExample {
             .category("Examples")
             .build(context -> {
                 CommandSender sender = context.getSender();
-                sender.sendMessage(ChatColor.GREEN + "Test command executed!");
+                sender.sendMessage(Component.text("Test command executed!", NamedTextColor.GREEN));
                 
-                if (context.getArgs().size() > 0) {
-                    sender.sendMessage(ChatColor.YELLOW + "Arguments: " + 
-                                      String.join(", ", context.getArgs().getAll()));
+                if (context.getParsedArgs().size() > 0) {
+                    sender.sendMessage(Component.text("Arguments: ", NamedTextColor.YELLOW)
+                                       .append(Component.text(String.join(", ", context.getParsedArgs().getAll()))));
                 }
                 
                 return true;
@@ -56,7 +57,7 @@ public class CommandFrameworkExample {
         commandManager.registerCommand(testCommand);
         
         // Create a command with sub-commands
-        SimpleCommand parentCommand = SimpleCommand.builder("parent", "example")
+        SimpleCommand parentCommand = CommandUtil.createCommandBuilder("parent", "example")
             .description("A parent command with sub-commands")
             .usage("<sub-command> [args...]")
             .aliases(Collections.singletonList("p"))
@@ -64,10 +65,10 @@ public class CommandFrameworkExample {
             .category("Examples")
             .build(context -> {
                 // This will be called if no sub-command is specified
-                if (context.getArgs().isEmpty()) {
-                    context.getSender().sendMessage(ChatColor.RED + "Please specify a sub-command.");
-                    context.getSender().sendMessage(ChatColor.YELLOW + "Available sub-commands: " + 
-                                                  ChatColor.WHITE + "sub1, sub2");
+                if (context.getParsedArgs().isEmpty()) {
+                    context.getSender().sendMessage(Component.text("Please specify a sub-command.", NamedTextColor.RED));
+                    context.getSender().sendMessage(Component.text("Available sub-commands: ", NamedTextColor.YELLOW)
+                                                   .append(Component.text("sub1, sub2", NamedTextColor.WHITE)));
                     return true;
                 }
                 
@@ -76,33 +77,33 @@ public class CommandFrameworkExample {
             });
         
         // Create sub-commands
-        SimpleCommand subCommand1 = SimpleCommand.builder("sub1", "example")
+        SimpleCommand subCommand1 = CommandUtil.createCommandBuilder("sub1", "example")
             .description("Sub-command 1")
             .usage("[arg]")
             .parent(parentCommand)
             .permission("example.parent.sub1")
             .build(context -> {
-                context.getSender().sendMessage(ChatColor.GREEN + "Sub-command 1 executed!");
+                context.getSender().sendMessage(Component.text("Sub-command 1 executed!", NamedTextColor.GREEN));
                 
-                if (context.getArgs().size() > 0) {
-                    context.getSender().sendMessage(ChatColor.YELLOW + "Argument: " + 
-                                                  context.getArgs().get(0));
+                if (context.getParsedArgs().size() > 0) {
+                    context.getSender().sendMessage(Component.text("Argument: ", NamedTextColor.YELLOW)
+                                                   .append(Component.text(context.getParsedArgs().get(0))));
                 }
                 
                 return true;
             });
         
-        SimpleCommand subCommand2 = SimpleCommand.builder("sub2", "example")
+        SimpleCommand subCommand2 = CommandUtil.createCommandBuilder("sub2", "example")
             .description("Sub-command 2")
             .usage("[arg]")
             .parent(parentCommand)
             .permission("example.parent.sub2")
             .build(context -> {
-                context.getSender().sendMessage(ChatColor.GREEN + "Sub-command 2 executed!");
+                context.getSender().sendMessage(Component.text("Sub-command 2 executed!", NamedTextColor.GREEN));
                 
-                if (context.getArgs().size() > 0) {
-                    context.getSender().sendMessage(ChatColor.YELLOW + "Argument: " + 
-                                                  context.getArgs().get(0));
+                if (context.getParsedArgs().size() > 0) {
+                    context.getSender().sendMessage(Component.text("Argument: ", NamedTextColor.YELLOW)
+                                                   .append(Component.text(context.getParsedArgs().get(0))));
                 }
                 
                 return true;
@@ -120,12 +121,55 @@ public class CommandFrameworkExample {
     }
     
     /**
+     * Example method to show how to handle commands without sub-commands.
+     *
+     * @param sender The command sender
+     * @param args The command arguments
+     * @return true if the command was handled
+     */
+    public boolean handleCommand(CommandSender sender, String[] args) {
+        if (args.length == 0) {
+            sender.sendMessage(Component.text("Please specify a sub-command.", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Available sub-commands: ", NamedTextColor.YELLOW)
+                             .append(Component.text("subcommand1, subcommand2")));
+            return true;
+        }
+        
+        String subCommand = args[0].toLowerCase();
+        String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+        
+        switch (subCommand) {
+            case "subcommand1":
+                sender.sendMessage(Component.text("Sub-command 1 executed!", NamedTextColor.GREEN));
+                
+                if (subArgs.length > 0) {
+                    sender.sendMessage(Component.text("Argument: ", NamedTextColor.YELLOW)
+                                     .append(Component.text(subArgs[0])));
+                }
+                return true;
+                
+            case "subcommand2":
+                sender.sendMessage(Component.text("Sub-command 2 executed!", NamedTextColor.GREEN));
+                
+                if (subArgs.length > 0) {
+                    sender.sendMessage(Component.text("Argument: ", NamedTextColor.YELLOW)
+                                     .append(Component.text(subArgs[0])));
+                }
+                return true;
+                
+            default:
+                sender.sendMessage(Component.text("Unknown sub-command: " + subCommand, NamedTextColor.RED));
+                return false;
+        }
+    }
+    
+    /**
      * Example command using annotations.
      *
      * @param context The command context
      * @return true if the command was executed successfully
      */
-    @CommandProcessor.RegisterCommand(
+    @RegisterCommand(
         name = "example",
         description = "Example command using annotations",
         usage = "[arg]",
@@ -138,10 +182,11 @@ public class CommandFrameworkExample {
     )
     public boolean exampleCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        sender.sendMessage(ChatColor.GREEN + "Example command executed!");
+        sender.sendMessage(Component.text("Example command executed!", NamedTextColor.GREEN));
         
-        if (context.getArgs().size() > 0) {
-            sender.sendMessage(ChatColor.YELLOW + "Argument: " + context.getArgs().get(0));
+        if (context.getParsedArgs().size() > 0) {
+            sender.sendMessage(Component.text("Argument: ", NamedTextColor.YELLOW)
+                              .append(Component.text(context.getParsedArgs().get(0))));
         }
         
         return true;
@@ -155,7 +200,7 @@ public class CommandFrameworkExample {
      * @param args The command arguments
      * @return true if the command was executed successfully
      */
-    @CommandProcessor.RegisterCommand(
+    @RegisterCommand(
         name = "complete",
         description = "Example command with tab completion",
         usage = "<option>",
@@ -170,59 +215,42 @@ public class CommandFrameworkExample {
         List<String> options = Arrays.asList("option1", "option2", "option3");
         
         if (options.contains(option)) {
-            sender.sendMessage(ChatColor.GREEN + "Selected option: " + option);
+            sender.sendMessage(Component.text("Selected option: " + option, NamedTextColor.GREEN));
         } else {
-            sender.sendMessage(ChatColor.RED + "Invalid option. Available options: " + 
-                              String.join(", ", options));
+            sender.sendMessage(Component.text("Invalid option. Available options: ", NamedTextColor.RED)
+                              .append(Component.text(String.join(", ", options))));
         }
         
         return true;
     }
     
     /**
-     * Tab completion for the complete command.
-     *
-     * @param sender The command sender
-     * @param args The command arguments
-     * @return List of tab completion options
-     */
-    public List<String> completeTab(CommandSender sender, String[] args) {
-        if (args.length == 1) {
-            List<String> options = Arrays.asList("option1", "option2", "option3");
-            String arg = args[0].toLowerCase();
-            
-            return options.stream()
-                .filter(option -> option.startsWith(arg))
-                .collect(java.util.stream.Collectors.toList());
-        }
-        
-        return Collections.emptyList();
-    }
-    
-    /**
-     * Example command that's only available to players.
+     * Example command for players only.
      *
      * @param context The command context
      * @return true if the command was executed successfully
      */
-    @CommandProcessor.RegisterCommand(
+    @RegisterCommand(
         name = "player",
         description = "Example command for players only",
+        usage = "[message]",
         permission = "example.player",
         category = "Examples"
     )
     public boolean playerCommand(CommandContext context) {
         if (!context.isPlayer()) {
-            context.getSender().sendMessage(ChatColor.RED + "This command can only be used by players.");
-            return true;
+            context.getSender().sendMessage(Component.text("This command can only be used by players.", NamedTextColor.RED));
+            return false;
         }
         
-        Player player = context.getPlayer().get();
-        player.sendMessage(ChatColor.GREEN + "Hello, " + player.getName() + "!");
-        player.sendMessage(ChatColor.YELLOW + "Your location: " + 
-                          player.getLocation().getBlockX() + ", " + 
-                          player.getLocation().getBlockY() + ", " + 
-                          player.getLocation().getBlockZ());
+        Player player = context.getPlayerOrNull();
+        
+        if (context.getParsedArgs().size() > 0) {
+            player.sendMessage(Component.text("Your message: ", NamedTextColor.YELLOW)
+                              .append(Component.text(context.getParsedArgs().get(0))));
+        } else {
+            player.sendMessage(Component.text("Hello, " + player.getName() + "!", NamedTextColor.GREEN));
+        }
         
         return true;
     }

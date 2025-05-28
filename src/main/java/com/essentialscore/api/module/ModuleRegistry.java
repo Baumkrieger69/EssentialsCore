@@ -157,6 +157,15 @@ public class ModuleRegistry {
     }
     
     /**
+     * Gets all registered modules as a map.
+     *
+     * @return A map of module IDs to module information
+     */
+    public Map<String, ModuleInfo> getModules() {
+        return Collections.unmodifiableMap(registeredModules);
+    }
+    
+    /**
      * Finds modules with a specific capability.
      *
      * @param capability The capability

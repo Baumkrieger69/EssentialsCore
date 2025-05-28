@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 /**
  * Command that provides help information for other commands.
  */
+@SuppressWarnings("deprecation") // Suppress ChatColor deprecation warnings
 public class HelpCommand extends AbstractCommand {
     
     private static final int COMMANDS_PER_PAGE = 8;
@@ -38,14 +39,15 @@ public class HelpCommand extends AbstractCommand {
     @Override
     public boolean execute(CommandContext context) {
         CommandSender sender = context.getSender();
+        List<String> args = context.getParsedArgs().getAll();
         
-        if (context.getArgs().isEmpty()) {
+        if (args.isEmpty()) {
             // Show first page of commands
             showCommandList(sender, 1);
             return true;
         }
         
-        String arg = context.getArgs().get(0);
+        String arg = args.get(0);
         
         // Check if it's a page number
         try {
