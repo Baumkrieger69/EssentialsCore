@@ -1,0 +1,23 @@
+[Unit]
+Description=EssentialsCore WebUI Server
+After=network.target
+
+[Service]
+Type=simple
+User=minecraft
+Group=minecraft
+WorkingDirectory=/workspaces/EssentialsCore
+ExecStart=/usr/bin/java -Xmx2G -Xms1G -XX:+UseG1GC -jar essentialscore-webui.jar
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/workspaces/EssentialsCore
+
+[Install]
+WantedBy=multi-user.target

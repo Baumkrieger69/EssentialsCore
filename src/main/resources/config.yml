@@ -10,7 +10,7 @@ core:
   # Debug mode enables detailed logs
   debug: false
   # Plugin message prefix
-  prefix: "&8[&b&lApiCore&8] &7"
+  prefix: "&8[&b&lEssentialsCore&8] &7"
   # Automatically extract module resources
   extract-resources: true
 
@@ -58,7 +58,7 @@ console:
   
   # Component prefixes
   prefixes:
-    core: "&8[&b&lApiCore&8]"
+    core: "&8[&b&lEssentialsCore&8]"
     module-manager: "&8[&d&lModuleManager&8]"
     file-manager: "&8[&6&lFileManager&8]"
     thread-manager: "&8[&a&lThreadManager&8]"
@@ -74,19 +74,7 @@ console:
     system:    { enabled: true, prefix: "SYS",    color: "BRIGHT_CYAN",   icon: "⚡" }
     config:    { enabled: true, prefix: "CFG",    color: "BRIGHT_BLUE",   icon: "⚙" }
     module:    { enabled: true, prefix: "MOD",    color: "BRIGHT_GREEN",  icon: "📦" }
-<<<<<<< HEAD
-<<<<<<< HEAD
-    performance: 
-      enabled: true
-      prefix: "PERF"
-      color: "BRIGHT_YELLOW"
-      icon: "📊"
-=======
-    performance:{ enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
->>>>>>> 1cd13da (Das ist Dumm)
-=======
-    performance:{ enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+    performance: { enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
     security:  { enabled: true, prefix: "SEC",    color: "BRIGHT_RED",    icon: "🔒" }
     network:   { enabled: true, prefix: "NET",    color: "BRIGHT_PURPLE", icon: "🌐" }
     database:  { enabled: true, prefix: "DB",     color: "BRIGHT_WHITE",  icon: "💾" }
@@ -250,7 +238,7 @@ commands:
   # Reload commands after changes
   auto-reload: true
   # Default permission node prefix
-  permission-prefix: "apicore"
+  permission-prefix: "essentialscore"
   # Respect Bukkit permissions
   respect-bukkit-permissions: true
   # Default command tab completions
@@ -261,3 +249,226 @@ commands:
   max-args: 64
   # Disabled API Core commands
   disabled: []
+
+#---------------------------------
+# WebUI Settings
+#---------------------------------
+webui:
+  # Enable WebUI interface
+  enabled: true
+  
+  # HTTP Server Configuration
+  http:
+    # Server bind address (0.0.0.0 for all interfaces)
+    bind-address: "0.0.0.0"
+    # HTTP port
+    port: 8080
+    # Enable SSL/HTTPS
+    ssl-enabled: false
+    # SSL port (only if ssl-enabled is true)
+    ssl-port: 8443
+    # SSL certificate file path
+    ssl-cert-path: "certs/server.crt"
+    # SSL private key file path
+    ssl-key-path: "certs/server.key"
+    # Connection timeout in seconds
+    connection-timeout: 30
+    # Maximum connections
+    max-connections: 100
+    # Enable compression
+    enable-compression: true
+    # Static file caching in seconds
+    static-cache-time: 3600
+  
+  # WebSocket Configuration
+  websocket:
+    # WebSocket port
+    port: 8081
+    # Enable WebSocket
+    enabled: true
+    # Connection timeout in seconds
+    timeout: 60
+    # Maximum message size in bytes
+    max-message-size: 65536
+    # Heartbeat interval in seconds
+    heartbeat-interval: 30
+    # Maximum connections per IP
+    max-connections-per-ip: 5
+  
+  # Authentication Settings
+  auth:
+    # Authentication method: SESSION, TOKEN, NONE
+    method: "SESSION"
+    # Session timeout in minutes
+    session-timeout: 60
+    # Maximum login attempts
+    max-login-attempts: 5
+    # Login attempt reset time in minutes
+    attempt-reset-time: 15
+    # Enable two-factor authentication
+    enable-2fa: false
+    # JWT secret for token authentication
+    jwt-secret: "change-this-secret-key"
+    # JWT token expiration in hours
+    jwt-expiration: 24
+    # Enable password encryption
+    encrypt-passwords: true
+    # Minimum password length
+    min-password-length: 8
+  
+  # Access Control
+  access:
+    # Allow external access (from other IPs)
+    allow-external: true
+    # Allowed IP addresses (empty = allow all)
+    allowed-ips: []
+    # Blocked IP addresses
+    blocked-ips: []
+    # CORS settings
+    cors:
+      enabled: true
+      allowed-origins: ["*"]
+      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed-headers: ["*"]
+  
+  # Dashboard Configuration
+  dashboard:
+    # Auto-refresh interval in seconds
+    refresh-interval: 5
+    # Show server statistics
+    show-stats: true
+    # Show player list
+    show-players: true
+    # Show console
+    show-console: true
+    # Maximum console lines to display
+    max-console-lines: 1000
+    # Enable dark theme by default
+    dark-theme: true
+    # Show performance charts
+    show-performance: true
+    # Chart update interval in seconds
+    chart-update-interval: 10
+  
+  # Features Configuration
+  features:
+    # Enable console access
+    console: true
+    # Enable player management
+    player-management: true
+    # Enable file manager
+    file-manager: true
+    # Enable module manager
+    module-manager: true
+    # Enable performance monitoring
+    performance-monitor: true
+    # Enable security manager
+    security-manager: true
+    # Enable backup manager
+    backup-manager: true
+    # Enable plugin manager
+    plugin-manager: true
+    # Enable world manager
+    world-manager: false
+  
+  # File Manager Settings
+  file-manager:
+    # Allow file editing
+    allow-editing: true
+    # Allow file upload
+    allow-upload: true
+    # Allow file deletion
+    allow-deletion: false
+    # Maximum upload size in MB
+    max-upload-size: 10
+    # Allowed file extensions for editing
+    editable-extensions: [".txt", ".yml", ".yaml", ".json", ".properties", ".log"]
+    # Restricted directories
+    restricted-directories: ["plugins/EssentialsCore/data", "world/playerdata"]
+    # Show hidden files
+    show-hidden: false
+  
+  # Console Settings
+  console:
+    # Allow command execution
+    allow-commands: true
+    # Command history size
+    history-size: 100
+    # Enable auto-completion
+    auto-completion: true
+    # Restricted commands
+    restricted-commands: ["stop", "restart", "reload"]
+    # Log console commands
+    log-commands: true
+  
+  # Logging
+  logging:
+    # Enable access logging
+    access-log: true
+    # Log file path
+    log-file: "logs/webui-access.log"
+    # Log level: DEBUG, INFO, WARN, ERROR
+    log-level: "INFO"
+    # Maximum log file size in MB
+    max-log-size: 10
+    # Number of log files to keep
+    max-log-files: 5
+
+#---------------------------------
+# Integrations
+#---------------------------------
+integrations:
+  # Vault Economy Integration
+  vault:
+    enabled: true
+    # Default currency symbol
+    currency-symbol: "$"
+    # Format large numbers
+    format-large-numbers: true
+  
+  # PlaceholderAPI Integration
+  placeholderapi:
+    enabled: true
+    # Register custom placeholders
+    register-placeholders: true
+  
+  # WorldEdit Integration
+  worldedit:
+    enabled: false
+    # Allow WebUI world editing
+    allow-webui-editing: false
+  
+  # LuckPerms Integration
+  luckperms:
+    enabled: false
+    # Sync permissions
+    sync-permissions: true
+  
+  # DiscordSRV Integration
+  discordsrv:
+    enabled: false
+    # Send notifications to Discord
+    send-notifications: false
+
+#---------------------------------
+# Database Settings
+#---------------------------------
+database:
+  # Database type: SQLITE, MYSQL, POSTGRESQL
+  type: "SQLITE"
+  # Database file path (for SQLite)
+  file: "data/essentialscore.db"
+  # Connection settings (for MySQL/PostgreSQL)
+  connection:
+    host: "localhost"
+    port: 3306
+    database: "essentialscore"
+    username: "root"
+    password: "password"
+    # Connection pool settings
+    pool:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000

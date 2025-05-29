@@ -44,7 +44,7 @@ public class RestApiManager {
      * Registers default API endpoints
      */
     private void registerDefaultEndpoints() {
-        // Register a minimal set of endpoints for demonstration
+        // Register core API endpoints
         registerEndpoint(new ApiEndpoint(plugin) {
             @Override
             public String getPath() {

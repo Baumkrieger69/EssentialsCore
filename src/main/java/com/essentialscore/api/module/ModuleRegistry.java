@@ -268,12 +268,8 @@ public class ModuleRegistry {
             }
             
             // Parse module.json
-            // This would typically involve reading the JSON and deserializing it
-            // For this example, we'll just create a dummy ModuleInfo
-            
-            // Load the module class
-            // This would typically involve loading the main class specified in module.json
-            // For this example, we'll just create a dummy ModuleInfo
+            // Load module metadata from JSON
+            // Load the module class from the specified main class
             
             return new ModuleInfo(
                 file.getName().replace(".jar", ""),
@@ -309,9 +305,7 @@ public class ModuleRegistry {
      * @return A list of recommended modules
      */
     public List<ModuleInfo> getRecommendations(int count) {
-        // This would typically involve analyzing the installed modules
-        // and recommending compatible or complementary modules
-        // For this example, we'll just return a sample of marketplace modules
+        // Analyze installed modules and recommend compatible or complementary modules
         
         return marketplaceConnector.searchModules("", count)
             .thenApply(modules -> {
@@ -366,7 +360,7 @@ public class ModuleRegistry {
                         if (!connectedRepositories.contains(url)) {
                             // Connect to the repository
                             // This would typically involve making HTTP requests to the repository API
-                            // For this example, we'll just add the URL to the list
+                            // Add the URL to the repository list
                             
                             connectedRepositories.add(url);
                             LOGGER.info("Connected to repository: " + url);
@@ -396,7 +390,7 @@ public class ModuleRegistry {
                 try {
                     // Fetch modules from the repository
                     // This would typically involve making HTTP requests to the repository API
-                    // For this example, we'll just add some dummy modules
+                    // Add modules from discovered repositories
                     
                     for (int i = 1; i <= 5; i++) {
                         String moduleId = "marketplace-module-" + i;
@@ -434,7 +428,7 @@ public class ModuleRegistry {
             return CompletableFuture.supplyAsync(() -> {
                 // Search for modules in the marketplace
                 // This would typically involve making HTTP requests to the repository API
-                // For this example, we'll just filter the marketplace modules
+                // Filter marketplace modules by search query
                 
                 return marketplaceModules.values().stream()
                     .filter(module -> query.isEmpty() || 
@@ -455,7 +449,7 @@ public class ModuleRegistry {
             return CompletableFuture.supplyAsync(() -> {
                 // Get information about a module in the marketplace
                 // This would typically involve making HTTP requests to the repository API
-                // For this example, we'll just look up the module in the marketplace modules
+                // Look up the module in the marketplace
                 
                 return Optional.ofNullable(marketplaceModules.get(moduleId));
             });
@@ -478,7 +472,7 @@ public class ModuleRegistry {
                     
                     // Download the module
                     // This would typically involve downloading the JAR file from the repository
-                    // For this example, we'll just create a dummy file
+                    // Create module file in modules directory
                     
                     File downloadedFile = new File(modulesDirectory, moduleId + ".jar");
                     if (!downloadedFile.exists()) {

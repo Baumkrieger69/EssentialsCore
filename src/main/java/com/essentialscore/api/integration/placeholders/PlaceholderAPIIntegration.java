@@ -184,7 +184,7 @@ public class PlaceholderAPIIntegration extends AbstractPluginDependentIntegratio
                                                   String version, 
                                                   Map<String, BiFunction<Player, String, String>> placeholders) {
         // In a real implementation, this would create or load a class that extends PlaceholderExpansion
-        // For this example, we'll just throw an exception indicating this is not implemented
+        // This method is not implemented - PlaceholderAPI integration required
         throw new UnsupportedOperationException(
             "Direct creation of PlaceholderExpansion classes requires bytecode manipulation. " + 
             "For real usage, create a proper class that extends PlaceholderExpansion."

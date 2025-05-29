@@ -18,6 +18,10 @@ repositories {
         url = "https://oss.sonatype.org/content/groups/public/"
     }
     maven {
+        name = "placeholderapi"
+        url = "https://repo.extendedclip.com/content/repositories/placeholderapi/"
+    }
+    maven {
         name = "jitpack"
         url = "https://jitpack.io"
     }
@@ -25,8 +29,38 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
-    compileOnly("com.github.MilkBowl:VaultAPI:1.7")
-    // Weitere Abhängigkeiten hier einfügen
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude group: 'org.bukkit', module: 'bukkit'
+    }
+    
+    // PlaceholderAPI
+    compileOnly("me.clip:placeholderapi:2.11.6")
+    
+    // Web server for remote management
+    implementation("io.javalin:javalin:5.6.1")
+    implementation("org.slf4j:slf4j-simple:2.0.7")
+    
+    // JSON processing
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2")
+    
+    // WebSocket support
+    implementation("org.eclipse.jetty.websocket:websocket-jetty-server:11.0.15")
+    implementation("org.java-websocket:Java-WebSocket:1.5.4")
+    
+    // TOML configuration support
+    implementation("com.moandjiezana.toml:toml4j:0.7.2")
+    
+    // Additional utilities
+    implementation("org.apache.commons:commons-lang3:3.12.0")
+    implementation("commons-io:commons-io:2.11.0")
+    implementation("com.google.guava:guava:32.1.2-jre")
+    
+    // Reflection utilities
+    implementation("org.reflections:reflections:0.10.2")
+    
+    // YAML processing
+    implementation("org.yaml:snakeyaml:2.0")
 }
 
 java {

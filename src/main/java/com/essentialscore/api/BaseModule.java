@@ -81,180 +81,43 @@ public abstract class BaseModule implements Module {
         onInitialize();
     }
     
-<<<<<<< HEAD
-    /**
-     * Called when the module is initialized.
-     * This method should be implemented by subclasses to perform their initialization.
-     */
-    protected abstract void onInitialize();
-    
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public void onPostLoad() {
         // Default implementation, can be overridden by subclasses
     }
     
     @Override
-<<<<<<< HEAD
     public void onDisable() {
-=======
-    public void onUnload() {
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
         // Default implementation, can be overridden by subclasses
     }
     
     @Override
-<<<<<<< HEAD
-    public void onReload() {
-        // Default implementation, can be overridden by subclasses
-        if (config != null) {
-            onReload(config);
-        }
-    }
-    
-    /**
-     * Reloads the module with the given configuration.
-     * This is an additional helper method not in the Module interface.
-     * 
-     * @param config The updated configuration
-     * @return True if reload was successful, false otherwise
-     */
-    public boolean onReload(FileConfiguration config) {
-=======
-    public boolean onReload(FileConfiguration config) {
-        // Default implementation, update config and return success
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
+    public boolean configure(Configuration config) {
         this.config = config;
         return true;
     }
     
-    /**
-<<<<<<< HEAD
-     * Gets the name of the module.
-     * 
-     * @return The module name
-     */
-=======
-     * Called after the API and config have been set.
-     * Override this to perform initialization logic.
-     */
-    protected void onInitialize() {
-        // Default implementation does nothing
-    }
-    
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String getName() {
         return name;
     }
     
-<<<<<<< HEAD
-    /**
-     * Gets the version of the module.
-     * 
-     * @return The module version
-     */
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String getVersion() {
         return version;
     }
     
-<<<<<<< HEAD
-    /**
-     * Gets the description of the module.
-     * 
-     * @return The module description
-     */
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public String getDescription() {
         return description;
     }
     
-<<<<<<< HEAD
-    /**
-     * Gets the dependencies of the module.
-     * 
-     * @return The module dependencies
-     */
-    @Override
-    public String[] getDependencies() {
-        return dependencies.keySet().toArray(new String[0]);
-    }
-    
-    /**
-     * Gets the soft dependencies of the module.
-     * 
-     * @return The soft dependencies
-     */
-    @Override
-    public String[] getSoftDependencies() {
-        return optionalDependencies.keySet().toArray(new String[0]);
-    }
-    
-    /**
-     * Gets the dependencies map with version requirements.
-     * This is an additional method not in the Module interface.
-     * 
-     * @return Map of dependencies with version requirements
-     */
-    public Map<String, String> getDependenciesMap() {
-        return dependencies;
-    }
-    
-    /**
-     * Gets the optional dependencies of the module.
-     * 
-     * @return The optional module dependencies
-     */
-=======
-    @Override
-    public Map<String, String> getDependencies() {
-        return dependencies;
-    }
-    
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
     @Override
     public Map<String, String> getOptionalDependencies() {
         return optionalDependencies;
     }
     
     /**
-<<<<<<< HEAD
-     * Called when a command from this module is executed.
-     * This is a legacy method that should not be used in new code.
-     * 
-     * @param command The command name
-     * @param sender The command sender
-     * @param args The command arguments
-     * @return true if the command was executed successfully
-     */
-    @Override
-    public boolean onCommand(String command, CommandSender sender, String[] args) {
-        return true;
-    }
-    
-    /**
-     * Called when tab completion is requested for a command from this module.
-     * This is a legacy method that should not be used in new code.
-     * 
-     * @param command The command name
-     * @param sender The command sender
-     * @param args The command arguments
-     * @return A list of tab completion suggestions, or null for default behavior
-     */
-    @Override
-    public List<String> onTabComplete(String command, CommandSender sender, String[] args) {
-        return null;
-    }
-    
-    /**
-=======
->>>>>>> 1cd13dada4735d9fd6a061a32e5e9d93533588ac
      * Logs an informational message
      * 
      * @param message The message to log

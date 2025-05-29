@@ -1,13 +1,385 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EssentialsCore WebUI</title>
+    <title>EssentialsCore WebUI - Advanced Server Management</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    
+    <!-- Primary Styles -->
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/RemoteManagement.css">
+    <link rel="stylesheet" href="css/charts.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    
+    <!-- Meta Tags für SEO und Performance -->
+    <meta name="description" content="Advanced WebUI for EssentialsCore - Professional Minecraft Server Management Interface">
+    <meta name="keywords" content="minecraft, server, management, webui, essentialscore, admin, dashboard">
+    <meta name="author" content="EssentialsCore Team">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#2196f3">
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="EssentialsCore WebUI">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16x16.png">
+    
+    <!-- Preload kritische Ressourcen -->
+    <link rel="preload" href="js/app.js" as="script">
+    <link rel="preload" href="css/main.css" as="style">
 </head>
-<body>
-    <div id="root"></div>
+<body data-theme="dark">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <img src="assets/logo.png" alt="EssentialsCore" onerror="this.style.display='none'">
+            </div>
+            <div class="loading-spinner-container">
+                <div class="loading-spinner"></div>
+            </div>
+            <div class="loading-text">
+                <h2>EssentialsCore WebUI</h2>
+                <p>Initialisierung...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Application Root -->
+    <div id="root" style="display: none;"></div>
+    
+    <!-- Version Info (wird dynamisch gefüllt) -->
+    <div id="versionInfo" class="version-info" style="display: none;">
+        <span id="versionText"></span>
+    </div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        // Service Worker für PWA-Funktionalität
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('Service Worker registriert:', registration);
+                    })
+                    .catch(function(error) {
+                        console.log('Service Worker Registrierung fehlgeschlagen:', error);
+                    });
+            });
+        }
+        
+        // Loading Screen Management
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const loadingScreen = document.getElementById('loadingScreen');
+                const root = document.getElementById('root');
+                
+                loadingScreen.style.opacity = '0';
+                setTimeout(function() {
+                    loadingScreen.style.display = 'none';
+                    root.style.display = 'block';
+                    root.style.opacity = '1';
+                }, 300);
+            }, 1000);
+        });
+        
+        // Error Handling
+        window.addEventListener('error', function(event) {
+            console.error('Global Error:', event.error);
+            // Fehler an WebUI melden falls verfügbar
+            if (window.webui && window.webui.handleGlobalError) {
+                window.webui.handleGlobalError(event.error);
+            }
+        });
+        
+        // Performance Monitoring
+        window.addEventListener('load', function() {
+            if (window.performance && window.performance.timing) {
+                const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+                console.log('Page Load Time:', loadTime + 'ms');
+            }
+        });
+    </script>
+    
+    <!-- Main Application Script -->
     <script src="js/app.js"></script>
+    
+    <!-- Enhanced Features -->
+    <script src="js/enhanced-features.js"></script>
+    
+    <!-- Security & Settings Module -->
+    <script src="js/security-settings.js"></script>
+    
+    <!-- Data Visualization Module -->
+    <script src="js/data-visualization.js"></script>
+    
+    <!-- WebSocket Manager -->
+    <script src="js/websocket-manager.js"></script>
+    
+    <!-- Additional Modules (werden dynamisch geladen) -->
+    <script>
+        // Dynamisches Laden zusätzlicher Module
+        window.loadModule = function(moduleName) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = `js/modules/${moduleName}.js`;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        };
+        
+        // Theme Persistence
+        (function() {
+            const savedTheme = localStorage.getItem('webui_theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+            }
+        })();
+    </script>
+    
+    <!-- Development Tools (nur in Entwicklung) -->
+    <script>
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('🚀 EssentialsCore WebUI - Development Mode');
+            
+            // Performance Observer für Entwicklung
+            if ('PerformanceObserver' in window) {
+                const observer = new PerformanceObserver((list) => {
+                    for (const entry of list.getEntries()) {
+                        if (entry.entryType === 'navigation') {
+                            console.log('Navigation Timing:', entry);
+                        }
+                    }
+                });
+                observer.observe({entryTypes: ['navigation', 'measure']});
+            }
+            
+            // Entwickler-Shortcuts
+            document.addEventListener('keydown', function(e) {
+                // CTRL + ALT + D = Developer Tools
+                if (e.ctrlKey && e.altKey && e.key === 'd') {
+                    if (window.webui && window.webui.showDeveloperTools) {
+                        window.webui.showDeveloperTools();
+                    }
+                }
+                
+                // CTRL + ALT + R = Reload Configuration
+                if (e.ctrlKey && e.altKey && e.key === 'r') {
+                    if (window.webui && window.webui.reloadConfig) {
+                        window.webui.reloadConfig();
+                    }
+                }
+            });
+        }
+    </script>
+    
+    <style>
+        /* Loading Screen Styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+        
+        .loading-logo img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .loading-spinner-container {
+            margin: 2rem 0;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        .loading-text h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .loading-text p {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .version-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            z-index: 1000;
+        }
+        
+        #root {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Icons für Navigation (falls Font Awesome nicht lädt) */
+        .icon-dashboard::before { content: "📊"; }
+        .icon-terminal::before { content: "💻"; }
+        .icon-users::before { content: "👥"; }
+        .icon-puzzle::before { content: "🧩"; }
+        .icon-folder::before { content: "📁"; }
+        .icon-chart::before { content: "📈"; }
+        .icon-shield::before { content: "🛡️"; }
+        .icon-settings::before { content: "⚙️"; }
+        .icon-logout::before { content: "🚪"; }
+        .icon-theme::before { content: "🌓"; }
+        .icon-bell::before { content: "🔔"; }
+    </style>
+
+    <!-- Service Worker Registration -->
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(registration) {
+                        console.log('🚀 Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', function() {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', function() {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (confirm('🔄 Neue Version verfügbar! Seite neu laden?')) {
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(function(error) {
+                        console.warn('⚠️ Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button/banner
+            const installBtn = document.createElement('button');
+            installBtn.textContent = '📱 App installieren';
+            installBtn.className = 'pwa-install-btn';
+            installBtn.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: var(--primary-color);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            installBtn.addEventListener('click', function() {
+                installBtn.style.display = 'none';
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function(choiceResult) {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ PWA installation accepted');
+                    }
+                    deferredPrompt = null;
+                });
+            });
+            
+            document.body.appendChild(installBtn);
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                if (installBtn.parentNode) {
+                    installBtn.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => installBtn.remove(), 300);
+                }
+            }, 10000);
+        });
+
+        // PWA Installation Success
+        window.addEventListener('appinstalled', function() {
+            console.log('✅ PWA successfully installed');
+            // Analytics or notification
+        });
+
+        // Add slide animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
 </body>
 </html>

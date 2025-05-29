@@ -1,0 +1,153 @@
+{
+    "name": "EssentialsCore WebUI",
+    "short_name": "EssentialsCore",
+    "description": "Advanced WebUI and Remote Management System for EssentialsCore",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a1d23",
+    "theme_color": "#3b82f6",
+    "orientation": "any",
+    "categories": ["productivity", "utilities", "games", "developer"],
+    "lang": "en",
+    "scope": "/",
+    "launch_handler": {
+        "client_mode": "focus-existing"
+    },
+    "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+    "edge_side_panel": {
+        "preferred_width": 400
+    },
+    "handle_links": "preferred",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%233b82f6' d='M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM256 448c-106 0-192-86-192-192S150 64 256 64s192 86 192 192-86 192-192 192z'/%3E%3Cpath fill='%233b82f6' d='M256 128c-70.7 0-128 57.3-128 128s57.3 128 128 128 128-57.3 128-128-57.3-128-128-128zm0 192c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64z'/%3E%3C/svg%3E",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%233b82f6' d='M256 0C114.6 0 0 114.6 0 256s114.6 256 256 256 256-114.6 256-256S397.4 0 256 0zM256 448c-106 0-192-86-192-192S150 64 256 64s192 86 192 192-86 192-192 192z'/%3E%3Cpath fill='%233b82f6' d='M256 128c-70.7 0-128 57.3-128 128s57.3 128 128 128 128-57.3 128-128-57.3-128-128-128zm0 192c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64z'/%3E%3C/svg%3E",
+            "sizes": "512x512",
+            "type": "image/svg+xml"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'%3E%3Crect width='1280' height='720' fill='%231a1d23'/%3E%3Ctext x='640' y='360' text-anchor='middle' fill='%23ffffff' font-family='Arial' font-size='48'%3EEssentialsCore WebUI%3C/text%3E%3C/svg%3E",
+            "sizes": "1280x720",
+            "type": "image/svg+xml",
+            "form_factor": "wide",
+            "label": "Dashboard View"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "Server monitoring dashboard",
+            "url": "/#/dashboard",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        },
+        {
+            "name": "Console",
+            "short_name": "Console",
+            "description": "Server console access",
+            "url": "/#/console",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        },
+        {
+            "name": "Players",
+            "short_name": "Players",
+            "description": "Player management",
+            "url": "/#/players",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H17c-.8 0-1.54.37-2.01 1l-2.49 3.32a1 1 0 0 0 .8 1.6l2.7-.4v8.48z'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        },
+        {
+            "name": "Files",
+            "short_name": "Files",
+            "description": "File management",
+            "url": "/#/files",
+            "icons": [
+                {
+                    "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z'/%3E%3C/svg%3E",
+                    "sizes": "96x96",
+                    "type": "image/svg+xml"
+                }
+            ]
+        }
+    ],
+    "protocol_handlers": [
+        {
+            "protocol": "minecraft",
+            "url": "/#/connect?server=%s"
+        }
+    ],
+    "file_handlers": [
+        {
+            "action": "/#/files",
+            "accept": {
+                "application/json": [".json", ".mcmeta"],
+                "text/plain": [".txt", ".log", ".yml", ".yaml", ".properties"],
+                "application/zip": [".zip", ".jar"]
+            }
+        }
+    ],
+    "share_target": {
+        "action": "/#/share",
+        "method": "POST",
+        "enctype": "multipart/form-data",
+        "params": {
+            "title": "title",
+            "text": "text",
+            "url": "url",
+            "files": [
+                {
+                    "name": "files",
+                    "accept": ["text/plain", "application/json", "application/zip"]
+                }
+            ]
+        }
+    },
+    "permissions": [
+        "background-sync",
+        "notifications",
+        "persistent-storage"
+    ],
+    "related_applications": [
+        {
+            "platform": "play",
+            "url": "https://play.google.com/store/apps/details?id=com.essentialscore.mobile",
+            "id": "com.essentialscore.mobile"
+        },
+        {
+            "platform": "itunes",
+            "url": "https://apps.apple.com/app/essentialscore/id123456789",
+            "id": "123456789"
+        }
+    ],
+    "scope_extensions": [
+        {
+            "origin": "https://api.essentialscore.com"
+        }
+    ],
+    "id": "/",
+    "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7"
+}

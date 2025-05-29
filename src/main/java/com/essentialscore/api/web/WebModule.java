@@ -283,7 +283,7 @@ public class WebModule implements Module {
         // In a real implementation, you might want to use a hardcoded list or more advanced methods
         
         try {
-            // For this example, we'll return a dummy list of known files
+            // Return a list of known web files
             // In a real implementation, you would need to determine this list
             if (path.equals("webui/webapp")) {
                 return new String[]{

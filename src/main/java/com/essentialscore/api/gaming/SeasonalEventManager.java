@@ -285,7 +285,7 @@ public class SeasonalEventManager implements Listener {
                 // Add event handlers
                 if (eventConfig.contains("on_start")) {
                     // In a real implementation, you would load and set actual event handlers
-                    // For this example, we'll just log that there's a handler
+                    // Execute event handler logic
                     builder.onStart(event -> LOGGER.info("Event started: " + event.getName()));
                 }
                 

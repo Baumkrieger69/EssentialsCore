@@ -283,14 +283,11 @@ public class PermissionManager {
         
         FileConfiguration config = new YamlConfiguration();
         
-        // Add some default permissions
-        config.set("modules.example-module.permissions", List.of("file.read", "network.connect"));
+        // Add default console permissions
+        config.set("users.console.core.permissions", List.of("*"));
         
-        // Add some default user permissions
-        config.set("users.console.example-module.permissions", List.of("*"));
-        
-        // Add some default group permissions
-        config.set("groups.admin.example-module.permissions", List.of("*"));
+        // Add default admin group permissions
+        config.set("groups.admin.core.permissions", List.of("*"));
         
         try {
             config.save(permissionsFile);

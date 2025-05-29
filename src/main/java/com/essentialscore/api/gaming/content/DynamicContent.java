@@ -7,10 +7,13 @@ import java.time.Instant;
 import java.util.Set;
 import org.bukkit.entity.Player;
 
+// Import types from our gaming types file
+import com.essentialscore.api.gaming.*;
+
 /**
  * Repräsentiert eine dynamisch generierte Quest.
  */
-public class DynamicQuest {
+class DynamicQuest {
     private final String id;
     private final String name;
     private final String description;
@@ -32,6 +35,7 @@ public class DynamicQuest {
         this.difficulty = difficulty;
         this.createdAt = Instant.now();
         this.status = QuestStatus.ACTIVE;
+        this.tags = new java.util.HashSet<>();
     }
     
     public void updateProgress(Player player, String objectiveId, int progress) {
@@ -59,12 +63,13 @@ public class DynamicQuest {
     public DifficultyLevel getDifficulty() { return difficulty; }
     public QuestStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
+    public Set<String> getTags() { return tags; }
 }
 
 /**
  * Repräsentiert ein Quest-Ziel.
  */
-public class QuestObjective {
+class QuestObjective {
     private final String id;
     private final String description;
     private final int requiredProgress;
@@ -102,7 +107,7 @@ public class QuestObjective {
 /**
  * Typen von Quest-Zielen.
  */
-public enum ObjectiveType {
+enum ObjectiveType {
     KILL_ENTITY,
     COLLECT_ITEM,
     VISIT_LOCATION,
@@ -114,7 +119,7 @@ public enum ObjectiveType {
 /**
  * Status einer Quest.
  */
-public enum QuestStatus {
+enum QuestStatus {
     ACTIVE,
     COMPLETED,
     FAILED,
@@ -124,7 +129,7 @@ public enum QuestStatus {
 /**
  * Schwierigkeitsgrade für Quests und Herausforderungen.
  */
-public enum DifficultyLevel {
+enum DifficultyLevel {
     BEGINNER(1.0),
     EASY(1.5),
     MEDIUM(2.0),
@@ -146,7 +151,7 @@ public enum DifficultyLevel {
 /**
  * Kontext für die Quest-Generierung.
  */
-public class QuestGenerationContext {
+class QuestGenerationContext {
     private final PlayerProfile playerProfile;
     private final PlayerBehaviorData behaviorData;
     private final SocialContextData socialContext;
@@ -169,7 +174,7 @@ public class QuestGenerationContext {
 /**
  * Daten über soziale Interaktionen.
  */
-public class SocialContextData {
+class SocialContextData {
     private final double groupCohesion;
     private final Map<UUID, PlayerRole> playerRoles;
     private final List<InteractionPattern> patterns;
@@ -192,7 +197,7 @@ public class SocialContextData {
 /**
  * Repräsentiert eine Spielerrolle in einer Gruppe.
  */
-public enum PlayerRole {
+enum PlayerRole {
     LEADER,
     SUPPORTER,
     CONTRIBUTOR,
@@ -203,7 +208,7 @@ public enum PlayerRole {
 /**
  * Repräsentiert eine Spielergemeinschaft.
  */
-public class Community {
+class Community {
     private final String id;
     private final Set<UUID> members;
     private final CommunityType type;
@@ -230,7 +235,7 @@ public class Community {
 /**
  * Typen von Gemeinschaften.
  */
-public enum CommunityType {
+enum CommunityType {
     GUILD,
     FRIEND_GROUP,
     TRADING_NETWORK,

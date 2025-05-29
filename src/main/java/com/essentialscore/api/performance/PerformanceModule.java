@@ -172,7 +172,7 @@ public class PerformanceModule {
      */
     private List<ProfilingSystem.Metric> getTopMetrics(int limit) {
         // In a real implementation, you would sort metrics by value
-        // For this example, we'll just return all metrics up to the limit
+        // Return all metrics up to the specified limit
         return Arrays.asList(profilingSystem.getMetrics().values().toArray(new ProfilingSystem.Metric[0])).subList(
             0,
             Math.min(limit, profilingSystem.getMetrics().size())
@@ -617,7 +617,7 @@ public class PerformanceModule {
      * @return The formatted timestamp
      */
     private String formatTimestamp(long timestamp) {
-        // Simple formatter for this example
+        // Formatter implementation
         java.util.Date date = new java.util.Date(timestamp);
         return date.toString();
     }

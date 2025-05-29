@@ -378,32 +378,6 @@ public class CommandProcessor {
     }
     
     /**
-     * Example class for demonstrating command registration.
-     */
-    public static class Example {
-        /**
-         * Example command method.
-         */
-        @RegisterCommand(
-            name = "example",
-            description = "An example command",
-            usage = "[arg]",
-            aliases = {"ex", "test"},
-            permission = "example.command",
-            minArgs = 0,
-            maxArgs = 1,
-            category = "Examples",
-            detailedHelp = "This is an example command that shows how to use the command processor.",
-            examples = {"/example", "/example arg"},
-            cooldown = 5
-        )
-        public boolean exampleCommand(CommandContext context) {
-            context.getSender().sendMessage("Example command executed!");
-            return true;
-        }
-    }
-    
-    /**
      * SimpleCommand implementation.
      */
     public static class SimpleCommand implements Command {

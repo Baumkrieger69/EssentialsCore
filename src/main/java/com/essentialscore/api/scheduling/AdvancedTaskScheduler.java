@@ -11,7 +11,9 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.bukkit.plugin.Plugin;
+import com.essentialscore.api.scheduling.Duration;
 
 /**
  * Erweitertes Task-Scheduling-System mit Prioritäten und Abhängigkeiten.

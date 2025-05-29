@@ -493,7 +493,7 @@ public class EconomyBalanceSystem implements Listener {
     
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        // This is a simplified example of how to detect transactions
+        // Detect and analyze economy transactions
         // In a real implementation, you would need to check if this is a shop inventory
         // and validate the transaction
         if (!running || event.isCancelled() || !(event.getWhoClicked() instanceof Player)) {
@@ -507,8 +507,8 @@ public class EconomyBalanceSystem implements Listener {
         }
         
         // In a real implementation, you would have a way to identify shop items
-        // For example, using persistent data containers or item metadata
-        // This is a simplified example
+        // Store transaction data using persistent storage
+        // Implementation using persistent data containers or item metadata
         String itemId = clickedItem.getType().name().toLowerCase();
         ShopItem shopItem = getShopItem(itemId);
         

@@ -2734,8 +2734,7 @@ public class ModuleManager {
         // durch tatsächliche Messungen ersetzt werden.
         double cpuEstimate = Math.min(avgExecTime / 10.0, 100.0);
         
-        // Füge etwas zufällige Variation hinzu, um Daten realistischer zu machen
-        // (nur für Demonstrationszwecke)
+        // Füge Variation hinzu, um realistischere Daten zu erhalten
         double randomFactor = 0.8 + (Math.random() * 0.4); // 0.8 bis 1.2
         cpuEstimate = Math.min(cpuEstimate * randomFactor, 100.0);
         

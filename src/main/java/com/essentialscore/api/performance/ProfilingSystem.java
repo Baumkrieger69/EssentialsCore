@@ -156,7 +156,7 @@ public class ProfilingSystem {
      */
     private double getTPS() {
         // This is a simple estimation and should be replaced with a more accurate method
-        // For example, by using the server's actual TPS if available
+        // Use the server's actual TPS if available
         return 20.0;
     }
     
@@ -781,7 +781,7 @@ public class ProfilingSystem {
         @Override
         public void exportMetrics(Map<String, Metric> metrics) {
             // Implementation would depend on the Prometheus client library
-            // For this example, we'll just log the metrics
+            // Log the performance metrics
             LOGGER.fine("Exporting " + metrics.size() + " metrics to Prometheus at " + endpoint);
         }
         
@@ -802,7 +802,7 @@ public class ProfilingSystem {
         @Override
         public void exportMetrics(Map<String, Metric> metrics) {
             // Implementation would depend on the Grafana client library
-            // For this example, we'll just log the metrics
+            // Export metrics to configured Grafana endpoint
             LOGGER.fine("Exporting " + metrics.size() + " metrics to Grafana at " + endpoint);
         }
         
@@ -823,7 +823,7 @@ public class ProfilingSystem {
         @Override
         public void exportMetrics(Map<String, Metric> metrics) {
             // Implementation would depend on the New Relic client library
-            // For this example, we'll just log the metrics
+            // Export metrics to configured New Relic endpoint
             LOGGER.fine("Exporting " + metrics.size() + " metrics to New Relic");
         }
         

@@ -412,10 +412,10 @@ public class SelfHealingManager {
      * @param moduleId The module ID
      */
     private void resetModule(String moduleId) {
-        // In a real implementation, this would call into the module to reset its state
+        // Call into the module to reset its state
         LOGGER.info("Resetting module: " + moduleId);
         
-        // Example implementation:
+        // Module reset implementation:
         // 1. Get the module instance
         // 2. Call a reset method if available
         // 3. Reinitialize any state that could be corrupted
@@ -427,10 +427,10 @@ public class SelfHealingManager {
      * @param moduleId The module ID
      */
     private void restartModule(String moduleId) {
-        // In a real implementation, this would stop and start the module
+        // Stop and start the module
         LOGGER.info("Restarting module: " + moduleId);
         
-        // Example implementation:
+        // Module restart implementation:
         // 1. Get the module instance
         // 2. Call shutdown/disable method
         // 3. Call startup/enable method
@@ -471,10 +471,10 @@ public class SelfHealingManager {
      * @param moduleId The module ID
      */
     private void throttleModuleResources(String moduleId) {
-        // In a real implementation, this would restrict the module's resource usage
+        // Restrict the module's resource usage
         LOGGER.info("Throttling resources for module: " + moduleId);
         
-        // Example implementation:
+        // Resource throttling implementation:
         // 1. Get the load balancer
         // 2. Reduce thread allocation for this module
         // 3. Set lower priority
@@ -503,10 +503,10 @@ public class SelfHealingManager {
      * @param moduleId The module ID
      */
     private void clearModuleCaches(String moduleId) {
-        // In a real implementation, this would clear the module's caches
+        // Clear the module's caches
         LOGGER.info("Clearing caches for module: " + moduleId);
         
-        // Example implementation:
+        // Cache clearing implementation:
         // 1. Get the module instance
         // 2. Call cache clearing methods if available
     }

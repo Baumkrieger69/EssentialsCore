@@ -238,14 +238,14 @@ public class PerformanceBenchmark {
         // Permission Cache testen, falls verfügbar
         if (apiCore.getPermissionManager() != null) {
             int permChecks = 5000;
-            String[] testPermissions = {
+            String[] benchmarkPermissions = {
                 "apicore.admin", "apicore.debug", "apicore.commands", 
-                "test.perm1", "test.perm2", "test.perm3", "test.perm4", "test.perm5"
+                "core.perm1", "core.perm2", "core.perm3", "core.perm4", "core.perm5"
             };
             
             startTime = System.nanoTime();
             for (int i = 0; i < permChecks; i++) {
-                String permission = testPermissions[i % testPermissions.length];
+                String permission = benchmarkPermissions[i % benchmarkPermissions.length];
                 // Direkter Cache-Zugriff für Benchmark-Zwecke
                 String cacheKey = "benchmark-test:" + permission;
                 // Simuliere einen Cache-Hit oder Cache-Miss ohne echten Player

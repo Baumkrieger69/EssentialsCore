@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EssentialsCore WebUI - Monitoring</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .widget { background: #2a2a2a; padding: 20px; border-radius: 8px; border: 1px solid #444; }
+        .widget h3 { margin-top: 0; color: #4CAF50; }
+        .status-ok { color: #4CAF50; }
+        .status-warning { color: #FF9800; }
+        .status-error { color: #F44336; }
+        .metric { display: flex; justify-content: space-between; margin: 10px 0; }
+        .refresh-btn { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>EssentialsCore WebUI - System Monitoring</h1>
+    <button class="refresh-btn" onclick="location.reload()">Aktualisieren</button>
+    
+    <div class="dashboard">
+        <div class="widget">
+            <h3>Server Status</h3>
+            <div class="metric">
+                <span>HTTP-Server:</span>
+                <span id="http-status" class="status-ok">Online</span>
+            </div>
+            <div class="metric">
+                <span>WebSocket-Server:</span>
+                <span id="ws-status" class="status-ok">Online</span>
+            </div>
+            <div class="metric">
+                <span>Uptime:</span>
+                <span id="uptime">--</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <h3>System Resources</h3>
+            <div class="metric">
+                <span>CPU Usage:</span>
+                <span id="cpu-usage">--</span>
+            </div>
+            <div class="metric">
+                <span>Memory Usage:</span>
+                <span id="memory-usage">--</span>
+            </div>
+            <div class="metric">
+                <span>Disk Usage:</span>
+                <span id="disk-usage">--</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <h3>Network</h3>
+            <div class="metric">
+                <span>Active Connections:</span>
+                <span id="connections">--</span>
+            </div>
+            <div class="metric">
+                <span>Requests/min:</span>
+                <span id="requests-rate">--</span>
+            </div>
+            <div class="metric">
+                <span>Response Time:</span>
+                <span id="response-time">--</span>
+            </div>
+        </div>
+        
+        <div class="widget">
+            <h3>Logs</h3>
+            <div class="metric">
+                <span>Errors (last 24h):</span>
+                <span id="error-count" class="status-warning">--</span>
+            </div>
+            <div class="metric">
+                <span>Last Error:</span>
+                <span id="last-error">--</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Monitoring-Daten laden
+        async function loadMonitoringData() {
+            try {
+                // Hier würden echte API-Calls stehen
+                document.getElementById('uptime').textContent = formatUptime(Date.now() - (Math.random() * 86400000));
+                document.getElementById('cpu-usage').textContent = (Math.random() * 100).toFixed(1) + '%';
+                document.getElementById('memory-usage').textContent = (Math.random() * 100).toFixed(1) + '%';
+                document.getElementById('disk-usage').textContent = (Math.random() * 100).toFixed(1) + '%';
+                document.getElementById('connections').textContent = Math.floor(Math.random() * 50);
+                document.getElementById('requests-rate').textContent = Math.floor(Math.random() * 1000);
+                document.getElementById('response-time').textContent = Math.floor(Math.random() * 100) + 'ms';
+                document.getElementById('error-count').textContent = Math.floor(Math.random() * 10);
+            } catch (error) {
+                console.error('Fehler beim Laden der Monitoring-Daten:', error);
+            }
+        }
+        
+        function formatUptime(ms) {
+            const days = Math.floor(ms / 86400000);
+            const hours = Math.floor((ms % 86400000) / 3600000);
+            const minutes = Math.floor((ms % 3600000) / 60000);
+            return `${days}d ${hours}h ${minutes}m`;
+        }
+        
+        // Initial laden und alle 30 Sekunden aktualisieren
+        loadMonitoringData();
+        setInterval(loadMonitoringData, 30000);
+    </script>
+</body>
+</html>

@@ -14,6 +14,11 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.lang.reflect.Method;
+import java.net.URLClassLoader;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.BufferedInputStream;
@@ -39,13 +44,15 @@ import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.nio.file.*;
+import java.net.URLClassLoader;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.essentialscore.util.BloomFilter;

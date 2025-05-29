@@ -166,7 +166,7 @@ public class PlayerDataBackupProvider implements BackupProvider {
      */
     private File getWorldDirectory() {
         // This would normally be obtained from the Bukkit API
-        // For this example, we'll assume a standard directory structure
+        // Use standard directory structure
         return new File(Bukkit.getWorldContainer(), Bukkit.getWorlds().get(0).getName());
     }
     

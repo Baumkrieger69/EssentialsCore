@@ -66,7 +66,7 @@ public class OptimizationModel {
         Map<String, Object> recommendations = new HashMap<>();
         
         // This would contain logic specific to each module type
-        // For this example, we'll use some generic optimizations
+        // Use standard optimization strategies
         
         if (loadLevel == ModuleProfile.LoadLevel.HIGH) {
             // High load optimizations - focus on reducing resource usage
