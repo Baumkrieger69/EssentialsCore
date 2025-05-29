@@ -94,6 +94,16 @@ public class ApiRequest {
     public String getQueryParam(String name, String defaultValue) {
         return queryParams.getOrDefault(name, defaultValue);
     }
+
+    /**
+     * Gets a parameter (alias for getQueryParam)
+     * 
+     * @param name The parameter name
+     * @return The parameter value, or null if not found
+     */
+    public String getParameter(String name) {
+        return getQueryParam(name);
+    }
     
     /**
      * Gets the request body
@@ -166,4 +176,4 @@ public class ApiRequest {
     public boolean isDelete() {
         return "DELETE".equalsIgnoreCase(method);
     }
-} 
+}

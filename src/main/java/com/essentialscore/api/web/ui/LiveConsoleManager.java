@@ -94,6 +94,35 @@ public class LiveConsoleManager {
     public String[] getConsoleHistory() {
         return consoleHistory.toArray(new String[0]);
     }
+
+    /**
+     * Gets recent console logs with optional filtering
+     * 
+     * @param limit Maximum number of logs to return
+     * @param since Timestamp to filter logs from (0 for all)
+     * @return List of recent logs
+     */
+    public java.util.List<java.util.Map<String, Object>> getRecentLogs(int limit, long since) {
+        java.util.List<java.util.Map<String, Object>> logs = new java.util.ArrayList<>();
+        String[] history = getConsoleHistory();
+        
+        // Get the most recent logs up to the limit
+        int startIndex = Math.max(0, history.length - limit);
+        long currentTime = System.currentTimeMillis();
+        
+        for (int i = startIndex; i < history.length; i++) {
+            String line = history[i];
+            if (line != null && !line.trim().isEmpty()) {
+                java.util.Map<String, Object> logEntry = new java.util.HashMap<>();
+                logEntry.put("message", line);
+                logEntry.put("timestamp", currentTime - (history.length - i) * 1000); // Estimate timestamp
+                logEntry.put("level", "INFO"); // Default level
+                logs.add(logEntry);
+            }
+        }
+        
+        return logs;
+    }
     
     /**
      * Subscribes a client to console updates
@@ -186,4 +215,4 @@ public class LiveConsoleManager {
             // Nothing to do
         }
     }
-} 
+}

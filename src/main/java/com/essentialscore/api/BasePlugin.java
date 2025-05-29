@@ -7,7 +7,7 @@ import com.essentialscore.api.module.ModuleManager;
 import com.essentialscore.api.module.ModuleManager.ModuleInfo;
 import com.essentialscore.api.module.ModuleSandbox;
 import com.essentialscore.api.permission.PermissionManager;
-import com.essentialscore.api.util.ThreadManager;
+import com.essentialscore.ThreadManager;
 import com.essentialscore.util.ModuleResourceManager;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;

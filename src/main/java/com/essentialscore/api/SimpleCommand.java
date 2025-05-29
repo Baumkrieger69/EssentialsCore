@@ -44,6 +44,17 @@ public class SimpleCommand implements CommandDefinition {
     }
     
     /**
+     * Creates a new builder for a simple command
+     * 
+     * @param name The command name
+     * @param moduleName The module name
+     * @return A new SimpleCommand instance
+     */
+    public static SimpleCommand builder(String name, String moduleName) {
+        return new SimpleCommand(name, "", "/" + name, null, moduleName);
+    }
+
+    /**
      * Sets the function that executes this command
      * 
      * @param executor The function that takes a CommandSender and String[] args and returns a boolean
@@ -92,6 +103,64 @@ public class SimpleCommand implements CommandDefinition {
         return this;
     }
     
+    /**
+     * Sets the description for this command
+     * 
+     * @param description The description
+     * @return This command for method chaining
+     */
+    public SimpleCommand description(String description) {
+        return new SimpleCommand(this.name, description, this.usage, this.permission, this.moduleName);
+    }
+    
+    /**
+     * Sets the usage for this command
+     * 
+     * @param usage The usage message
+     * @return This command for method chaining
+     */
+    public SimpleCommand usage(String usage) {
+        return new SimpleCommand(this.name, this.description, usage, this.permission, this.moduleName);
+    }
+    
+    /**
+     * Sets aliases for this command
+     * 
+     * @param aliases The aliases list
+     * @return This command for method chaining
+     */
+    public SimpleCommand aliases(List<String> aliases) {
+        SimpleCommand cmd = new SimpleCommand(this.name, this.description, this.usage, this.permission, this.moduleName);
+        if (aliases != null) {
+            cmd.aliases.addAll(aliases);
+        }
+        return cmd;
+    }
+    
+    /**
+     * Sets the permission for this command
+     * 
+     * @param permission The permission
+     * @return This command for method chaining
+     */
+    public SimpleCommand permission(String permission) {
+        return new SimpleCommand(this.name, this.description, this.usage, permission, this.moduleName);
+    }
+    
+    /**
+     * Builds the command with an executor and tab completer
+     * 
+     * @param executor The command executor
+     * @param tabCompleter The tab completer
+     * @return This command
+     */
+    public SimpleCommand build(BiFunction<CommandSender, String[], Boolean> executor, 
+                               BiFunction<CommandSender, String[], List<String>> tabCompleter) {
+        this.executor = executor;
+        this.tabCompleter = tabCompleter;
+        return this;
+    }
+
     @Override
     public String getName() {
         return name;
@@ -160,4 +229,4 @@ public class SimpleCommand implements CommandDefinition {
         
         return Collections.emptyList();
     }
-} 
+}

@@ -226,6 +226,17 @@ public class ModuleSandbox {
     public ClassLoaderSandbox getClassLoaderSandbox() {
         return classLoaderSandbox;
     }
+
+    /**
+     * Sets strict mode for the sandbox.
+     *
+     * @param strict true to enable strict mode, false to disable
+     */
+    public void setStrictMode(boolean strict) {
+        if (securityPolicy instanceof StrictModePolicy) {
+            ((StrictModePolicy) securityPolicy).setStrictMode(strict);
+        }
+    }
     
     /**
      * Interface for sandboxed tasks.
@@ -256,4 +267,4 @@ public class ModuleSandbox {
             super(message, cause);
         }
     }
-} 
+}

@@ -138,20 +138,7 @@ class Role {
     public SecurityLevel getLevel() { return level; }
 }
 
-class SecurityPolicy {
-    private final String name;
-    private final Map<String, Object> rules;
-    private final boolean enforced;
-    
-    public SecurityPolicy(String name, boolean enforced) {
-        this.name = name;
-        this.enforced = enforced;
-        this.rules = new HashMap<>();
-    }
-    
-    public String getName() { return name; }
-    public boolean isEnforced() { return enforced; }
-}
+
 
 class ComplianceViolation {
     private final String ruleId;

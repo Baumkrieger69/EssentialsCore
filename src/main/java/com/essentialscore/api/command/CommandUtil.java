@@ -13,6 +13,6 @@ public class CommandUtil {
      * @return A new command builder
      */
     public static SimpleCommand.Builder createCommandBuilder(String name, String moduleId) {
-        return new SimpleCommand.Builder(name, moduleId);
+        return new SimpleCommand.Builder(name);
     }
 } 

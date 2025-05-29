@@ -1,6 +1,7 @@
 package com.essentialscore.api.security;
 
 import com.essentialscore.api.integration.PluginIntegration;
+import com.essentialscore.api.security.ModuleSandbox;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.event.EventHandler;
@@ -65,8 +66,7 @@ public class SecurityManager implements Listener {
         
         // Create security components
         this.auditLogger = new AuditLogger(
-                plugin, 
-                getSettingAsInt("audit.retentionDays", 90)
+                plugin.getDataFolder().toPath().resolve("audit")
         );
         
         this.encryption = new DataEncryption(
@@ -84,7 +84,7 @@ public class SecurityManager implements Listener {
                 auditLogger
         );
 
-        this.gdprManager = new GDPRComplianceManager(plugin, encryption);
+        this.gdprManager = new GDPRComplianceManager(plugin, auditLogger);
         
         this.vulnerabilityScanner = new VulnerabilityScanner(plugin);
     }
@@ -583,7 +583,8 @@ public class SecurityManager implements Listener {
      * @return The configured sandbox
      */
     public ModuleSandbox createModuleSandbox(String moduleId) {
-        ModuleSandbox sandbox = new ModuleSandbox(moduleId, strictMode);
+        SecurityPolicy defaultPolicy = new SecurityPolicy("default", false);
+        ModuleSandbox sandbox = new ModuleSandbox(plugin, moduleId, moduleId, defaultPolicy);
         moduleSandboxes.put(moduleId, sandbox);
         return sandbox;
     }
@@ -679,6 +680,31 @@ public class SecurityManager implements Listener {
     private boolean requiresTwoFactor(String permission) {
         return securitySettings.containsKey("2fa.required." + permission) &&
                (boolean) securitySettings.get("2fa.required." + permission);
+    }
+
+    /**
+     * Checks if an operation is allowed for a module
+     * 
+     * @param moduleId The module ID
+     * @param operation The operation to check
+     * @param target The target of the operation
+     * @return true if the operation is allowed
+     */
+    public boolean isOperationAllowed(String moduleId, String operation, String target) {
+        // Check if the operation is explicitly blocked
+        String operationKey = moduleId + ":" + operation + ":" + target;
+        if (blockedOperations.contains(operationKey)) {
+            return false;
+        }
+        
+        // Check module sandbox permissions
+        ModuleSandbox sandbox = moduleSandboxes.get(moduleId);
+        if (sandbox != null) {
+            return sandbox.isOperationAllowed(operation, target);
+        }
+        
+        // Default to allow if no specific restrictions
+        return true;
     }
 
     private String generateRandomPassword() {

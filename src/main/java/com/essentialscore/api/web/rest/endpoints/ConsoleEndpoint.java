@@ -20,6 +20,7 @@ public class ConsoleEndpoint extends ApiEndpoint {
     private final LiveConsoleManager consoleManager;
     private final Queue<String> commandHistory;
     private final int MAX_HISTORY_SIZE = 100;
+    private final long startTime;
     
     /**
      * Creates a new console endpoint
@@ -31,6 +32,7 @@ public class ConsoleEndpoint extends ApiEndpoint {
         super(plugin);
         this.consoleManager = consoleManager;
         this.commandHistory = new ConcurrentLinkedQueue<>();
+        this.startTime = System.currentTimeMillis();
     }
     
     @Override
@@ -103,7 +105,7 @@ public class ConsoleEndpoint extends ApiEndpoint {
         status.put("consoleActive", true);
         status.put("commandHistorySize", commandHistory.size());
         status.put("serverTime", System.currentTimeMillis());
-        status.put("serverUptime", System.currentTimeMillis() - Bukkit.getServer().getStartTime());
+        status.put("serverUptime", System.currentTimeMillis() - startTime);
         
         // Performance info
         Runtime runtime = Runtime.getRuntime();

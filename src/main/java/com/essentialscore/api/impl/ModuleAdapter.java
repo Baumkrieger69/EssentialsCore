@@ -7,6 +7,8 @@ import org.bukkit.entity.Player;
 import com.essentialscore.ApiCore;
 import com.essentialscore.api.Module;
 import com.essentialscore.api.ModuleAPI;
+import com.essentialscore.lifecycle.ModuleStateManager;
+import com.essentialscore.lifecycle.ModuleState;
 
 import java.io.File;
 import java.util.List;

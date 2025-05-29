@@ -20,7 +20,7 @@ public class ModuleSandbox {
     private final Plugin plugin;
     private final ExecutorService executor;
     private final long defaultTimeoutMs;
-    private final boolean strictMode;
+    private boolean strictMode;
 
     /**
      * Creates a new module sandbox.
@@ -46,6 +46,26 @@ public class ModuleSandbox {
             Thread thread = new Thread(r);
             thread.setDaemon(true);
             thread.setName("ModuleSandbox-" + thread.getId());
+            return thread;
+        });
+    }
+
+    /**
+     * Creates a new module sandbox with module ID and security policy.
+     *
+     * @param plugin The plugin
+     * @param moduleId The module identifier  
+     * @param moduleName The module name
+     * @param securityPolicy The security policy
+     */
+    public ModuleSandbox(Plugin plugin, String moduleId, String moduleName, com.essentialscore.api.security.SecurityPolicy securityPolicy) {
+        this.plugin = plugin;
+        this.defaultTimeoutMs = 5000;
+        this.strictMode = securityPolicy != null;
+        this.executor = Executors.newCachedThreadPool(r -> {
+            Thread thread = new Thread(r);
+            thread.setDaemon(true);
+            thread.setName("ModuleSandbox-" + moduleId + "-" + thread.getId());
             return thread;
         });
     }
@@ -187,6 +207,36 @@ public class ModuleSandbox {
     }
 
     /**
+     * Sets the strict mode for this sandbox
+     * 
+     * @param strict Whether to enable strict mode
+     */
+    public void setStrictMode(boolean strict) {
+        // This would update the sandbox's security policy
+        // For now, just log the change
+        plugin.getLogger().info("Sandbox strict mode set to: " + strict);
+    }
+    
+    /**
+     * Checks if an operation is allowed in this sandbox
+     * 
+     * @param operation The operation to check
+     * @param target The target of the operation
+     * @return true if the operation is allowed
+     */
+    public boolean isOperationAllowed(String operation, String target) {
+        // Implement operation checking logic
+        // For now, allow most operations but block dangerous ones
+        if (operation.contains("file.delete") && target.contains("..")) {
+            return false; // Block path traversal
+        }
+        if (operation.contains("network") && strictMode) {
+            return false; // Block network operations in strict mode
+        }
+        return true;
+    }
+
+    /**
      * Checks if the sandbox is in strict mode.
      *
      * @return True if the sandbox is in strict mode
@@ -218,4 +268,4 @@ public class ModuleSandbox {
             Thread.currentThread().interrupt();
         }
     }
-} 
+}

@@ -1,5 +1,7 @@
 package com.essentialscore;
 
+import com.essentialscore.ThreadManager;
+import com.essentialscore.api.module.ModuleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.ConfigurationSection;
@@ -275,13 +277,13 @@ public class PerformanceBenchmark {
         Map<String, Object> modules = new LinkedHashMap<>();
         
         // Aktuelle Module auflisten
-        Map<String, ApiCore.ModuleInfo> loadedModules = apiCore.getLoadedModules();
+        Map<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> loadedModules = apiCore.getLoadedModules();
         results.put("loaded_modules_count", loadedModules.size());
         
         // Modul-Ladezeiten sammeln
         Map<String, Long> moduleLoadTimes = new HashMap<>();
         
-        for (Map.Entry<String, ApiCore.ModuleInfo> entry : loadedModules.entrySet()) {
+        for (Map.Entry<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> entry : loadedModules.entrySet()) {
             String moduleName = entry.getKey();
             
             // Module nur testen, wenn sie sicher neu geladen werden können
@@ -291,7 +293,7 @@ public class PerformanceBenchmark {
                 long midTime = System.nanoTime();
                 
                 try {
-                    ApiCore.ModuleInfo info = entry.getValue();
+                    ModuleManager.ModuleInfo info = entry.getValue();
                     apiCore.getModuleManager().loadModule(info.getJarFile());
                     long endTime = System.nanoTime();
                     

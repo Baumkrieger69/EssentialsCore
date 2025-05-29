@@ -4,6 +4,8 @@ import com.essentialscore.ApiCore;
 import com.essentialscore.api.*;
 import com.essentialscore.api.integration.*;
 import com.essentialscore.api.security.*;
+import com.essentialscore.api.module.ModuleSandbox;
+import com.essentialscore.api.security.ModuleSandbox as SecuritySandbox;
 import com.essentialscore.api.gui.GUI;
 import com.essentialscore.api.gui.GUIBuilder;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -224,7 +226,7 @@ public class CoreModuleAPI implements ModuleAPI {
     }
     
     @Override
-    public String registerModulePermission(Module module, String permissionName, String description) {
+    public String registerModulePermission(com.essentialscore.api.Module module, String permissionName, String description) {
         return core.getPermissionManager().registerModulePermission(moduleName, permissionName, description);
     }
     
@@ -234,8 +236,8 @@ public class CoreModuleAPI implements ModuleAPI {
     }
     
     @Override
-    public SecurityManager getSecurityManager() {
-        SecurityManager securityManager = core.getSecurityManager();
+    public com.essentialscore.api.security.SecurityManager getSecurityManager() {
+        com.essentialscore.api.security.SecurityManager securityManager = core.getSecurityManager();
         if (securityManager == null) {
             logWarning("Security manager is not available");
             return null;
@@ -374,8 +376,8 @@ public class CoreModuleAPI implements ModuleAPI {
     }
     
     @Override
-    public GUIBuilder createGUI(String moduleId, String title, int rows) {
-        return new DummyGUIBuilder();
+    public com.essentialscore.api.gui.GUIBuilder createGUI(String moduleId, String title, int rows) {
+        return core.getGUIManager().createGUI(moduleId, title, rows);
     }
     
     @Override
@@ -394,12 +396,6 @@ public class CoreModuleAPI implements ModuleAPI {
     }
     
     // Dummy-Implementierungen der Builder-Klassen
-    private class DummyGUIBuilder implements GUIBuilder {
-        @Override
-        public GUI build() {
-            return null;
-        }
-    }
     
     private class DummyInventoryBuilder implements ModuleAPI.InventoryBuilder {
         private final String title;
@@ -618,6 +614,164 @@ public class CoreModuleAPI implements ModuleAPI {
                 item.setItemMeta(meta);
             }
             return item;
+        }
+    }
+
+    @Override
+    public PerformanceResult checkModulePerformance(String moduleName) {
+        try {
+            com.essentialscore.api.module.ModulePerformanceData perfData = 
+                core.getModuleManager().getPerformanceData(moduleName);
+            
+            if (perfData != null) {
+                return new PerformanceResult() {
+                    @Override
+                    public long getExecutionCount() {
+                        return perfData.getExecutionCount();
+                    }
+                    
+                    @Override
+                    public double getAverageExecutionTime() {
+                        return perfData.getAverageExecutionTime();
+                    }
+                    
+                    @Override
+                    public long getTotalExecutionTime() {
+                        return perfData.getTotalExecutionTime();
+                    }
+                    
+                    @Override
+                    public long getLastExecutionTime() {
+                        return perfData.getLastExecutionTime();
+                    }
+                    
+                    @Override
+                    public boolean isHealthy() {
+                        return getAverageExecutionTime() < 1000; // Less than 1 second is healthy
+                    }
+                };
+            }
+            return null;
+        } catch (Exception e) {
+            logError("Error checking module performance for " + moduleName, e);
+            return null;
+        }
+    }
+    
+    /**
+     * Check if the plugin is still enabled
+     * 
+     * @return true if enabled
+     */
+    @Override
+    public boolean isPluginEnabled() {
+        return core.isEnabled();
+    }
+    
+    /**
+     * Removes player-specific module data.
+     * 
+     * @param playerUUID The player UUID
+     * @param key The data key
+     */
+    @Override
+    public void removePlayerData(UUID playerUUID, String key) {
+        try {
+            core.getDataManager().removePlayerData(moduleName, playerUUID, key);
+        } catch (Exception e) {
+            logError("Failed to remove player data: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Gets player-specific module data.
+     * 
+     * @param playerUUID The player UUID
+     * @param key The data key
+     * @return The stored data, or null if not found
+     */
+    @Override
+    public Object getPlayerData(UUID playerUUID, String key) {
+        try {
+            return core.getDataManager().getPlayerData(moduleName, playerUUID, key);
+        } catch (Exception e) {
+            logError("Failed to get player data: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * Sets player-specific module data.
+     * 
+     * @param playerUUID The player UUID
+     * @param key The data key
+     * @param value The data value
+     */
+    @Override
+    public void setPlayerData(UUID playerUUID, String key, Object value) {
+        try {
+            core.getDataManager().setPlayerData(moduleName, playerUUID, key, value);
+        } catch (Exception e) {
+            logError("Failed to set player data: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Gets the GUI manager.
+     * 
+     * @return The GUI manager
+     */
+    @Override
+    public com.essentialscore.api.gui.GUIManager getGUIManager() {
+        return core.getGUIManager();
+    }
+    
+    /**
+     * Gets the resources folder for a module.
+     * 
+     * @param moduleName The module name
+     * @return The module resources folder
+     */
+    @Override
+    public File getModuleResourcesFolder(String moduleName) {
+        try {
+            File dataFolder = core.getDataFolder();
+            File modulesFolder = new File(dataFolder, "modules");
+            File resourcesFolder = new File(modulesFolder, moduleName + "/resources");
+            
+            if (!resourcesFolder.exists()) {
+                resourcesFolder.mkdirs();
+            }
+            
+            return resourcesFolder;
+        } catch (Exception e) {
+            logError("Failed to get module resources folder: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * Gets the configuration file for a module.
+     * 
+     * @param moduleName The module name
+     * @return The module configuration file
+     */
+    @Override
+    public File getModuleConfigFile(String moduleName) {
+        try {
+            File dataFolder = core.getDataFolder();
+            File modulesFolder = new File(dataFolder, "modules");
+            File configFile = new File(modulesFolder, moduleName + "/config.yml");
+            
+            // Ensure parent directory exists
+            if (!configFile.getParentFile().exists()) {
+                configFile.getParentFile().mkdirs();
+            }
+            
+            return configFile;
+        } catch (Exception e) {
+            logError("Failed to get module config file: " + e.getMessage(), e);
+            return null;
         }
     }
 }

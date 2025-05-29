@@ -296,7 +296,7 @@ public class PerformanceEndpoint extends ApiEndpoint {
         server.put("onlinePlayers", Bukkit.getOnlinePlayers().size());
         server.put("maxPlayers", Bukkit.getMaxPlayers());
         server.put("viewDistance", Bukkit.getViewDistance());
-        server.put("serverName", Bukkit.getServerName());
+        server.put("serverName", Bukkit.getServer().getName());
         server.put("version", Bukkit.getVersion());
         server.put("bukkitVersion", Bukkit.getBukkitVersion());
         

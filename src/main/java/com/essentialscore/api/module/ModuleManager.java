@@ -20,12 +20,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
+import java.util.stream.Collectors;
 
 /**
  * Manages module loading, unloading, and lifecycle.
@@ -33,6 +35,7 @@ import java.util.zip.ZipEntry;
 public class ModuleManager {
     private final Plugin plugin;
     private final BasePlugin basePlugin;
+    private final com.essentialscore.ApiCore apiCore;
     private final File modulesDirectory;
     private final Map<String, ModuleInfo> loadedModules;
     private final Map<String, ModuleLogger> moduleLoggers;
@@ -50,6 +53,7 @@ public class ModuleManager {
     public ModuleManager(Plugin plugin, BasePlugin basePlugin, File modulesDirectory) {
         this.plugin = plugin;
         this.basePlugin = basePlugin;
+        this.apiCore = (com.essentialscore.ApiCore) plugin;
         this.modulesDirectory = modulesDirectory;
         this.loadedModules = new ConcurrentHashMap<>();
         this.moduleLoggers = new ConcurrentHashMap<>();
@@ -144,7 +148,7 @@ public class ModuleManager {
             Object moduleInstance = moduleClass.getDeclaredConstructor().newInstance();
 
             // Create module info
-            ModuleInfo moduleInfo = new ModuleInfo(moduleName, version, description, moduleInstance, classLoader);
+            ModuleInfo moduleInfo = new ModuleInfo(moduleName, version, description, moduleInstance, classLoader, file);
             loadedModules.put(moduleName, moduleInfo);
             loadOrder.add(moduleName);
 
@@ -176,7 +180,7 @@ public class ModuleManager {
         try {
             if (moduleInstance instanceof Module) {
                 Module module = (Module) moduleInstance;
-                module.onLoad(basePlugin, moduleLoggers.get(moduleName), moduleConfig);
+                module.init(apiCore.getModuleAPI(moduleName), moduleConfig);
             } else {
                 // Try reflection for older modules
                 try {
@@ -331,7 +335,8 @@ public class ModuleManager {
 
             // Call reload method
             if (moduleInstance instanceof Module) {
-                ((Module) moduleInstance).onReload();
+                FileConfiguration moduleConfig = loadModuleConfig(moduleName);
+                ((Module) moduleInstance).onReload(moduleConfig);
                 return true;
             } else {
                 try {
@@ -442,6 +447,125 @@ public class ModuleManager {
     }
 
     /**
+     * Loads the configuration for a module
+     * 
+     * @param moduleName The module name
+     * @return The module configuration
+     */
+    private FileConfiguration loadModuleConfig(String moduleName) {
+        try {
+            File configFile = new File(modulesDirectory, moduleName + "_config.yml");
+            if (configFile.exists()) {
+                return YamlConfiguration.loadConfiguration(configFile);
+            } else {
+                // Create default config
+                FileConfiguration config = new YamlConfiguration();
+                config.set("enabled", true);
+                config.set("module.name", moduleName);
+                config.save(configFile);
+                return config;
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to load config for module " + moduleName + ": " + e.getMessage());
+            return new YamlConfiguration();
+        }
+    }
+
+    /**
+     * Gets the configuration for a module (public method)
+     * 
+     * @param moduleName The module name
+     * @return The module configuration
+     */
+    public FileConfiguration getModuleConfig(String moduleName) {
+        return loadModuleConfig(moduleName);
+    }
+
+    /**
+     * Saves the configuration for a module
+     * 
+     * @param moduleName The module name
+     */
+    public void saveModuleConfig(String moduleName) {
+        try {
+            File configFile = new File(modulesDirectory, moduleName + "_config.yml");
+            FileConfiguration config = loadModuleConfig(moduleName);
+            config.save(configFile);
+            plugin.getLogger().info("Saved config for module: " + moduleName);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to save config for module " + moduleName + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Reloads the configuration for a module
+     * 
+     * @param moduleName The module name
+     */
+    public void reloadModuleConfig(String moduleName) {
+        try {
+            ModuleInfo info = loadedModules.get(moduleName);
+            if (info != null && info.getModule() != null) {
+                FileConfiguration config = loadModuleConfig(moduleName);
+                info.getModule().onReload(config);
+                plugin.getLogger().info("Reloaded config for module: " + moduleName);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to reload config for module " + moduleName + ": " + e.getMessage());
+        }
+    }
+
+    // Neue Methoden für Web API
+    public Set<String> getAllModuleNames() {
+        return loadedModules.keySet();
+    }
+
+    public Set<String> getEnabledModules() {
+        return loadedModules.entrySet().stream()
+            .filter(entry -> entry.getValue().isEnabled())
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+    }
+
+    public Module getModule(String name) {
+        ModuleInfo info = loadedModules.get(name);
+        return info != null ? info.getModule() : null;
+    }
+
+
+
+    public ModulePerformanceData getPerformanceData(String name) {
+        // Implementation für Performance-Daten
+        ModuleInfo info = loadedModules.get(name);
+        if (info != null) {
+            return info.getPerformanceData();
+        }
+        return null;
+    }
+
+    public List<String> getDependencies(String name) {
+        ModuleInfo info = loadedModules.get(name);
+        if (info != null && info.getModule() != null) {
+            Map<String, String> deps = info.getModule().getDependencies();
+            return new ArrayList<>(deps.keySet());
+        }
+        return new ArrayList<>();
+    }
+
+    public List<String> getDependents(String name) {
+        List<String> dependents = new ArrayList<>();
+        for (Map.Entry<String, ModuleInfo> entry : loadedModules.entrySet()) {
+            if (entry.getValue().getModule() != null) {
+                Map<String, String> deps = entry.getValue().getModule().getDependencies();
+                if (deps.containsKey(name)) {
+                    dependents.add(entry.getKey());
+                }
+            }
+        }
+        return dependents;
+    }
+
+    /**
      * Information about a module.
      */
     public static class ModuleInfo {
@@ -450,6 +574,9 @@ public class ModuleManager {
         private final String description;
         private final Object instance;
         private final URLClassLoader classLoader;
+        private final File jarFile;
+        private boolean enabled;
+        private ModulePerformanceData performanceData;
 
         /**
          * Creates new module information.
@@ -459,13 +586,17 @@ public class ModuleManager {
          * @param description The module description
          * @param instance The module instance
          * @param classLoader The module class loader
+         * @param jarFile The JAR file containing the module
          */
-        public ModuleInfo(String name, String version, String description, Object instance, URLClassLoader classLoader) {
+        public ModuleInfo(String name, String version, String description, Object instance, URLClassLoader classLoader, File jarFile) {
             this.name = name;
             this.version = version;
             this.description = description;
             this.instance = instance;
             this.classLoader = classLoader;
+            this.jarFile = jarFile;
+            this.enabled = false;
+            this.performanceData = new ModulePerformanceData(name);
         }
 
         /**
@@ -505,6 +636,18 @@ public class ModuleManager {
         }
 
         /**
+         * Gets the module as a Module interface if possible.
+         *
+         * @return The module instance cast to Module, or null if not possible
+         */
+        public Module getModule() {
+            if (instance instanceof Module) {
+                return (Module) instance;
+            }
+            return null;
+        }
+
+        /**
          * Gets the module class loader.
          *
          * @return The module class loader
@@ -512,5 +655,41 @@ public class ModuleManager {
         public URLClassLoader getClassLoader() {
             return classLoader;
         }
+
+        /**
+         * Gets the JAR file containing the module.
+         *
+         * @return The JAR file
+         */
+        public File getJarFile() {
+            return jarFile;
+        }
+
+        /**
+         * Checks if the module is enabled.
+         *
+         * @return True if the module is enabled
+         */
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        /**
+         * Sets the enabled status of the module.
+         *
+         * @param enabled True to enable, false to disable
+         */
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        /**
+         * Gets the performance data for this module.
+         *
+         * @return The performance data
+         */
+        public ModulePerformanceData getPerformanceData() {
+            return performanceData;
+        }
     }
-} 
+}

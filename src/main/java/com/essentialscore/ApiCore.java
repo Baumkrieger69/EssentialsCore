@@ -72,6 +72,7 @@ import com.essentialscore.api.command.Command;
 import com.essentialscore.api.command.CommandManager;
 import com.essentialscore.api.command.DynamicCommand;
 import com.essentialscore.api.config.ConfigManager;
+import com.essentialscore.api.language.LanguageManager;
 import com.essentialscore.api.module.ModuleFileManager;
 import com.essentialscore.api.module.ModuleManager;
 import com.essentialscore.api.module.ModuleManager.ModuleInfo;
@@ -79,7 +80,7 @@ import com.essentialscore.api.module.ModulePermissionManager;
 import com.essentialscore.api.module.ModuleSandbox;
 import com.essentialscore.api.permission.PermissionManager;
 import com.essentialscore.api.util.ModuleClassLoader;
-import com.essentialscore.api.util.ThreadManager;
+import com.essentialscore.ThreadManager;
 
 // Correct performance imports from local packages
 import com.essentialscore.PerformanceMonitor;
@@ -101,6 +102,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     private ThreadManager threadManager;
     private PermissionManager permissionManager;
     private CommandManager commandManager;
+    private LanguageManager languageManager;
     private PerformanceMonitor performanceMonitor;
     private PerformanceBenchmark performanceBenchmark;
     private ModuleFileManager moduleFileManager;
@@ -425,6 +427,7 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         configManager = new ConfigManager(this);
         threadManager = new ThreadManager(this);
         commandManager = new CommandManager(this);
+        languageManager = new LanguageManager();
         
         // Initialize performance monitoring if enabled
         if (getConfig().getBoolean("performance.enable-monitoring", true)) {
@@ -1158,7 +1161,8 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
                             internalInfo.getVersion(),
                             internalInfo.getDescription(),
                             internalInfo.getInstance(),
-                            internalInfo.getLoader());
+                            internalInfo.getLoader(),
+                            internalInfo.getJarFile());
                     
                     result.put(entry.getKey(), moduleInfo);
                 } catch (Exception e) {
@@ -1190,7 +1194,8 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
                 internalInfo.getVersion(),
                 internalInfo.getDescription(),
                 internalInfo.getInstance(),
-                internalInfo.getLoader());
+                internalInfo.getLoader(),
+                internalInfo.getJarFile());
         } catch (Exception e) {
             getLogger().log(Level.WARNING, "Failed to convert ModuleInfo: " + e.getMessage());
             return null;
@@ -1352,6 +1357,15 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     }
     
     /**
+     * Gibt den LanguageManager zurück
+     * 
+     * @return LanguageManager-Instanz
+     */
+    public LanguageManager getLanguageManager() {
+        return languageManager;
+    }
+    
+    /**
      * Gibt den PermissionManager zurück
      * 
      * @return PermissionManager-Instanz
@@ -1495,5 +1509,130 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      */
     public CommandManager getCommandManager() {
         return commandManager;
+    }
+
+    /**
+     * Gets the permission cache size
+     * 
+     * @return The permission cache size
+     */
+    public int getPermissionCacheSize() {
+        if (permissionManager != null) {
+            try {
+                Method getCacheSizeMethod = permissionManager.getClass().getMethod("getCacheSize");
+                return (Integer) getCacheSizeMethod.invoke(permissionManager);
+            } catch (Exception e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+    
+    /**
+     * Invokes a method on an object using reflection
+     * 
+     * @param object The object to invoke the method on
+     * @param methodName The method name
+     * @param paramTypes The parameter types
+     * @return The method result
+     */
+    public Object invokeMethod(Object object, String methodName, Class<?>[] paramTypes, Object... args) {
+        try {
+            Method method = object.getClass().getMethod(methodName, paramTypes);
+            return method.invoke(object, args);
+        } catch (Exception e) {
+            getLogger().warning("Failed to invoke method " + methodName + ": " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Tracks method execution time for performance monitoring.
+     *
+     * @param moduleName The module name
+     * @param methodName The method name
+     * @param startTime The start time in milliseconds
+     */
+    public void trackMethodTime(String moduleName, String methodName, long startTime) {
+        long duration = System.currentTimeMillis() - startTime;
+        getPerformanceMonitor().recordMethodExecution(moduleName, methodName, duration);
+    }
+
+    /**
+     * Gets module configuration.
+     *
+     * @param moduleName The module name
+     * @return The module configuration
+     */
+    public FileConfiguration getModuleConfig(String moduleName) {
+        return getModuleManager().getModuleConfig(moduleName);
+    }
+
+    /**
+     * Saves module configuration.
+     *
+     * @param moduleName The module name
+     */
+    public void saveModuleConfig(String moduleName) {
+        getModuleManager().saveModuleConfig(moduleName);
+    }
+
+    /**
+     * Reloads module configuration.
+     *
+     * @param moduleName The module name
+     */
+    public void reloadModuleConfig(String moduleName) {
+        getModuleManager().reloadModuleConfig(moduleName);
+    }
+
+    /**
+     * Gets the integration manager.
+     *
+     * @return The integration manager
+     */
+    public Object getIntegrationManager() {
+        // Placeholder implementation
+        return null;
+    }
+
+    /**
+     * Gets the placeholder manager.
+     *
+     * @return The placeholder manager
+     */
+    public Object getPlaceholderManager() {
+        // Placeholder implementation
+        return null;
+    }
+
+    /**
+     * Gets the security manager.
+     *
+     * @return The security manager
+     */
+    public com.essentialscore.api.security.SecurityManager getSecurityManager() {
+        // Placeholder implementation
+        return null;
+    }
+
+    /**
+     * Gets the GUI manager.
+     *
+     * @return The GUI manager
+     */
+    public Object getGUIManager() {
+        // Placeholder implementation
+        return null;
+    }
+
+    /**
+     * Gets the module state manager.
+     *
+     * @return The module state manager
+     */
+    public Object getModuleStateManager() {
+        // Placeholder implementation
+        return null;
     }
 }

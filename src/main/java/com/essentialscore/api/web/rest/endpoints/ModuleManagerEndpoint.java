@@ -1,7 +1,7 @@
 package com.essentialscore.api.web.rest.endpoints;
 
-import com.essentialscore.ModuleManager;
-import com.essentialscore.ModulePerformanceData;
+import com.essentialscore.api.module.ModuleManager;
+import com.essentialscore.api.module.ModulePerformanceData;
 import com.essentialscore.api.Module;
 import com.essentialscore.api.web.rest.ApiEndpoint;
 import com.essentialscore.api.web.rest.ApiRequest;

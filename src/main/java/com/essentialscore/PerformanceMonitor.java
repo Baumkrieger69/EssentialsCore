@@ -61,7 +61,7 @@ public class PerformanceMonitor {
         collectSystemPerformanceData();
         
         // Modul-Performance-Daten sammeln
-        for (Map.Entry<String, ApiCore.ModuleInfo> entry : core.getLoadedModules().entrySet()) {
+        for (Map.Entry<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> entry : core.getLoadedModules().entrySet()) {
             String moduleName = entry.getKey();
             
             // Erstelle oder aktualisiere Performance-Daten für das Modul
@@ -158,6 +158,17 @@ public class PerformanceMonitor {
     }
     
     /**
+     * Zeichnet eine Methodenausführung auf (Alias für registerMethodExecution)
+     * 
+     * @param moduleName Name des Moduls
+     * @param methodName Name der Methode
+     * @param durationMs Ausführungszeit in Millisekunden
+     */
+    public void recordMethodExecution(String moduleName, String methodName, long durationMs) {
+        registerMethodExecution(moduleName, methodName, (double) durationMs);
+    }
+    
+    /**
      * Gibt die Performance-Daten aller Module zurück
      * 
      * @return Map mit Modul-Performance-Daten
@@ -182,4 +193,4 @@ public class PerformanceMonitor {
     public void clearAllPerformanceData() {
         performanceData.clear();
     }
-} 
+}

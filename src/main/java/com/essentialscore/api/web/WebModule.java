@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
@@ -330,7 +331,6 @@ public class WebModule implements Module {
         }
     }
 
-    @Override
     public void onLoad(BasePlugin plugin, ModuleLogger logger, FileConfiguration config) {
         this.config = config;
         loadConfig();
@@ -346,32 +346,27 @@ public class WebModule implements Module {
         return "EssentialsCore Team";
     }
 
-    @Override
     public BasePlugin getPlugin() {
         return (BasePlugin) api.getPlugin();
     }
 
-    @Override
     public ModuleLogger getLogger() {
         return new ModuleLogger(LOGGER, getName(), false);
     }
 
-    @Override
     public FileConfiguration getConfig() {
         return config;
     }
 
     @Override
-    public String[] getDependencies() {
-        return new String[] { "security" };
+    public Map<String, String> getDependencies() {
+        return Map.of("security", "1.0");
     }
 
-    @Override
     public String[] getSoftDependencies() {
         return new String[0];
     }
 
-    @Override
     public void onReload() {
         // Reload configuration
         loadConfig();

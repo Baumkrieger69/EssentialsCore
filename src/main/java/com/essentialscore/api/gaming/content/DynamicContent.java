@@ -149,6 +149,85 @@ enum DifficultyLevel {
 }
 
 /**
+ * Spielerprofil mit Präferenzen und Statistiken.
+ */
+class PlayerProfile {
+    private final UUID playerId;
+    private final String name;
+    private final Map<String, Object> preferences;
+    private final Map<String, Integer> statistics;
+    
+    public PlayerProfile(UUID playerId, String name) {
+        this.playerId = playerId;
+        this.name = name;
+        this.preferences = new HashMap<>();
+        this.statistics = new HashMap<>();
+    }
+    
+    public UUID getPlayerId() { return playerId; }
+    public String getName() { return name; }
+    public Map<String, Object> getPreferences() { return preferences; }
+    public Map<String, Integer> getStatistics() { return statistics; }
+}
+
+/**
+ * Daten über Spielerverhalten.
+ */
+class PlayerBehaviorData {
+    private final Map<String, Double> behaviorMetrics;
+    private final List<String> recentActions;
+    private final long sessionDuration;
+    
+    public PlayerBehaviorData() {
+        this.behaviorMetrics = new HashMap<>();
+        this.recentActions = new ArrayList<>();
+        this.sessionDuration = 0;
+    }
+    
+    public Map<String, Double> getBehaviorMetrics() { return behaviorMetrics; }
+    public List<String> getRecentActions() { return recentActions; }
+    public long getSessionDuration() { return sessionDuration; }
+}
+
+/**
+ * Server-Bedingungen und -Status.
+ */
+class ServerConditions {
+    private final int playerCount;
+    private final double serverLoad;
+    private final Map<String, Object> conditions;
+    
+    public ServerConditions(int playerCount, double serverLoad) {
+        this.playerCount = playerCount;
+        this.serverLoad = serverLoad;
+        this.conditions = new HashMap<>();
+    }
+    
+    public int getPlayerCount() { return playerCount; }
+    public double getServerLoad() { return serverLoad; }
+    public Map<String, Object> getConditions() { return conditions; }
+}
+
+/**
+ * Interaktionsmuster zwischen Spielern.
+ */
+class InteractionPattern {
+    private final String type;
+    private final double frequency;
+    private final Map<String, Object> metadata;
+    
+    public InteractionPattern(String type, double frequency) {
+        this.type = type;
+        this.frequency = frequency;
+        this.metadata = new HashMap<>();
+    }
+    
+    public String getType() { return type; }
+    public double getFrequency() { return frequency; }
+    public Map<String, Object> getMetadata() { return metadata; }
+}
+
+/**
  * Kontext für die Quest-Generierung.
  */
 class QuestGenerationContext {

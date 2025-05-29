@@ -147,6 +147,18 @@ public class ApiResponse {
     }
     
     /**
+     * Creates a method not allowed response with a status code of 405
+     * 
+     * @param message The error message
+     * @return The API response
+     */
+    public static ApiResponse methodNotAllowed(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", message);
+        return new ApiResponse(405, response);
+    }
+    
+    /**
      * Creates an internal server error response with a status code of 500
      * 
      * @param message The error message

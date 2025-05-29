@@ -117,66 +117,11 @@ class GameEvent {
     public Map<String, Object> getData() { return data; }
 }
 
-class ServerConditions {
-    private final int playerCount;
-    private final double tps;
-    private final long memoryUsage;
-    
-    public ServerConditions(int playerCount, double tps, long memoryUsage) {
-        this.playerCount = playerCount;
-        this.tps = tps;
-        this.memoryUsage = memoryUsage;
-    }
-    
-    public int getPlayerCount() { return playerCount; }
-    public double getTps() { return tps; }
-    public long getMemoryUsage() { return memoryUsage; }
-}
-
-class PlayerProfile {
-    private final UUID playerId;
-    private final String username;
-    private final Map<String, Object> stats;
-    
-    public PlayerProfile(UUID playerId, String username) {
-        this.playerId = playerId;
-        this.username = username;
-        this.stats = new HashMap<>();
-    }
-    
-    public UUID getPlayerId() { return playerId; }
-    public String getUsername() { return username; }
-}
-
-class PlayerBehaviorData {
-    private final UUID playerId;
-    private final Map<String, Double> behaviorMetrics;
-    private final List<String> preferences;
-    
-    public PlayerBehaviorData(UUID playerId) {
-        this.playerId = playerId;
-        this.behaviorMetrics = new HashMap<>();
-        this.preferences = new ArrayList<>();
-    }
-    
-    public UUID getPlayerId() { return playerId; }
-    public Map<String, Double> getBehaviorMetrics() { return behaviorMetrics; }
-}
-
-class InteractionPattern {
-    private final String type;
-    private final double frequency;
-    private final Map<String, Object> context;
-    
-    public InteractionPattern(String type, double frequency) {
-        this.type = type;
-        this.frequency = frequency;
-        this.context = new HashMap<>();
-    }
-    
-    public String getType() { return type; }
-    public double getFrequency() { return frequency; }
-}
+// Removed duplicate class definitions - these classes are now in separate files:
+// - ServerConditions.java
+// - PlayerProfile.java
+// - PlayerBehaviorData.java
+// - InteractionPattern.java
 
 class QuestTemplate {
     private final String id;

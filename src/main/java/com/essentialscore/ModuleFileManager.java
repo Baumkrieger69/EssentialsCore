@@ -96,7 +96,7 @@ public class ModuleFileManager {
 
         try {
             // Hole die JAR-Datei des Moduls
-            ApiCore.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
+            com.essentialscore.api.module.ModuleManager.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
             if (moduleInfo == null) {
                 console.error("Modul " + moduleName + " nicht gefunden!");
                 return null;

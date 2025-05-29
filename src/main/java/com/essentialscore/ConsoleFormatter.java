@@ -14,6 +14,15 @@ import java.lang.reflect.Field;
  */
 public class ConsoleFormatter {
     
+    /**
+     * Gibt eine Nachricht an die Konsole aus.
+     * 
+     * @param message Die auszugebende Nachricht
+     */
+    private void log(String message) {
+        System.out.println(message);
+    }
+
     // ANSI Farbcodes
     public static final String RESET = "\u001B[0m";
     public static final String BLACK = "\u001B[30m";
@@ -597,4 +606,113 @@ public class ConsoleFormatter {
             return WHITE;
         }
     }
-} 
+    
+    // Fehlende Methoden für ApiCore und andere Klassen
+    
+    /**
+     * Erstellt einen Header mit hervorgehobenem Text
+     */
+    public void header(String text) {
+        String line = BRIGHT_CYAN + "═".repeat(Math.max(50, text.length() + 10)) + RESET;
+        log(line);
+        log(BRIGHT_CYAN + "  " + BOLD + text + RESET);
+        log(line);
+    }
+    
+    /**
+     * Fügt eine Leerzeile hinzu
+     */
+    public void blank() {
+        log("");
+    }
+    
+    /**
+     * Erstellt eine doppelte Linie
+     */
+    public void doubleLine() {
+        log(BRIGHT_CYAN + "═".repeat(60) + RESET);
+    }
+    
+    /**
+     * Erstellt einen Subheader
+     */
+    public void subHeader(String text) {
+        log(BRIGHT_YELLOW + "▶ " + BOLD + text + RESET);
+        log(BRIGHT_YELLOW + "─".repeat(Math.max(30, text.length() + 5)) + RESET);
+    }
+    
+    /**
+     * Erstellt eine Sektion
+     */
+    public void section(String text) {
+        log(BRIGHT_GREEN + "┌─ " + BOLD + text + RESET);
+    }
+    
+    /**
+     * Erstellt einen Listeneintrag
+     */
+    public void listItem(String marker, String text) {
+        log(BRIGHT_WHITE + "  " + marker + " " + RESET + text);
+    }
+    
+    /**
+     * Erstellt eine einfache Fortschrittsanzeige
+     */
+    public void progressBar(int current, int total, int width) {
+        if (total <= 0) return;
+        
+        int filledWidth = (int) ((double) current / total * width);
+        String filled = "█".repeat(filledWidth);
+        String empty = "░".repeat(width - filledWidth);
+        
+        int percentage = (int) ((double) current / total * 100);
+        
+        log(BRIGHT_CYAN + "[" + BRIGHT_GREEN + filled + BRIGHT_BLACK + empty + BRIGHT_CYAN + "] " + 
+            BRIGHT_WHITE + percentage + "%" + RESET);
+    }
+    
+    /**
+     * Erstellt eine farbige Fortschrittsanzeige mit Text
+     */
+    public void colorProgressBar(int current, int total, int width, String statusText) {
+        if (total <= 0) return;
+        
+        int filledWidth = (int) ((double) current / total * width);
+        String filled = "█".repeat(filledWidth);
+        String empty = "░".repeat(width - filledWidth);
+        
+        // Farbauswahl basierend auf Fortschritt
+        String color = current >= total ? BRIGHT_GREEN : 
+                      current >= total * 0.7 ? BRIGHT_YELLOW : BRIGHT_RED;
+        
+        log(BRIGHT_CYAN + "[" + color + filled + BRIGHT_BLACK + empty + BRIGHT_CYAN + "] " + 
+            BRIGHT_WHITE + statusText + RESET);
+    }
+    
+    /**
+     * Erstellt einen detaillierten Schritt mit Status
+     */
+    public void richStep(int current, int total, String text, boolean success) {
+        String status = success ? BRIGHT_GREEN + "✓" : BRIGHT_RED + "✗";
+        String prefix = BRIGHT_CYAN + "[" + current + "/" + total + "] " + status + " ";
+        log(prefix + RESET + text);
+    }
+    
+    /**
+     * Erstellt einen Textblock mit Rahmen
+     */
+    public void textBlock(String title, String content, boolean success) {
+        String color = success ? BRIGHT_GREEN : BRIGHT_RED;
+        String icon = success ? "✓" : "✗";
+        
+        log(color + "┌─ " + icon + " " + BOLD + title + RESET);
+        
+        // Content in Zeilen aufteilen und einrücken
+        String[] lines = content.split("\n");
+        for (String line : lines) {
+            log(color + "│ " + RESET + line);
+        }
+        
+        log(color + "└" + "─".repeat(Math.max(30, title.length() + 10)) + RESET);
+    }
+}

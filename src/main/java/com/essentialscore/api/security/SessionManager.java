@@ -117,6 +117,49 @@ public class SessionManager {
     }
     
     /**
+     * Initializes a session for a player
+     * 
+     * @param player The player to initialize a session for
+     */
+    public void initializeSession(Player player) {
+        UUID playerId = player.getUniqueId();
+        Session session = new Session(playerId, player.getName());
+        sessions.put(playerId, session);
+        
+        LOGGER.info("Session initialized for player: " + player.getName());
+        
+        // Log the session creation
+        auditLogger.logPlayerAction(
+            AuditLogger.Actions.LOGIN,
+            "session",
+            player,
+            "Session initialized"
+        );
+    }
+    
+    /**
+     * Terminates a session for a player
+     * 
+     * @param player The player to terminate the session for
+     */
+    public void terminateSession(Player player) {
+        UUID playerId = player.getUniqueId();
+        Session session = sessions.remove(playerId);
+        
+        if (session != null) {
+            LOGGER.info("Session terminated for player: " + player.getName());
+            
+            // Log the session termination
+            auditLogger.logPlayerAction(
+                AuditLogger.Actions.LOGOUT,
+                "session", 
+                player,
+                "Session terminated"
+            );
+        }
+    }
+
+    /**
      * Gets a player's session.
      *
      * @param playerId The player ID
@@ -341,6 +384,16 @@ public class SessionManager {
         }
         
         /**
+         * Creates a new session with default timeout.
+         *
+         * @param playerId The player ID
+         * @param playerName The player name
+         */
+        public Session(UUID playerId, String playerName) {
+            this(playerId, playerName, DEFAULT_TIMEOUT);
+        }
+
+        /**
          * Refreshes the session, extending its expiration time.
          */
         public void refresh() {
@@ -470,4 +523,4 @@ public class SessionManager {
             invalidateSession(playerId);
         }
     }
-} 
+}

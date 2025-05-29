@@ -1,6 +1,7 @@
 package com.essentialscore.api.command;
 
 import com.essentialscore.api.CommandDefinition;
+import com.essentialscore.api.SimpleCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
@@ -29,6 +30,7 @@ public class CommandManager {
     
     private final Plugin plugin;
     private final Map<String, Command> registeredCommands;
+    private final Map<String, BukkitCommand> bukkitCommands;
     private final Map<String, Set<String>> moduleCommands;
     private final Map<String, Long> commandCooldowns;
     private final Map<String, HelpTopic> helpTopics;
@@ -42,6 +44,7 @@ public class CommandManager {
     public CommandManager(Plugin plugin) {
         this.plugin = plugin;
         this.registeredCommands = new ConcurrentHashMap<>();
+        this.bukkitCommands = new ConcurrentHashMap<>();
         this.moduleCommands = new ConcurrentHashMap<>();
         this.commandCooldowns = new ConcurrentHashMap<>();
         this.helpTopics = new ConcurrentHashMap<>();
@@ -190,7 +193,7 @@ public class CommandManager {
      * @param commandDef The legacy command definition
      * @return The registered command
      */
-    public Command registerLegacyCommand(CommandDefinition commandDef) {
+    public SimpleCommand registerLegacyCommand(CommandDefinition commandDef) {
         if (commandDef == null) return null;
         
         // Create a command from the legacy definition
@@ -199,22 +202,16 @@ public class CommandManager {
             .usage(commandDef.getUsage())
             .aliases(commandDef.getAliases())
             .permission(commandDef.getPermission())
-            .build((context) -> {
+            .build((sender, args) -> {
                 // Delegate to the legacy command
-                return commandDef.execute(
-                    context.getSender(),
-                    context.getLabel(),
-                    context.getRawArgs()
-                );
+                return commandDef.execute(sender, commandDef.getName(), args);
             }, (sender, args) -> {
                 // Delegate to the legacy tab completion
                 return commandDef.tabComplete(sender, args);
             });
         
-        // Register the command
-        registerCommand(command);
-        
-        return command;
+        // Register the command using the CommandDefinition interface
+        return registerCommandDefinition(command);
     }
     
     /**
@@ -236,6 +233,48 @@ public class CommandManager {
         return count;
     }
     
+    /**
+     * Registers a command definition as a bukkit command
+     * 
+     * @param commandDef The command definition to register
+     * @return The registered command
+     */
+    public SimpleCommand registerCommandDefinition(CommandDefinition commandDef) {
+        if (commandDef == null) return null;
+        
+        try {
+            // Create a bukkit command wrapper
+            BukkitCommand bukkitCommand = new BukkitCommand(commandDef.getName()) {
+                @Override
+                public boolean execute(CommandSender sender, String commandLabel, String[] args) {
+                    return commandDef.execute(sender, commandLabel, args);
+                }
+                
+                @Override
+                public List<String> tabComplete(CommandSender sender, String alias, String[] args) {
+                    return commandDef.tabComplete(sender, args);
+                }
+            };
+            
+            bukkitCommand.setDescription(commandDef.getDescription());
+            bukkitCommand.setUsage(commandDef.getUsage());
+            bukkitCommand.setPermission(commandDef.getPermission());
+            bukkitCommand.setAliases(commandDef.getAliases());
+            
+            // Register with bukkit
+            bukkitCommandMap.register(plugin.getName(), bukkitCommand);
+            
+            // Store in our registry
+            bukkitCommands.put(commandDef.getName().toLowerCase(), bukkitCommand);
+            
+            return (commandDef instanceof SimpleCommand) ? (SimpleCommand) commandDef : null;
+            
+        } catch (Exception e) {
+            LOGGER.severe("Failed to register command " + commandDef.getName() + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * Gets a registered command by name.
      *
@@ -569,4 +608,4 @@ public class CommandManager {
             return manager.tabCompleteCommand(sender, alias, args);
         }
     }
-} 
+}

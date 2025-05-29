@@ -205,7 +205,7 @@ public class ModuleResourceManager {
         }
         
         // Hole die Modul-JAR
-        ApiCore.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
+        com.essentialscore.api.module.ModuleManager.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
         if (moduleInfo == null) {
             console.error("Modul nicht gefunden: " + moduleName);
             return false;
@@ -1019,7 +1019,7 @@ public class ModuleResourceManager {
      * Lädt eine Ressource direkt aus der JAR, ohne sie vorher zu extrahieren
      */
     private byte[] loadResourceDirectlyFromJar(String moduleName, String resourcePath) {
-        ApiCore.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
+        com.essentialscore.api.module.ModuleManager.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
         if (moduleInfo == null) {
             return null;
         }
@@ -1100,7 +1100,7 @@ public class ModuleResourceManager {
      * Erstellt einen InputStream für eine Ressource direkt aus der JAR
      */
     private InputStream getModuleJarResourceStream(String moduleName, String resourcePath) {
-        ApiCore.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
+        com.essentialscore.api.module.ModuleManager.ModuleInfo moduleInfo = core.getModuleInfo(moduleName);
         if (moduleInfo == null) {
             return null;
         }

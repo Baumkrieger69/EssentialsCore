@@ -81,6 +81,13 @@ public abstract class BaseModule implements Module {
         onInitialize();
     }
     
+    /**
+     * Called during module initialization. Override this method to perform module-specific initialization.
+     */
+    protected void onInitialize() {
+        // Default implementation, can be overridden by subclasses
+    }
+    
     @Override
     public void onPostLoad() {
         // Default implementation, can be overridden by subclasses
@@ -92,7 +99,7 @@ public abstract class BaseModule implements Module {
     }
     
     @Override
-    public boolean configure(Configuration config) {
+    public boolean onReload(FileConfiguration config) {
         this.config = config;
         return true;
     }
@@ -274,4 +281,4 @@ public abstract class BaseModule implements Module {
             return BaseModule.this.onTabComplete(getName(), sender, args);
         }
     }
-} 
+}
