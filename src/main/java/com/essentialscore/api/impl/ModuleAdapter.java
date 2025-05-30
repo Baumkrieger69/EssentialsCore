@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ModuleAdapter {
     private final Module module;
     private final ModuleAPI moduleAPI;
-    private final ApiCore apiCore;
     private final ModuleStateManager stateManager;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean enabled = new AtomicBoolean(false);
@@ -38,7 +37,6 @@ public class ModuleAdapter {
         
         this.module = module;
         this.moduleAPI = moduleAPI;
-        this.apiCore = apiCore;
         this.stateManager = apiCore.getModuleStateManager();
     }
 

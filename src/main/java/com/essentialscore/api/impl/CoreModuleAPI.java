@@ -5,7 +5,7 @@ import com.essentialscore.api.*;
 import com.essentialscore.api.integration.*;
 import com.essentialscore.api.security.*;
 import com.essentialscore.api.module.ModuleSandbox;
-import com.essentialscore.api.security.ModuleSandbox as SecuritySandbox;
+import com.essentialscore.api.gui.GUI;
 import com.essentialscore.api.gui.GUI;
 import com.essentialscore.api.gui.GUIBuilder;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -246,12 +246,12 @@ public class CoreModuleAPI implements ModuleAPI {
     }
     
     @Override
-    public ModuleSandbox getModuleSandbox(String moduleId) {
+    public com.essentialscore.api.security.ModuleSandbox getModuleSandbox(String moduleId) {
         if (moduleId == null || moduleId.isEmpty()) {
             throw new IllegalArgumentException("Module ID cannot be null or empty");
         }
         
-        ModuleSandbox sandbox = core.getModuleSandbox();
+        com.essentialscore.api.security.ModuleSandbox sandbox = core.getModuleSandbox();
         if (sandbox == null) {
             logWarning("Sandbox is not available for module: " + moduleId);
             return null;

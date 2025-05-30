@@ -267,10 +267,11 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void error(String message) {
+        String symbol = useUnicodeSymbols ? ERROR_SYMBOL + " " : "";
         if (useColors) {
-            logger.severe(formatWithPrefix(RED + "FEHLER: " + message + RESET));
+            logger.severe(formatWithPrefix(symbol + RED + "FEHLER: " + message + RESET));
         } else {
-            logger.severe(formatWithPrefix("FEHLER: " + message));
+            logger.severe(formatWithPrefix(symbol + "FEHLER: " + message));
         }
     }
     
@@ -280,10 +281,11 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void warning(String message) {
+        String symbol = useUnicodeSymbols ? WARNING_SYMBOL + " " : "";
         if (useColors) {
-            logger.warning(formatWithPrefix(YELLOW + "WARNUNG: " + message + RESET));
+            logger.warning(formatWithPrefix(symbol + YELLOW + "WARNUNG: " + message + RESET));
         } else {
-            logger.warning(formatWithPrefix("WARNUNG: " + message));
+            logger.warning(formatWithPrefix(symbol + "WARNUNG: " + message));
         }
     }
     
@@ -293,10 +295,11 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void info(String message) {
+        String symbol = useUnicodeSymbols ? INFO_SYMBOL + " " : "";
         if (useColors) {
-            logger.info(formatWithPrefix(BRIGHT_WHITE + message + RESET));
+            logger.info(formatWithPrefix(symbol + BRIGHT_WHITE + message + RESET));
         } else {
-            logger.info(formatWithPrefix(message));
+            logger.info(formatWithPrefix(symbol + message));
         }
     }
     
@@ -308,11 +311,26 @@ public class ConsoleFormatter {
      */
     public void debug(String message, boolean condition) {
         if (condition) {
-        if (useColors) {
-                logger.info(formatWithPrefix(BRIGHT_CYAN + "DEBUG: " + message + RESET));
-        } else {
-                logger.info(formatWithPrefix("DEBUG: " + message));
+            String symbol = useUnicodeSymbols ? DEBUG_SYMBOL + " " : "";
+            if (useColors) {
+                logger.info(formatWithPrefix(symbol + BRIGHT_CYAN + "DEBUG: " + message + RESET));
+            } else {
+                logger.info(formatWithPrefix(symbol + "DEBUG: " + message));
             }
+        }
+    }
+    
+    /**
+     * Gibt eine wichtige Nachricht aus
+     * 
+     * @param message Die Nachricht
+     */
+    public void important(String message) {
+        String symbol = useUnicodeSymbols ? IMPORTANT_SYMBOL + " " : "";
+        if (useColors) {
+            logger.info(formatWithPrefix(symbol + BRIGHT_YELLOW + "WICHTIG: " + message + RESET));
+        } else {
+            logger.info(formatWithPrefix(symbol + "WICHTIG: " + message));
         }
     }
     
@@ -322,10 +340,11 @@ public class ConsoleFormatter {
      * @param message Die Nachricht
      */
     public void success(String message) {
+        String symbol = useUnicodeSymbols ? SUCCESS_SYMBOL + " " : "";
         if (useColors) {
-            logger.info(formatWithPrefix(BRIGHT_GREEN + "ERFOLG: " + message + RESET));
+            logger.info(formatWithPrefix(symbol + BRIGHT_GREEN + "ERFOLG: " + message + RESET));
         } else {
-            logger.info(formatWithPrefix("ERFOLG: " + message));
+            logger.info(formatWithPrefix(symbol + "ERFOLG: " + message));
         }
     }
     

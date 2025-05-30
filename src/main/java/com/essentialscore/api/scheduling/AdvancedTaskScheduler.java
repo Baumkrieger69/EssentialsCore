@@ -92,12 +92,13 @@ public class AdvancedTaskScheduler {
             TaskPriority priority) {
         
         CronSchedule schedule = new CronSchedule(cronExpression);
-        ScheduledTask scheduledTask = new ScheduledTask(
-            taskId,
-            task,
-            schedule,
-            priority
-        );
+        ScheduledTask scheduledTask = ScheduledTask.builder()
+            .id(UUID.fromString(taskId))
+            .name("CronTask_" + taskId)
+            .runnable(task)
+            .priority(priority)
+            .cronExpression(cronExpression)
+            .build();
         
         activeTasks.put(taskId, scheduledTask);
         schedule.scheduleNext(scheduledTask, scheduler);
