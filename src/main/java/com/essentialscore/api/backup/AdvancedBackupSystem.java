@@ -1,10 +1,12 @@
 package com.essentialscore.api.backup;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.UUID;
 import java.time.Instant;
 import java.nio.file.*;
 import java.io.*;
@@ -232,5 +234,67 @@ public class AdvancedBackupSystem {
     private boolean shouldExclude(Path path) {
         return excludedPaths.stream().anyMatch(excluded -> 
             path.startsWith(excluded) || path.endsWith(excluded));
+    }
+    
+    /**
+     * Findet alle geänderten Dateien seit dem letzten Backup.
+     */
+    private Set<Path> findChangedFiles() throws IOException {
+        Set<Path> changedFiles = new HashSet<>();
+        Files.walk(plugin.getDataFolder().toPath())
+            .filter(Files::isRegularFile)
+            .forEach(file -> {
+                try {
+                    byte[] currentChecksum = calculateChecksum(file);
+                    String currentChecksumHex = bytesToHex(currentChecksum);
+                    String cachedChecksum = checksumCache.get(file.toString());
+                    
+                    if (!currentChecksumHex.equals(cachedChecksum)) {
+                        changedFiles.add(file);
+                        checksumCache.put(file.toString(), currentChecksum);
+                    }
+                } catch (IOException e) {
+                    plugin.getLogger().warning("Fehler beim Prüfen der Datei: " + file);
+                }
+            });
+        return changedFiles;
+    }
+    
+    /**
+     * Prüft, ob eine Datei bereits als Duplikat existiert.
+     */
+    private boolean isFileDuplicate(String checksumHex) {
+        return checksumCache.containsValue(checksumHex.getBytes());
+    }
+    
+    /**
+     * Erstellt einen Backup für eine einzelne Datei.
+     */
+    private void backupFile(Path sourceFile, Path backupPath, byte[] checksum) throws IOException {
+        Path targetFile = backupPath.resolve(sourceFile.getFileName());
+        Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    /**
+     * Erstellt Backup-Metadaten.
+     */
+    private BackupMetadata createBackupMetadata(String backupId, Set<Path> files, Map<String, String> deduplicationMap) {
+        return new BackupMetadata(backupId, Instant.now(), files.size(), deduplicationMap);
+    }
+    
+    /**
+     * Berechnet die Gesamtgröße eines Backup-Verzeichnisses.
+     */
+    private long calculateTotalSize(Path backupPath) throws IOException {
+        return Files.walk(backupPath)
+            .filter(Files::isRegularFile)
+            .mapToLong(file -> {
+                try {
+                    return Files.size(file);
+                } catch (IOException e) {
+                    return 0L;
+                }
+            })
+            .sum();
     }
 }

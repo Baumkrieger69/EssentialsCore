@@ -1,6 +1,7 @@
 package com.essentialscore.api.gaming.content;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.time.Instant;

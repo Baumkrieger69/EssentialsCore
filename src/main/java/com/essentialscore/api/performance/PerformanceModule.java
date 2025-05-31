@@ -287,7 +287,7 @@ public class PerformanceModule {
      */
     private boolean handleTestsCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        List<String> args = context.getArgs().getAll();
+        List<String> args = Arrays.asList(context.getArgs());
         
         if (args.isEmpty()) {
             // List active tests
@@ -424,7 +424,7 @@ public class PerformanceModule {
      */
     private boolean handleAnalyticsCommand(CommandContext context) {
         CommandSender sender = context.getSender();
-        List<String> args = context.getArgs().getAll();
+        List<String> args = Arrays.asList(context.getArgs());
         
         if (args.isEmpty()) {
             // Show general analytics

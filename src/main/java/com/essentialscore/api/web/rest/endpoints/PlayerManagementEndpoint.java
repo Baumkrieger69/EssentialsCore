@@ -197,7 +197,7 @@ public class PlayerManagementEndpoint extends ApiEndpoint {
         String reason = "Kicked by admin";
         if (body != null && !body.trim().isEmpty()) {
             try {
-                JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+                JsonObject json = new JsonParser().parse(body).getAsJsonObject();
                 if (json.has("reason")) {
                     reason = json.get("reason").getAsString();
                 }
@@ -227,7 +227,7 @@ public class PlayerManagementEndpoint extends ApiEndpoint {
         
         if (body != null && !body.trim().isEmpty()) {
             try {
-                JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+                JsonObject json = new JsonParser().parse(body).getAsJsonObject();
                 if (json.has("reason")) {
                     reason = json.get("reason").getAsString();
                 }
@@ -285,7 +285,7 @@ public class PlayerManagementEndpoint extends ApiEndpoint {
         }
         
         try {
-            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(body).getAsJsonObject();
             
             if (json.has("target")) {
                 // Teleport to another player
@@ -337,7 +337,7 @@ public class PlayerManagementEndpoint extends ApiEndpoint {
         }
         
         try {
-            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(body).getAsJsonObject();
             String mode = json.get("gamemode").getAsString().toUpperCase();
             
             GameMode gameMode = GameMode.valueOf(mode);
@@ -404,7 +404,7 @@ public class PlayerManagementEndpoint extends ApiEndpoint {
         }
         
         try {
-            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(body).getAsJsonObject();
             String message = json.get("message").getAsString();
             
             Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage("[WebUI Admin] " + message));

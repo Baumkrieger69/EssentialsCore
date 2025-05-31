@@ -170,7 +170,7 @@ public class PerformancePredictor {
         }
         
         // Check if current usage is approaching threshold
-        if (currentUsage > threshold * 0.7) {
+        if (currentUsage > maxUsage * 0.7) {
             // Check trend
             double slope = usageTrend.getSlope();
             if (slope > 0) {
@@ -336,6 +336,16 @@ public class PerformancePredictor {
         }
         
         /**
+         * Gets the metric name.
+         *
+         * @return The metric name
+         */
+        @SuppressWarnings("unused")
+        public String getMetricName() {
+            return metricName;
+        }
+        
+        /**
          * Adds a sample to the trend analysis.
          *
          * @param value The sample value
@@ -402,6 +412,7 @@ public class PerformancePredictor {
          * @param time The future time
          * @return The predicted value
          */
+        @SuppressWarnings("unused")
         public double predictValue(Instant time) {
             if (dataPoints.isEmpty()) return 0;
             

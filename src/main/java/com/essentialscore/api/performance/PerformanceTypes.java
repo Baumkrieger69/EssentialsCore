@@ -8,61 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Missing performance monitoring classes
  */
 
-class AnomalyDetector {
-    private final Map<String, Double> baselineMetrics;
-    private final double threshold;
-    
-    public AnomalyDetector(double threshold) {
-        this.baselineMetrics = new HashMap<>();
-        this.threshold = threshold;
-    }
-    
-    public List<Anomaly> detectAnomalies(Map<String, Double> currentMetrics) {
-        List<Anomaly> anomalies = new ArrayList<>();
-        
-        for (Map.Entry<String, Double> entry : currentMetrics.entrySet()) {
-            String metric = entry.getKey();
-            Double currentValue = entry.getValue();
-            Double baseline = baselineMetrics.get(metric);
-            
-            if (baseline != null && Math.abs(currentValue - baseline) > threshold) {
-                anomalies.add(new Anomaly(metric, currentValue, baseline, Anomaly.Severity.MEDIUM));
-            }
-        }
-        
-        return anomalies;
-    }
-    
-    public void updateBaseline(String metric, double value) {
-        baselineMetrics.put(metric, value);
-    }
-    
-    public static class Anomaly {
-        private final String metric;
-        private final double currentValue;
-        private final double expectedValue;
-        private final Severity severity;
-        private final Instant timestamp;
-        
-        public Anomaly(String metric, double currentValue, double expectedValue, Severity severity) {
-            this.metric = metric;
-            this.currentValue = currentValue;
-            this.expectedValue = expectedValue;
-            this.severity = severity;
-            this.timestamp = Instant.now();
-        }
-        
-        public String getMetric() { return metric; }
-        public double getCurrentValue() { return currentValue; }
-        public double getExpectedValue() { return expectedValue; }
-        public Severity getSeverity() { return severity; }
-        public Instant getTimestamp() { return timestamp; }
-        
-        public enum Severity {
-            LOW, MEDIUM, HIGH, CRITICAL
-        }
-    }
-}
+// AnomalyDetector class moved to separate file: com.essentialscore.api.performance.AnomalyDetector
 
 class PredictiveScaler {
     private final Map<String, List<Double>> historicalData;

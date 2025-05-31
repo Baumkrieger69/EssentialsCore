@@ -33,4 +33,17 @@ public class SecurityPolicy {
     public boolean isOperationAllowed(String operationType, String target) {
         return enforced ? false : true; // Default: Erlaube alle Operationen wenn nicht erzwungen
     }
+    
+    // Methods to use the rules map
+    public void addRule(String key, Object value) {
+        rules.put(key, value);
+    }
+    
+    public Object getRule(String key) {
+        return rules.get(key);
+    }
+    
+    public Map<String, Object> getRules() {
+        return new HashMap<>(rules); // Return a copy to prevent modification
+    }
 }

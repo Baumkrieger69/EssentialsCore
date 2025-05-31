@@ -22,10 +22,9 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
     private Object regionContainer;
     private Method regionContainerGetMethod;
     private Method worldAdapterGetMethod;
-    private Method regionManagerGetMethod;
     private Method hasRegionMethod;
-    private Method getRegionsMethod;
     private Method regionCanBuildMethod;
+    private Method createQueryMethod;
     private int worldGuardVersion;
     
     /**
@@ -35,6 +34,16 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
      */
     public WorldGuardIntegration(Plugin plugin) {
         super(plugin, "WorldGuard");
+    }
+    
+    /**
+     * Gets the plugin that this integration belongs to.
+     * 
+     * @return The plugin instance
+     */
+    @Override
+    public Plugin getPlugin() {
+        return plugin;
     }
     
     @Override
@@ -64,13 +73,12 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
     
     @Override
     protected void onPluginShutdown() {
-        worldGuardPlugin = null;
         regionContainer = null;
         regionContainerGetMethod = null;
         worldAdapterGetMethod = null;
-        regionManagerGetMethod = null;
         hasRegionMethod = null;
-        getRegionsMethod = null;
+        regionCanBuildMethod = null;
+        createQueryMethod = null;
         regionCanBuildMethod = null;
     }
     
@@ -115,9 +123,6 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
         
         Class<?> regionManagerClass = Class.forName("com.sk89q.worldguard.protection.managers.RegionManager");
         hasRegionMethod = regionManagerClass.getMethod("hasRegion", String.class);
-        getRegionsMethod = regionManagerClass.getMethod("getApplicableRegions", Class.forName("com.sk89q.worldguard.protection.ApplicableRegionSet"));
-        
-        // Get canBuild method
         Class<?> worldGuardClass = Class.forName("com.sk89q.worldguard.bukkit.WorldGuardPlugin");
         regionCanBuildMethod = worldGuardClass.getMethod("canBuild", Player.class, Location.class);
     }
@@ -132,7 +137,6 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
         Object worldGuard = getInstance.invoke(null);
         
         // Get platform manager and region container
-        Class<?> platformManagerClass = Class.forName("com.sk89q.worldguard.protection.platform.RegionContainer");
         Method getPlatform = worldGuardClass.getMethod("getPlatform");
         Object platform = getPlatform.invoke(worldGuard);
         
@@ -151,12 +155,12 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
         Class<?> regionManagerClass = Class.forName("com.sk89q.worldguard.protection.managers.RegionManager");
         hasRegionMethod = regionManagerClass.getMethod("hasRegion", String.class);
         
-        // Set up region query for canBuild
         Class<?> regionQueryClass = Class.forName("com.sk89q.worldguard.protection.regions.RegionQuery");
-        Method createQuery = regionContainerClass.getMethod("createQuery");
-        Object regionQuery = createQuery.invoke(regionContainer);
+        // Store createQuery method as a class field for later use in canBuild method
+        this.createQueryMethod = regionContainerClass.getMethod("createQuery");
         
         Class<?> locClass = Class.forName("com.sk89q.worldedit.util.Location");
+        regionCanBuildMethod = regionQueryClass.getMethod("testBuild", locClass, Class.forName("com.sk89q.worldguard.LocalPlayer"));
         regionCanBuildMethod = regionQueryClass.getMethod("testBuild", locClass, Class.forName("com.sk89q.worldguard.LocalPlayer"));
     }
     
@@ -213,10 +217,7 @@ public class WorldGuardIntegration extends AbstractPluginDependentIntegration {
                 
                 Method adaptLoc = bukkit.getMethod("adapt", Location.class);
                 Object loc = adaptLoc.invoke(null, location);
-                
-                Class<?> regionContainerClass = regionContainer.getClass();
-                Method createQuery = regionContainerClass.getMethod("createQuery");
-                Object regionQuery = createQuery.invoke(regionContainer);
+                Object regionQuery = createQueryMethod.invoke(regionContainer);
                 
                 Method testBuild = regionQuery.getClass().getMethod("testBuild", loc.getClass(), localPlayer.getClass());
                 return (Boolean) testBuild.invoke(regionQuery, loc, localPlayer);

@@ -56,6 +56,7 @@ public class PerformanceMonitor {
     /**
      * Sammelt Performance-Daten für den Core und alle Module
      */
+    @SuppressWarnings("unused") // This method is used in scheduled tasks
     private void collectPerformanceData() {
         // System-Performance-Daten sammeln
         collectSystemPerformanceData();

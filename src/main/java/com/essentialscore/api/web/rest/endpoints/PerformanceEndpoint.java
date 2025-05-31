@@ -17,7 +17,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class PerformanceEndpoint extends ApiEndpoint {
     
-    private final PerformanceMonitor performanceMonitor;
+    // We can remove this field as it's not being used
+    // private final PerformanceMonitor performanceMonitor;
     private final MemoryMXBean memoryBean;
     private final OperatingSystemMXBean osBean;
     private final RuntimeMXBean runtimeBean;
@@ -34,7 +35,8 @@ public class PerformanceEndpoint extends ApiEndpoint {
      */
     public PerformanceEndpoint(Plugin plugin, PerformanceMonitor performanceMonitor) {
         super(plugin);
-        this.performanceMonitor = performanceMonitor;
+        // We're not using the performanceMonitor, so we don't need to store it
+        this.memoryBean = ManagementFactory.getMemoryMXBean();
         this.memoryBean = ManagementFactory.getMemoryMXBean();
         this.osBean = ManagementFactory.getOperatingSystemMXBean();
         this.runtimeBean = ManagementFactory.getRuntimeMXBean();

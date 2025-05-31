@@ -38,7 +38,6 @@ public class StringListEntry extends AbstractSchemaEntry<List<String>> {
     }
     
     @Override
-    @SuppressWarnings("unchecked")
     protected List<String> convertValue(Object value) {
         if (value instanceof List) {
             List<?> list = (List<?>) value;

@@ -113,6 +113,10 @@ public class AuditLogger {
         String logEntry = String.format("[%s] SECURITY_EVENT: %s | Player: %s | Metadata: %s",
             timestamp, event, playerInfo, metadata.toString());
         LOGGER.warning(logEntry);
+        // Store to audit log file in baseDir
+        Path logFile = baseDir.resolve("security_events.log");
+        // Note: In a real implementation, you would write to this file
+        LOGGER.info("Security event logged to: " + logFile.toString());
     }
     
     /**

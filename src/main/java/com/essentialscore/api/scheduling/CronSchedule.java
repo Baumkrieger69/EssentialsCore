@@ -3,13 +3,15 @@ package com.essentialscore.api.scheduling;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 /**
  * Simple cron schedule implementation for task scheduling.
  */
 public class CronSchedule {
     private final String cronExpression;
-    private final Pattern cronPattern;
     
     // Simple cron pattern: minute hour day month weekday
     private static final Pattern CRON_VALIDATION = Pattern.compile(
@@ -31,10 +33,7 @@ public class CronSchedule {
         if (!CRON_VALIDATION.matcher(this.cronExpression).matches()) {
             throw new IllegalArgumentException("Invalid cron expression: " + cronExpression);
         }
-        
-        this.cronPattern = Pattern.compile(this.cronExpression.replace("*", "\\d+"));
     }
-    
     /**
      * Gets the cron expression.
      *
@@ -129,6 +128,24 @@ public class CronSchedule {
         }
         
         throw new IllegalStateException("Could not find next execution time for cron expression: " + cronExpression);
+    }
+    
+    /**
+     * Schedules the next execution of a task based on this cron schedule.
+     *
+     * @param task The scheduled task to execute
+     * @param scheduler The scheduler to use
+     */
+    public void scheduleNext(ScheduledTask task, ScheduledExecutorService scheduler) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nextExecution = getNextExecution(now);
+        Duration delay = Duration.between(now, nextExecution);
+        
+        scheduler.schedule(
+            task.getRunnable(),
+            delay.toMillis(),
+            TimeUnit.MILLISECONDS
+        );
     }
     
     @Override

@@ -58,6 +58,16 @@ public class VaultPermissionIntegration extends AbstractPluginDependentIntegrati
     }
     
     /**
+     * Gets the plugin instance.
+     *
+     * @return The plugin instance
+     */
+    @Override
+    public Plugin getPlugin() {
+        return super.getPlugin();
+    }
+    
+    /**
      * Gets the Vault permission provider.
      *
      * @return The Vault permission provider

@@ -40,9 +40,9 @@ public class OptimizationModel {
         LOGGER.info("Training optimization model for module: " + moduleId);
         
         // Get performance characteristics by load level
-        Map<String, Map<ModuleProfile.LoadLevel, java.util.List<Double>>> loadLevelPerformance = profile.getLoadLevelPerformance();
+        // In a real implementation, this would use performance data for ML techniques
+        // Map<String, Map<ModuleProfile.LoadLevel, java.util.List<Double>>> loadLevelPerformance = profile.getLoadLevelPerformance();
         
-        // In a real implementation, this would use more sophisticated ML techniques
         // For now, implement a simplified approach based on load levels
         
         // Generate recommendations for each load level

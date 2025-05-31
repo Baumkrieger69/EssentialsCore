@@ -71,6 +71,11 @@ public class PlaceholderAPIIntegration extends AbstractPluginDependentIntegratio
         return "PlaceholderAPI";
     }
     
+    @Override
+    public Plugin getPlugin() {
+        return super.getPlugin();
+    }
+    
     /**
      * Sets PlaceholderAPI placeholders in a string.
      *

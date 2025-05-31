@@ -218,6 +218,7 @@ public class PerformanceBenchmark {
         long startTime = System.nanoTime();
         for (int i = 0; i < iterations; i++) {
             String methodName = testMethods[i % testMethods.length];
+            apiCore.cleanMethodCache(methodName);
             try {
                 // Simuliert einen Method-Cache-Zugriff
                 Object dummyInstance = new Object();
@@ -372,8 +373,7 @@ public class PerformanceBenchmark {
         try {
             byte[] buffer = new byte[8192];
             try (java.io.FileInputStream fis = new java.io.FileInputStream(smallFile)) {
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
+                while (fis.read(buffer) != -1) {
                     // Nur lesen
                 }
             }
@@ -403,8 +403,7 @@ public class PerformanceBenchmark {
         try {
             byte[] buffer = new byte[8192];
             try (java.io.FileInputStream fis = new java.io.FileInputStream(largeFile)) {
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
+                while (fis.read(buffer) != -1) {
                     // Nur lesen
                 }
             }
@@ -948,29 +947,7 @@ public class PerformanceBenchmark {
         return lines;
     }
     
-    /**
-     * Formatiert einen Metriknamen für bessere Lesbarkeit
-     */
-    private String formatMetricName(String key) {
-        // Entferne Präfixe wie "thread_pool." oder "cache."
-        String formatted = key.replaceAll("^(thread_pool\\.|cache\\.|io\\.|module_)", "");
-        
-        // Ersetze Unterstriche durch Leerzeichen
-        formatted = formatted.replace('_', ' ');
-        
-        // Erste Buchstaben groß schreiben
-        String[] words = formatted.split(" ");
-        StringBuilder result = new StringBuilder();
-        for (String word : words) {
-            if (word.length() > 0) {
-                result.append(Character.toUpperCase(word.charAt(0)))
-                      .append(word.substring(1))
-                      .append(" ");
-            }
-        }
-        
-        return result.toString().trim();
-    }
+    // Method removed as it's not used anywhere in the class
 
     /**
      * Löscht alle gespeicherten Benchmark-Ergebnisse und Performance-Monitoring-Dateien

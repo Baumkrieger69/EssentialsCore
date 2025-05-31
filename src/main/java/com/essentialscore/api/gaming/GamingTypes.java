@@ -73,13 +73,11 @@ class ContentRecommendation {
     private final String contentId;
     private final double score;
     private final String type;
-    private final Map<String, Object> metadata;
     
     public ContentRecommendation(String contentId, double score) {
         this.contentId = contentId;
         this.score = score;
         this.type = "quest";
-        this.metadata = new HashMap<>();
     }
     
     public String getContentId() { return contentId; }
@@ -100,6 +98,7 @@ class DynamicContent {
     
     public String getId() { return id; }
     public String getType() { return type; }
+    public Map<String, Object> getProperties() { return properties; }
 }
 
 class GameEvent {
@@ -115,6 +114,7 @@ class GameEvent {
     
     public String getName() { return name; }
     public Map<String, Object> getData() { return data; }
+    public Instant getTimestamp() { return timestamp; }
 }
 
 // Removed duplicate class definitions - these classes are now in separate files:
@@ -138,6 +138,7 @@ class QuestTemplate {
     
     public String getId() { return id; }
     public String getName() { return name; }
+    public String getDescription() { return description; }
     public DifficultyLevel getDifficulty() { return difficulty; }
 }
 
@@ -292,6 +293,7 @@ class SeasonalEvent {
         Instant now = Instant.now();
         return now.isAfter(startTime) && now.isBefore(endTime);
     }
+    public Map<String, Object> getRewards() { return rewards; }
 }
 
 class WeatherPatternAnalyzer {

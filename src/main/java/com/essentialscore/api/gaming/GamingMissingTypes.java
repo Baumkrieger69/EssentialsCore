@@ -96,6 +96,7 @@ class EconomicTransaction {
     public UUID getPlayerId() { return playerId; }
     public String getType() { return type; }
     public double getAmount() { return amount; }
+    public long getTimestamp() { return timestamp; }
 }
 
 // Economy metrics

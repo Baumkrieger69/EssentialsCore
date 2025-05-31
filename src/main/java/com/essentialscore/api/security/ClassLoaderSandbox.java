@@ -185,6 +185,7 @@ public class ClassLoaderSandbox implements AutoCloseable {
                 if (sandbox != null) {
                     // Check if the module has the reflection permission
                     if (!sandbox.isOperationAllowed("reflection", name)) {
+                        LOGGER.warning("Module " + moduleId + " attempted to access restricted class: " + name);
                         throw new SecurityException("Access to restricted class denied: " + name);
                     }
                 }

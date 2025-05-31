@@ -74,7 +74,35 @@ class ComplianceManager {
     public ComplianceReport generateComplianceReport() {
         ComplianceReport report = new ComplianceReport();
         // Implementierung
+        
+        // Check user consent status
+        report.getMetrics().put("total_consents", userConsent.size());
+        // Add data retention policy information to the report
+        report.getMetrics().put("retention_period_days", retentionPolicy.getRetentionPeriod().toDays());
+        report.getMetrics().put("auto_deletion_enabled", retentionPolicy.isAutoDeletionEnabled());
+        
+        // Apply retention policy to check for expired data
+        if (retentionPolicy.isAutoDeletionEnabled()) {
+            applyRetentionPolicy();
+        }
+        
         return report;
+    }
+    
+    private void applyRetentionPolicy() {
+        Instant cutoffTime = Instant.now().minus(retentionPolicy.getRetentionPeriod());
+        // Implementation to find and handle data older than the cutoff time
+        // This would typically involve scanning stored data and marking it for deletion
+        
+        // Example implementation using cutoffTime
+        userConsent.entrySet().removeIf(entry -> {
+            UserDataConsent consent = entry.getValue();
+            return consent.getTimestamp().isBefore(cutoffTime);
+        });
+    }
+    
+    public boolean hasUserConsent(UUID userId) {
+        return userConsent.containsKey(userId);
     }
 }
 
@@ -92,6 +120,10 @@ class InternalSessionManager {
         this.cleaner = Executors.newSingleThreadScheduledExecutor();
         
         startSessionCleaner();
+    }
+    
+    public Duration getSessionTimeout() {
+        return sessionTimeout;
     }
     
     public SecuritySession createSession(UUID userId) {
@@ -141,10 +173,24 @@ class TwoFactorAuthManager {
         TwoFactorConfig config = userConfigs.get(userId);
         if (config == null) return false;
         
-        return totpGenerator.validateTOTP(
+        boolean isValid = totpGenerator.validateTOTP(
             config.getSecret(),
             code
         );
+        
+        if (isValid) {
+            authenticatedUsers.add(userId);
+        }
+        
+        return isValid;
+    }
+    
+    public boolean isAuthenticated(UUID userId) {
+        return authenticatedUsers.contains(userId);
+    }
+    
+    public void removeAuthentication(UUID userId) {
+        authenticatedUsers.remove(userId);
     }
 }
 
@@ -164,6 +210,19 @@ class SecurityPolicyManager {
     
     public void loadPolicies() {
         // Implementierung
+        policies.put("default", new SecurityPolicy());
+    }
+    
+    public SecurityPolicy getPolicy(String name) {
+        return policies.get(name);
+    }
+    
+    public boolean isIpWhitelisted(String ipAddress) {
+        return ipWhitelist.contains(ipAddress);
+    }
+    
+    public void addToIpWhitelist(String ipAddress) {
+        ipWhitelist.add(ipAddress);
     }
     
     public boolean requiresAdditionalAuth(String permission) {
@@ -199,6 +258,36 @@ class EncryptionService {
             throw new RuntimeException("Failed to generate master key", e);
         }
     }
+    
+    public byte[] encrypt(byte[] data) {
+        try {
+            byte[] iv = new byte[12];
+            SecureRandom random = new SecureRandom();
+            random.nextBytes(iv);
+            
+            GCMParameterSpec spec = new GCMParameterSpec(128, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, masterKey, spec);
+            
+            byte[] encrypted = cipher.doFinal(data);
+            ByteBuffer buffer = ByteBuffer.allocate(iv.length + encrypted.length);
+            buffer.put(iv);
+            buffer.put(encrypted);
+            
+            return buffer.array();
+        } catch (Exception e) {
+            throw new RuntimeException("Encryption failed", e);
+        }
+    }
+    
+    public void generateUserKey(UUID userId) {
+        try {
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            keyGen.init(256);
+            userKeys.put(userId, keyGen.generateKey());
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Failed to generate user key", e);
+        }
+    }
 }
 
 /**
@@ -217,15 +306,28 @@ class SecuritySession {
         this.sessionId = UUID.randomUUID().toString();
         this.createdAt = Instant.now();
         this.lastActivity = Instant.now();
-        this.attributes = new ConcurrentHashMap<>();
+        this.twoFactorAuthenticated = false;
+        this.attributes = new HashMap<>();
     }
     
     public UUID getUserId() { return userId; }
+    public String getSessionId() { return sessionId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Map<String, Object> getAttributes() { return attributes; }
+    public void setAttribute(String key, Object value) { attributes.put(key, value); }
+    public Object getAttribute(String key) { return attributes.get(key); }
     public boolean isExpired() {
-        return Duration.between(lastActivity, Instant.now()).toMinutes() > 30;
+        InternalSessionManager sessionManager = getSessionManager();
+        return Duration.between(lastActivity, Instant.now()).compareTo(sessionManager.getSessionTimeout()) > 0;
     }
     public void setTwoFactorAuthenticated(boolean value) { this.twoFactorAuthenticated = value; }
     public boolean isTwoFactorAuthenticated() { return twoFactorAuthenticated; }
+    
+    private InternalSessionManager getSessionManager() {
+        // This should be replaced with proper dependency injection or access to the session manager
+        // For now, we're using a default timeout
+        return new InternalSessionManager();
+    }
 }
 
 enum SecurityEvent {
@@ -253,6 +355,22 @@ class AuditEntry {
         this.event = event;
         this.userId = userId;
         this.details = new HashMap<>(details);
+    }
+    
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+    
+    public SecurityEvent getEvent() {
+        return event;
+    }
+    
+    public UUID getUserId() {
+        return userId;
+    }
+    
+    public Map<String, Object> getDetails() {
+        return details;
     }
 }
 
@@ -283,6 +401,10 @@ class ComplianceReport {
     public String getDetailedReport() {
         // Implementiere detaillierte Berichtserstellung
         return "";
+    }
+    
+    public Map<String, Object> getMetrics() {
+        return metrics;
     }
 }
 

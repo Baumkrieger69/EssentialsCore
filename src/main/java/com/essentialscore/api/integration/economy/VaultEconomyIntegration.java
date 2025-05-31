@@ -53,6 +53,11 @@ public class VaultEconomyIntegration extends AbstractPluginDependentIntegration 
         return "Vault Economy";
     }
     
+    @Override
+    public Plugin getPlugin() {
+        return super.getPlugin();
+    }
+    
     /**
      * Gets the Vault economy provider.
      *

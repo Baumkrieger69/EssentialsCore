@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  */
 public class FileManagerEndpoint extends ApiEndpoint {
     
-    private final FileManagerService fileManagerService;
+    // Removed unused field
     private final Path serverRoot;
     private final Set<String> allowedExtensions;
     private final Set<String> restrictedPaths;
@@ -32,7 +32,7 @@ public class FileManagerEndpoint extends ApiEndpoint {
      */
     public FileManagerEndpoint(Plugin plugin, FileManagerService fileManagerService) {
         super(plugin);
-        this.fileManagerService = fileManagerService;
+        // Not storing the fileManagerService since it's not used
         this.serverRoot = plugin.getDataFolder().getParentFile().getParentFile().toPath().normalize();
         
         // Initialize allowed file extensions for editing
@@ -172,7 +172,7 @@ public class FileManagerEndpoint extends ApiEndpoint {
                 return ApiResponse.badRequest("Request body is required");
             }
             
-            JsonObject json = JsonParser.parseString(request.getBody()).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(request.getBody()).getAsJsonObject();
             String filePath = json.get("path").getAsString();
             String content = json.get("content").getAsString();
             
@@ -213,7 +213,7 @@ public class FileManagerEndpoint extends ApiEndpoint {
      */
     private ApiResponse handleCreateRequest(ApiRequest request) {
         try {
-            JsonObject json = JsonParser.parseString(request.getBody()).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(request.getBody()).getAsJsonObject();
             String path = json.get("path").getAsString();
             String type = json.get("type").getAsString(); // "file" or "directory"
             
@@ -249,7 +249,7 @@ public class FileManagerEndpoint extends ApiEndpoint {
      */
     private ApiResponse handleDeleteRequest(ApiRequest request) {
         try {
-            JsonObject json = JsonParser.parseString(request.getBody()).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(request.getBody()).getAsJsonObject();
             String path = json.get("path").getAsString();
             
             Path targetPath = resolvePath(path);
@@ -297,7 +297,7 @@ public class FileManagerEndpoint extends ApiEndpoint {
      */
     private ApiResponse handleRenameRequest(ApiRequest request) {
         try {
-            JsonObject json = JsonParser.parseString(request.getBody()).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(request.getBody()).getAsJsonObject();
             String oldPath = json.get("oldPath").getAsString();
             String newPath = json.get("newPath").getAsString();
             
@@ -335,7 +335,7 @@ public class FileManagerEndpoint extends ApiEndpoint {
      */
     private ApiResponse handleCopyRequest(ApiRequest request) {
         try {
-            JsonObject json = JsonParser.parseString(request.getBody()).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(request.getBody()).getAsJsonObject();
             String sourcePath = json.get("sourcePath").getAsString();
             String targetPath = json.get("targetPath").getAsString();
             

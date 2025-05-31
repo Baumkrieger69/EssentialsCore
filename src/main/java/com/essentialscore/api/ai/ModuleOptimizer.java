@@ -21,7 +21,7 @@ public class ModuleOptimizer {
     private final Map<String, OptimizationParameters> currentParameters;
     private final ScheduledExecutorService scheduler;
     private final List<OptimizationListener> listeners;
-    private final Map<String, AnomalyDetector> anomalyDetectors;
+    private final Map<String, ModuleAnomalyDetector> anomalyDetectors;
     
     public ModuleOptimizer(Plugin plugin) {
         this.plugin = plugin;
@@ -41,7 +41,7 @@ public class ModuleOptimizer {
     public void registerModule(String moduleId, OptimizationParameters initialParams) {
         moduleHistory.put(moduleId, new PerformanceHistory());
         currentParameters.put(moduleId, initialParams);
-        anomalyDetectors.put(moduleId, new AnomalyDetector());
+        anomalyDetectors.put(moduleId, new ModuleAnomalyDetector());
     }
     
     /**
@@ -53,7 +53,7 @@ public class ModuleOptimizer {
             history.addDataPoint(data);
             
             // Prüfe auf Anomalien
-            AnomalyDetector detector = anomalyDetectors.get(moduleId);
+            ModuleAnomalyDetector detector = anomalyDetectors.get(moduleId);
             if (detector != null && detector.isAnomaly(data)) {
                 handleAnomaly(moduleId, data);
             }
@@ -221,11 +221,11 @@ public class ModuleOptimizer {
     /**
      * Erkennt Anomalien in Performance-Daten.
      */
-    private static class AnomalyDetector {
+    private static class ModuleAnomalyDetector {
         private static final double THRESHOLD = 3.0; // 3 Standardabweichungen
         private final List<Double> recentValues;
         
-        public AnomalyDetector() {
+        public ModuleAnomalyDetector() {
             this.recentValues = new ArrayList<>();
         }
         

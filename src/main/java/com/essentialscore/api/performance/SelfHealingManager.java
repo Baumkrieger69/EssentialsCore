@@ -270,6 +270,16 @@ public class SelfHealingManager {
                         issue
                     ));
                     break;
+                    
+                case UNKNOWN:
+                default:
+                    actions.add(new HealingAction(
+                        moduleId,
+                        HealingActionType.LOG_ONLY,
+                        "Unknown issue detected: " + issue.getDescription(),
+                        issue
+                    ));
+                    break;
             }
         }
         
@@ -394,6 +404,10 @@ public class SelfHealingManager {
                     
                 case CLEAR_CACHES:
                     clearModuleCaches(moduleId);
+                    break;
+                    
+                case LOG_ONLY:
+                    LOGGER.info("Logging issue only: " + action.getDescription());
                     break;
             }
             
@@ -619,7 +633,8 @@ public class SelfHealingManager {
         RESTART_MODULE,
         OPTIMIZE_CONFIGURATION,
         THROTTLE_RESOURCES,
-        CLEAR_CACHES
+        CLEAR_CACHES,
+        LOG_ONLY
     }
     
     /**

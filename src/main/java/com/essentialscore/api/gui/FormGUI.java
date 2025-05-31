@@ -119,7 +119,6 @@ public class FormGUI extends StandardGUI {
         
         // Validate each field
         for (Map.Entry<String, FormField> entry : fields.entrySet()) {
-            String id = entry.getKey();
             FormField field = entry.getValue();
             
             if (field.isRequired() && !field.isValid()) {

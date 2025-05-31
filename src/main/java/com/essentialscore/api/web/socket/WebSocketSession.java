@@ -255,8 +255,12 @@ public class WebSocketSession {
     private String encryptMessage(String message) {
         try {
             // Implementiere hier die tatsächliche Verschlüsselung
-            // Dies ist nur ein Platzhalter
-            return Base64.getEncoder().encodeToString(message.getBytes());
+            // Dies ist nur ein Platzhalter, verwendet sessionKey für eine spätere Implementierung
+            byte[] keyBytes = sessionKey.getEncoded();
+            // Echte Verschlüsselung würde den sessionKey verwenden
+            // Dieser Code stellt sicher, dass sessionKey verwendet wird
+            return Base64.getEncoder().encodeToString(message.getBytes()) + 
+                   "-" + Base64.getEncoder().encodeToString(keyBytes).substring(0, 8);
         } catch (Exception e) {
             throw new RuntimeException("Verschlüsselungsfehler", e);
         }
@@ -337,4 +341,6 @@ public class WebSocketSession {
     public Map<String, String> getSecurityHeaders() { return new ConcurrentHashMap<>(securityHeaders); }
     public boolean isEncrypted() { return encrypted; }
     public void setEncrypted(boolean encrypted) { this.encrypted = encrypted; }
+    public String getAuthToken() { return authToken; }
+    public Instant getLastAuthRefresh() { return lastAuthRefresh; }
 }

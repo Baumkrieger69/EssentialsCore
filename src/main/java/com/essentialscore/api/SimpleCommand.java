@@ -1,6 +1,7 @@
 package com.essentialscore.api;
 
 import org.bukkit.command.CommandSender;
+import com.essentialscore.api.command.CommandContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,10 +49,10 @@ public class SimpleCommand implements CommandDefinition {
      * 
      * @param name The command name
      * @param moduleName The module name
-     * @return A new SimpleCommand instance
+     * @return A new Builder instance
      */
-    public static SimpleCommand builder(String name, String moduleName) {
-        return new SimpleCommand(name, "", "/" + name, null, moduleName);
+    public static Builder builder(String name, String moduleName) {
+        return new Builder(name, moduleName);
     }
 
     /**
@@ -228,5 +229,49 @@ public class SimpleCommand implements CommandDefinition {
         }
         
         return Collections.emptyList();
+    }
+    
+    /**
+     * Builder class for SimpleCommand
+     */
+    public static class Builder {
+        private final String name;
+        private final String moduleName;
+        private String description = "";
+        private String permission = null;
+        private SimpleCommand parent = null;
+        private BiFunction<CommandContext, String[], Boolean> executor = null;
+        
+        public Builder(String name, String moduleName) {
+            this.name = name;
+            this.moduleName = moduleName;
+        }
+        
+        public Builder description(String description) {
+            this.description = description;
+            return this;
+        }
+        
+        public Builder permission(String permission) {
+            this.permission = permission;
+            return this;
+        }
+        
+        public Builder parent(SimpleCommand parent) {
+            this.parent = parent;
+            return this;
+        }
+        
+        public SimpleCommand build(BiFunction<CommandContext, String[], Boolean> executor) {
+            this.executor = executor;
+            SimpleCommand command = new SimpleCommand(name, description, "/" + name, permission, moduleName);
+            if (executor != null) {
+                command.setExecutor((sender, args) -> {
+                    CommandContext context = new CommandContext(sender, command, args);
+                    return executor.apply(context, args);
+                });
+            }
+            return command;
+        }
     }
 }

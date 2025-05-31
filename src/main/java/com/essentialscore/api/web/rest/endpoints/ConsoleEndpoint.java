@@ -168,7 +168,7 @@ public class ConsoleEndpoint extends ApiEndpoint {
                 return ApiResponse.badRequest("Command is required");
             }
             
-            JsonObject json = JsonParser.parseString(request.getBody()).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(request.getBody()).getAsJsonObject();
             String command = json.get("command").getAsString().trim();
             
             if (command.isEmpty()) {

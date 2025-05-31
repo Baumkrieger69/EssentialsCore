@@ -121,8 +121,8 @@ public class DynamicCommand extends Command implements TabCompleter {
             return customTabCompleter.onTabComplete(sender, command, alias, args);
         }
         // Schnellprüfung für wesentliche Bedingungen
-        ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
-        if (moduleInfo == null || !hasPermission(sender)) {
+        Object moduleInfoObj = apiCore.getModuleInfo(moduleName);
+        if (moduleInfoObj == null || !hasPermission(sender)) {
             return Collections.emptyList();
         }
         
@@ -219,23 +219,24 @@ public class DynamicCommand extends Command implements TabCompleter {
             
             // Otherwise, use the module-based execution
             if (moduleName != null && !moduleName.equalsIgnoreCase("apicore")) {
-                ApiCore.ModuleInfo moduleInfo = apiCore.getModuleInfo(moduleName);
-                if (moduleInfo != null && moduleInfo.getInstance() != null) {
-                    Object moduleInstance = moduleInfo.getInstance();
-                    
-                    // Versuche, die Methode onCommand aufzurufen
+                Object moduleInfoObj = apiCore.getModuleInfo(moduleName);
+                if (moduleInfoObj != null) {
                     try {
-                        if (moduleInstance instanceof Module) {
-                            ((Module) moduleInstance).onCommand(commandLabel, sender, args);
-                        } else {
-                            // Fallback auf Reflection
-                            try {
-                                Class<?> moduleClass = moduleInstance.getClass();
-                                moduleClass.getMethod("onCommand", String.class, CommandSender.class, String[].class)
-                                    .invoke(moduleInstance, commandLabel, sender, args);
-                            } catch (NoSuchMethodException e) {
-                                // Kein Handler gefunden - führe Standard-Verhalten aus
-                                return executeDefault(sender, commandLabel, args);
+                        Object moduleInstance = moduleInfoObj.getClass().getMethod("getInstance").invoke(moduleInfoObj);
+                        if (moduleInstance != null) {
+                            // Versuche, die Methode onCommand aufzurufen
+                            if (moduleInstance instanceof Module) {
+                                ((Module) moduleInstance).onCommand(commandLabel, sender, args);
+                            } else {
+                                    // Fallback auf Reflection
+                                try {
+                                    Class<?> moduleClass = moduleInstance.getClass();
+                                    moduleClass.getMethod("onCommand", String.class, CommandSender.class, String[].class)
+                                        .invoke(moduleInstance, commandLabel, sender, args);
+                                } catch (NoSuchMethodException e) {
+                                    // Kein Handler gefunden - führe Standard-Verhalten aus
+                                    return executeDefault(sender, commandLabel, args);
+                                }
                             }
                         }
                     } catch (Exception e) {

@@ -29,6 +29,7 @@ class SecurityProfile {
     public String getUsername() { return username; }
     public Set<String> getRoles() { return roles; }
     public SecurityLevel getSecurityLevel() { return securityLevel; }
+    public Map<String, Object> getAttributes() { return attributes; }
 }
 
 enum SecurityLevel {
@@ -62,8 +63,10 @@ class TwoFactorConfig {
         this.createdAt = Instant.now();
     }
     
+    public UUID getUserId() { return userId; }
     public String getSecret() { return secret; }
     public boolean isEnabled() { return enabled; }
+    public Instant getCreatedAt() { return createdAt; }
 }
 
 class TOTPGenerator {
@@ -89,6 +92,7 @@ class ComplianceRule {
     }
     
     public String getName() { return name; }
+    public String getDescription() { return description; }
     public boolean isMandatory() { return mandatory; }
 }
 
@@ -107,6 +111,8 @@ class UserDataConsent {
     
     public boolean hasDataProcessingConsent() { return dataProcessingConsent; }
     public boolean hasMarketingConsent() { return marketingConsent; }
+    public UUID getUserId() { return userId; }
+    public Instant getConsentGiven() { return consentGiven; }
 }
 
 class DataRetentionPolicy {

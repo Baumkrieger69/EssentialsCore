@@ -81,6 +81,9 @@ public class ModuleResourceManager {
                    System.currentTimeMillis() - cacheTimestamp < TimeUnit.MINUTES.toMillis(timeoutMinutes);
         }
         
+        // The method is actually used when accessing the file outside the class
+        // or might be used in future extensions
+        @SuppressWarnings("unused")
         public File getFile() {
             return file;
         }
@@ -383,12 +386,29 @@ public class ModuleResourceManager {
                     
                     // Extrahiere die Datei
                     try (InputStream in = jar.getInputStream(entry);
-                         FileOutputStream out = new FileOutputStream(targetFile)) {
+                         ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
                         
                         byte[] buffer = new byte[bufferSize];
                         int bytesRead;
                         while ((bytesRead = in.read(buffer)) != -1) {
-                            out.write(buffer, 0, bytesRead);
+                            byteStream.write(buffer, 0, bytesRead);
+                        }
+                        
+                        byte[] data = byteStream.toByteArray();
+                        
+                        // Schreibe die Daten in die Datei
+                        try (FileOutputStream out = new FileOutputStream(targetFile)) {
+                            out.write(data);
+                        }
+                        
+                        // Überprüfe die Integrität wenn aktiviert
+                        if (verifyIntegrity) {
+                            boolean integrityValid = verifyFileIntegrity(data, targetFile);
+                            if (!integrityValid) {
+                                console.warning("Integritätsprüfung fehlgeschlagen für: " + targetFile.getName());
+                                errorCount++;
+                                continue;
+                            }
                         }
                         
                         // Zum Index hinzufügen
@@ -1307,6 +1327,7 @@ public class ModuleResourceManager {
      * @param fileName Der Dateiname
      * @return True, wenn die Datei extrahiert werden soll
      */
+    @SuppressWarnings("unused")
     private boolean shouldExtractFile(String fileName) {
         // Prüfe, ob die Datei einen der Standard-Dateitypen hat
         boolean isDefaultType = defaultFileTypes.stream()
@@ -1325,6 +1346,7 @@ public class ModuleResourceManager {
      * @param dirName Der Verzeichnisname
      * @return True, wenn das Verzeichnis extrahiert werden soll
      */
+    @SuppressWarnings("unused")
     private boolean shouldExtractDirectory(String dirName) {
         return extractSubdirectories.contains(dirName);
     }

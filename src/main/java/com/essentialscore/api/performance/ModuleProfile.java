@@ -313,6 +313,27 @@ public class ModuleProfile {
     }
     
     /**
+     * Records a response time for a specific method.
+     *
+     * @param methodName The name of the method
+     * @param responseTime The response time in milliseconds
+     */
+    public void recordMethodResponseTime(String methodName, double responseTime) {
+        methodResponseTimes.computeIfAbsent(methodName, k -> new ArrayList<>())
+            .add(responseTime);
+    }
+    
+    /**
+     * Gets the response times for a specific method.
+     *
+     * @param methodName The name of the method
+     * @return List of response times, or empty list if method not found
+     */
+    public List<Double> getMethodResponseTimes(String methodName) {
+        return new ArrayList<>(methodResponseTimes.getOrDefault(methodName, new ArrayList<>()));
+    }
+    
+    /**
      * Enum for load levels.
      */
     public enum LoadLevel {

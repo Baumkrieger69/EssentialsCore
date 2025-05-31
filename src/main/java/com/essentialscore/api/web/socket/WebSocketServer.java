@@ -339,7 +339,7 @@ public class WebSocketServer {
         
         try {
             // Parse message
-            JsonObject json = JsonParser.parseString(message).getAsJsonObject();
+            JsonObject json = new JsonParser().parse(message).getAsJsonObject();
             
             // Get message type
             String type = json.has("type") ? json.get("type").getAsString() : null;
