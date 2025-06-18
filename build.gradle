@@ -1,0 +1,133 @@
+plugins {
+    id 'java-library'
+    id('xyz.jpenilla.run-paper') version "2.3.1"
+    id 'maven-publish'
+}
+
+group = 'com.github.Baumkrieger69'
+version = '1.0.12'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "papermc-repo"
+        url = "https://repo.papermc.io/repository/maven-public/"
+    }
+    maven {
+        name = "sonatype"
+        url = "https://oss.sonatype.org/content/groups/public/"
+    }
+    maven {
+        name = "placeholderapi"
+        url = "https://repo.extendedclip.com/content/repositories/placeholderapi/"
+    }
+    maven {
+        name = "jitpack"
+        url = "https://jitpack.io"
+    }
+}
+
+dependencies {
+    compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude group: 'org.bukkit', module: 'bukkit'
+    }
+    
+    // PlaceholderAPI
+    compileOnly("me.clip:placeholderapi:2.11.6")
+    
+    // Web server for remote management
+    implementation("io.javalin:javalin:5.6.1")
+    implementation("org.slf4j:slf4j-simple:2.0.7")
+    
+    // JSON processing
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2")
+    
+    // WebSocket support
+    implementation("org.eclipse.jetty.websocket:websocket-jetty-server:11.0.15")
+    implementation("org.java-websocket:Java-WebSocket:1.5.4")
+    
+    // TOML configuration support
+    implementation("com.moandjiezana.toml:toml4j:0.7.2")
+    
+    // Additional utilities
+    implementation("org.apache.commons:commons-lang3:3.12.0")
+    implementation("commons-io:commons-io:2.11.0")
+    implementation("com.google.guava:guava:32.1.2-jre")
+    
+    // Apache Commons Pool for connection pooling
+    implementation("org.apache.commons:commons-pool2:2.11.1")
+    
+    // Reflection utilities
+    implementation("org.reflections:reflections:0.10.2")
+    
+    // YAML processing
+    implementation("org.yaml:snakeyaml:2.0")
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(21)
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
+
+tasks {
+    runServer {
+        minecraftVersion("1.21")
+    }
+    jar {
+        archiveBaseName.set(project.name)
+        archiveClassifier.set('')
+        archiveVersion.set(project.version.toString())
+    }
+}
+
+// Javadoc configuration to handle errors gracefully
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.addStringOption('encoding', 'UTF-8')
+    options.addStringOption('charSet', 'UTF-8')
+    failOnError = false
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
+                name = 'EssentialsCore'
+                description = 'Minecraft Module structure Plugin'
+                url = 'https://github.com/Baumkrieger69/EssentialsCore'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'Baumkrieger69'
+                        name = 'Baumkrieger69'
+                    }
+                }
+            }
+        }
+    }
+}

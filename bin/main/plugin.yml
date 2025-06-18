@@ -1,0 +1,216 @@
+name: EssentialsCore
+version: 1.0.12
+main: com.essentialscore.ApiCore
+api-version: 1.16
+description: EssentialsCore - Advanced Minecraft Server Management with Module System & Integrations
+author: Baumkrieger69
+website: https://github.com/Baumkrieger69/EssentialsCore
+load: STARTUP
+
+# Default language setting
+language: en_US
+
+commands:
+  apicore:
+    description: Main command for controlling the EssentialsCore system - modules, language, performance, and more
+    usage: |
+      /apicore help - Show all available commands
+      /apicore modules [list|info|load|unload|reload|enable|disable] - Manage modules
+      /apicore language [set|list|reload] - Manage languages  
+      /apicore performance [status|report|benchmark] - View performance data
+      /apicore reload - Reload plugin configuration
+      /apicore debug [on|off|status] - Toggle debug mode
+    aliases: [acore, ac, ess, essentials, core, ec, esscore, module, modules, mod]
+    permission: apicore.admin
+permissions:
+  # Core permissions
+  apicore.admin:
+    description: Grants access to all EssentialsCore commands
+    default: op
+  apicore.use:
+    description: Allows basic usage of EssentialsCore features
+    default: true
+  apicore.admin.*:
+    description: Grants all administrative permissions
+    default: op
+    children:
+      apicore.admin: true
+      apicore.admin.modules: true
+      # apicore.admin.webui: true  # MOVED TO webui-development
+      apicore.admin.system: true
+      apicore.admin.performance: true
+      apicore.admin.security: true
+      apicore.admin.database: true
+      apicore.admin.integrations: true
+  
+  # Module management
+  apicore.admin.modules:
+    description: Grants access to module management commands
+    default: op
+    children:
+      apicore.admin.modules.list: true
+      apicore.admin.modules.load: true
+      apicore.admin.modules.unload: true
+      apicore.admin.modules.reload: true
+      apicore.admin.modules.enable: true
+      apicore.admin.modules.disable: true
+      apicore.admin.modules.install: true
+      apicore.admin.modules.uninstall: true
+  apicore.admin.modules.list:
+    description: Allows listing modules
+    default: op
+  apicore.admin.modules.load:
+    description: Allows loading modules
+    default: op
+  apicore.admin.modules.unload:
+    description: Allows unloading modules
+    default: op
+  apicore.admin.modules.reload:
+    description: Allows reloading modules
+    default: op
+  apicore.admin.modules.enable:
+    description: Allows enabling modules
+    default: op
+  apicore.admin.modules.disable:
+    description: Allows disabling modules
+    default: op
+  apicore.admin.modules.install:
+    description: Allows installing modules
+    default: op
+  apicore.admin.modules.uninstall:
+    description: Allows uninstalling modules
+    default: op
+  
+  # WebUI permissions - MOVED TO webui-development
+  # apicore.admin.webui:
+  #   description: Grants access to WebUI management
+  #   default: op
+  #   children:
+  #     apicore.admin.webui.access: true
+  #     apicore.admin.webui.manage: true
+  #     apicore.admin.webui.users: true
+  #     apicore.admin.webui.settings: true
+  # apicore.admin.webui.access:
+  #   description: Allows access to WebUI
+  #   default: op
+  # apicore.admin.webui.manage:
+  #   description: Allows managing WebUI (start/stop/restart)
+  #   default: op
+  # apicore.admin.webui.users:
+  #   description: Allows managing WebUI users
+  #   default: op
+  # apicore.admin.webui.settings:
+  #   description: Allows changing WebUI settings
+  #   default: op
+  
+  # System administration
+  apicore.admin.system:
+    description: Allows access to system-level features
+    default: op
+    children:
+      apicore.admin.system.performance: true
+      apicore.admin.system.benchmark: true
+      apicore.admin.system.diagnose: true
+      apicore.admin.system.cache: true
+      apicore.admin.system.threads: true
+      apicore.admin.system.memory: true
+  apicore.admin.system.performance:
+    description: Allows access to performance monitoring data
+    default: op
+  apicore.admin.system.benchmark:
+    description: Allows running benchmarks
+    default: op
+  apicore.admin.system.diagnose:
+    description: Allows using diagnostic tools
+    default: op
+  apicore.admin.system.cache:
+    description: Allows managing system caches
+    default: op
+  apicore.admin.system.threads:
+    description: Allows managing thread pools
+    default: op
+  apicore.admin.system.memory:
+    description: Allows memory management operations
+    default: op
+  
+  # Performance monitoring
+  apicore.admin.performance:
+    description: Grants access to performance monitoring
+    default: op
+    children:
+      apicore.admin.performance.view: true
+      apicore.admin.performance.alerts: true
+      apicore.admin.performance.reports: true
+  apicore.admin.performance.view:
+    description: Allows viewing performance data
+    default: op
+  apicore.admin.performance.alerts:
+    description: Allows managing performance alerts
+    default: op
+  apicore.admin.performance.reports:
+    description: Allows generating performance reports
+    default: op
+  
+  # Security management
+  apicore.admin.security:
+    description: Grants access to security features
+    default: op
+    children:
+      apicore.admin.security.permissions: true
+      apicore.admin.security.sandbox: true
+      apicore.admin.security.audit: true
+  apicore.admin.security.permissions:
+    description: Allows managing permissions
+    default: op
+  apicore.admin.security.sandbox:
+    description: Allows managing sandbox settings
+    default: op
+  apicore.admin.security.audit:
+    description: Allows viewing security audit logs
+    default: op
+  
+  # Database management
+  apicore.admin.database:
+    description: Grants access to database management
+    default: op
+    children:
+      apicore.admin.database.connect: true
+      apicore.admin.database.query: true
+      apicore.admin.database.backup: true
+      apicore.admin.database.restore: true
+  apicore.admin.database.connect:
+    description: Allows managing database connections
+    default: op
+  apicore.admin.database.query:
+    description: Allows executing database queries
+    default: op
+  apicore.admin.database.backup:
+    description: Allows creating database backups
+    default: op
+  apicore.admin.database.restore:
+    description: Allows restoring database backups
+    default: op
+  
+  # Integration management
+  apicore.admin.integrations:
+    description: Grants access to integration management
+    default: op
+    children:
+      apicore.admin.integrations.vault: true
+      apicore.admin.integrations.placeholderapi: true
+      apicore.admin.integrations.discord: true
+  apicore.admin.integrations.vault:
+    description: Allows managing Vault integration
+    default: op
+  apicore.admin.integrations.placeholderapi:
+    description: Allows managing PlaceholderAPI integration
+    default: op
+  apicore.admin.integrations.discord:
+    description: Allows managing Discord integration
+    default: op
+
+# Soft dependencies for integrations
+softdepend: [Vault, PlaceholderAPI, WorldEdit, WorldGuard, LuckPerms, DiscordSRV, Citizens, MythicMobs, ProtocolLib]
+
+# Plugin load order
+loadbefore: [Essentials, EssentialsX]

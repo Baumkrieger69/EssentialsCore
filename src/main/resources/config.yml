@@ -1,0 +1,475 @@
+###############################################################################
+#                        EssentialsCore Configuration                         #
+###############################################################################
+# Version 1.0.12
+
+#---------------------------------
+# Core Settings
+#---------------------------------
+core:
+  # Debug mode enables detailed logs
+  debug: false
+  # Plugin message prefix
+  prefix: "&8[&b&lEssentialsCore&8] &7"
+  # Automatically extract module resources
+  extract-resources: true
+
+#---------------------------------
+# Module System
+#---------------------------------
+modules:
+  # Automatically load modules on startup
+  auto-load: true
+  # Auto-check for new modules periodically
+  auto-check: true
+  # Check interval in seconds
+  check-interval: 30
+  # Load mode: STARTUP_ONLY, ON_DEMAND, PERIODICALLY
+  load-mode: "STARTUP_ONLY"
+  # Watch for module file changes (hot reload)
+  hot-reload: true
+  # Watcher check interval in seconds
+  watcher-interval: 5
+  # Timeout for module loading in milliseconds
+  module-load-timeout: 30000
+  # Ignore failed dependencies
+  ignore-failed-dependencies: true
+  # Extract module resources
+  extract-resources: true
+  # Force specific modules to load synchronously (list)
+  force-sync-modules: []
+
+#---------------------------------
+# Console Output
+#---------------------------------
+console:
+  # Enable colored console output
+  colors: true
+  # Show timestamps in console output
+  timestamps: false
+  # Use Unicode symbols for message types
+  unicode-symbols: true
+  # Style preset: default, minimal, or fancy
+  style: "default"
+  # Show startup animation
+  startup-animation: true
+  # Verbosity level: verbose, normal, minimal
+  verbosity: "normal"
+  
+  # Component prefixes
+  prefixes:
+    core: "&8[&b&lEssentialsCore&8]"
+    module-manager: "&8[&d&lModuleManager&8]"
+    file-manager: "&8[&6&lFileManager&8]"
+    thread-manager: "&8[&a&lThreadManager&8]"
+    resource-manager: "&8[&3&lResourceManager&8]"
+    permission-manager: "&8[&5&lPermissionManager&8]"
+    command-manager: "&8[&e&lCommandManager&8]"
+    config-manager: "&8[&9&lConfigManager&8]"
+    performance-monitor: "&8[&2&lPerformance&8]"
+  
+  # Message categories
+  categories:
+    enable-all: true
+    system:    { enabled: true, prefix: "SYS",    color: "BRIGHT_CYAN",   icon: "⚡" }
+    config:    { enabled: true, prefix: "CFG",    color: "BRIGHT_BLUE",   icon: "⚙" }
+    module:    { enabled: true, prefix: "MOD",    color: "BRIGHT_GREEN",  icon: "📦" }
+    performance: { enabled: true, prefix: "PERF",  color: "BRIGHT_YELLOW", icon: "📊" }
+    security:  { enabled: true, prefix: "SEC",    color: "BRIGHT_RED",    icon: "🔒" }
+    network:   { enabled: true, prefix: "NET",    color: "BRIGHT_PURPLE", icon: "🌐" }
+    database:  { enabled: true, prefix: "DB",     color: "BRIGHT_WHITE",  icon: "💾" }
+    user:      { enabled: true, prefix: "USER",   color: "BLUE",          icon: "👤" }
+    thread:    { enabled: true, prefix: "THREAD", color: "YELLOW",        icon: "🧵" }
+    resource:  { enabled: true, prefix: "RES",    color: "GREEN",         icon: "📄" }
+
+#---------------------------------
+# Performance Optimizations
+#---------------------------------
+performance:
+  # Enable performance monitoring
+  enable-monitoring: true
+  
+  # Thread pool configuration
+  threads:
+    # Thread pool size (Default: processor count)
+    pool-size: 4
+    # Thread pool type: CACHED, FIXED, WORK_STEALING, SCHEDULED, ADVANCED
+    pool-type: "CACHED"
+    # Create high priority threads
+    high-priority: false
+    # Optimize for multiple cores
+    optimize-cores: true
+    # Optimize thread memory on startup
+    optimize-memory: true
+    # Enable thread monitoring
+    monitoring: true
+  
+  # Memory optimizations
+  memory:
+    # Optimization level: low, medium, high
+    level: "medium"
+    # Maximum module memory in MB
+    max-module-memory: 256
+    # Minimize hard references
+    minimize-references: true
+    # GC threshold percentage
+    gc-threshold: 80
+    # Maximum cache size in MB
+    max-cache-size: 128
+    # Compress large data structures
+    compress-large-data: false
+    # Auto-flush inactive cache
+    auto-flush: true
+    # Flush after minutes of inactivity
+    flush-after-minutes: 30
+  
+  # Cache settings
+  cache:
+    # Method cache size
+    methods: 500
+    # Reflection cache size
+    reflection: 200
+    # Use method handles (better performance)
+    use-method-handles: true
+    # Off-heap cache size in MB (0 = disabled)
+    off-heap-size: 64
+  
+  # I/O operations
+  io:
+    # Buffer size for I/O operations
+    buffer-size: 8192
+  
+  # Advanced thread pool settings
+  advanced-pool:
+    # Enable advanced thread pool
+    enabled: true
+    # Monitor thread pool
+    monitoring: true
+    # Minimum thread count
+    min-threads: 2
+    # Maximum thread count
+    max-threads: 8
+    # Thread idle timeout in seconds
+    idle-timeout: 60
+    # Pre-warm thread pool
+    warm-up: true
+    # Enable task prioritization
+    prioritization: true
+    # Queue size
+    queue-size: 1000
+  
+  # Module performance tracking
+  module-tracking:
+    # Enable module performance tracking
+    enabled: true
+    # CPU warning threshold percentage
+    cpu-warning-threshold: 20
+    # CPU critical threshold percentage
+    cpu-critical-threshold: 40
+    # Memory warning threshold MB
+    memory-warning-threshold: 25
+    # Memory critical threshold MB
+    memory-critical-threshold: 50
+    # Execution time warning threshold ms
+    execution-warning-threshold: 100
+    # Execution time critical threshold ms
+    execution-critical-threshold: 250
+  
+  # Deadlock detection and resolution
+  deadlock:
+    # Enable deadlock detection
+    enabled: true
+    # Check interval in seconds
+    check-interval: 60
+    # Enable automatic recovery attempts
+    auto-recovery: true
+    # Maximum recovery attempts
+    max-recovery-attempts: 3
+    # Log detailed deadlock information
+    detailed-logging: true
+  
+  # Performance monitoring
+  monitoring:
+    # Data collection interval in seconds
+    interval: 60
+    # Log interval in minutes
+    log-interval: 10
+    # Maximum log files
+    max-log-files: 10
+    # Features to monitor
+    features:
+      cpu: true
+      memory: true
+      threads: true
+      database: false
+      network: false
+    # Warning thresholds
+    thresholds:
+      cpu: 80
+      memory: 85
+    # Log to file
+    log-to-file: true
+    # Enable log rotation
+    log-rotation: true
+
+#---------------------------------
+# Security Settings
+#---------------------------------
+security:
+  # Enable sandbox for module execution
+  enable-sandbox: true
+  # Sandbox security level: low, medium, high
+  sandbox-level: "medium"
+  # Trusted modules that bypass sandbox
+  trusted-modules: []
+  # Block dangerous reflection
+  block-dangerous-reflection: true
+  # Limited file system access
+  limited-filesystem-access: true
+  # Block system commands
+  block-system-commands: true
+  # Maximum allowed threads per module
+  max-threads-per-module: 5
+
+#---------------------------------
+# Command System
+#---------------------------------
+commands:
+  # Reload commands after changes
+  auto-reload: true
+  # Default permission node prefix
+  permission-prefix: "essentialscore"
+  # Respect Bukkit permissions
+  respect-bukkit-permissions: true
+  # Default command tab completions
+  default-completions: true
+  # Log command executions
+  log-executions: false
+  # Maximum arguments per command
+  max-args: 64
+  # Disabled API Core commands
+  disabled: []
+
+#---------------------------------
+# WebUI Settings - MOVED TO webui-development
+#---------------------------------
+# webui:
+#   # Enable WebUI interface (set to false to prevent auto-start on server startup)
+#   # Use '/apicore webui start' command to start the WebUI manually
+#   enabled: false
+#   
+#   # HTTP Server Configuration
+#   http:
+#     # Server bind address (0.0.0.0 for all interfaces)
+#     bind-address: "0.0.0.0"
+#     # HTTP port
+#     port: 8080
+#     # Enable SSL/HTTPS
+#     ssl-enabled: false
+#     # SSL port (only if ssl-enabled is true)
+#     ssl-port: 8443
+#     # SSL certificate file path
+#     ssl-cert-path: "certs/server.crt"
+#     # SSL private key file path
+#     ssl-key-path: "certs/server.key"
+#     # Connection timeout in seconds
+#     connection-timeout: 30
+#     # Maximum connections
+#     max-connections: 100
+#     # Enable compression
+#     enable-compression: true
+#     # Static file caching in seconds
+#     static-cache-time: 3600
+#   
+#   # WebSocket Configuration
+#   websocket:
+#     # WebSocket port
+#     port: 8081
+#     # Enable WebSocket
+#     enabled: true
+#     # Connection timeout in seconds
+#     timeout: 60
+#     # Maximum message size in bytes
+#     max-message-size: 65536
+#     # Heartbeat interval in seconds
+#     heartbeat-interval: 30
+#     # Maximum connections per IP
+#     max-connections-per-ip: 5
+#   
+#   # Authentication Settings
+#   auth:
+#     # Authentication method: SESSION, TOKEN, NONE
+#     method: "SESSION"
+#     # Session timeout in minutes
+#     session-timeout: 60
+#     # Maximum login attempts
+#     max-login-attempts: 5
+#     # Login attempt reset time in minutes
+#     attempt-reset-time: 15
+#     # Enable two-factor authentication
+#     enable-2fa: false
+#     # JWT secret for token authentication
+#     jwt-secret: "change-this-secret-key"
+#     # JWT token expiration in hours
+#     jwt-expiration: 24
+#     # Enable password encryption
+#     encrypt-passwords: true
+#     # Minimum password length
+#     min-password-length: 8
+#   
+#   # Access Control
+#   access:
+#     # Allow external access (from other IPs)
+#     allow-external: true
+#     # Allowed IP addresses (empty = allow all)
+#     allowed-ips: []
+#     # Blocked IP addresses
+#     blocked-ips: []
+#     # CORS settings
+#     cors:
+#       enabled: true
+#       allowed-origins: ["*"]
+#       allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+#       allowed-headers: ["*"]
+#   
+#   # Dashboard Configuration
+#   dashboard:
+#     # Auto-refresh interval in seconds
+#     refresh-interval: 5
+#     # Show server statistics
+#     show-stats: true
+#     # Show player list
+#     show-players: true
+#     # Show console
+#     show-console: true
+#     # Maximum console lines to display
+#     max-console-lines: 1000
+#     # Enable dark theme by default
+#     dark-theme: true
+#     # Show performance charts
+#     show-performance: true
+#     # Chart update interval in seconds
+#     chart-update-interval: 10
+#   
+#   # Features Configuration
+#   features:
+#     # Enable console access
+#     console: true
+#     # Enable player management
+#     player-management: true
+#     # Enable file manager
+#     file-manager: true
+#     # Enable module manager
+#     module-manager: true
+#     # Enable performance monitoring
+#     performance-monitor: true
+#     # Enable security manager
+#     security-manager: true
+#     # Enable backup manager
+#     backup-manager: true
+#     # Enable plugin manager
+#     plugin-manager: true
+#     # Enable world manager
+#     world-manager: false
+#   
+#   # File Manager Settings
+#   file-manager:
+#     # Allow file editing
+#     allow-editing: true
+#     # Allow file upload
+#     allow-upload: true
+#     # Allow file deletion
+#     allow-deletion: false
+#     # Maximum upload size in MB
+#     max-upload-size: 10
+#     # Allowed file extensions for editing
+#     editable-extensions: [".txt", ".yml", ".yaml", ".json", ".properties", ".log"]
+#     # Restricted directories
+#     restricted-directories: ["plugins/EssentialsCore/data", "world/playerdata"]
+#     # Show hidden files
+#     show-hidden: false
+#   
+#   # Console Settings
+#   console:
+#     # Allow command execution
+#     allow-commands: true
+#     # Command history size
+#     history-size: 100
+#     # Enable auto-completion
+#     auto-completion: true
+#     # Restricted commands
+#     restricted-commands: ["stop", "restart", "reload"]
+#     # Log console commands
+#     log-commands: true
+#   
+#   # Logging
+#   logging:
+#     # Enable access logging
+#     access-log: true
+#     # Log file path
+#     log-file: "logs/webui-access.log"
+#     # Log level: DEBUG, INFO, WARN, ERROR
+#     log-level: "INFO"
+#     # Maximum log file size in MB
+#     max-log-size: 10
+#     # Number of log files to keep
+#     max-log-files: 5
+
+#---------------------------------
+# Integrations
+#---------------------------------
+integrations:
+  # Vault Economy Integration
+  vault:
+    enabled: true
+    # Default currency symbol
+    currency-symbol: "$"
+    # Format large numbers
+    format-large-numbers: true
+  
+  # PlaceholderAPI Integration
+  placeholderapi:
+    enabled: true
+    # Register custom placeholders
+    register-placeholders: true
+  
+  # WorldEdit Integration
+  worldedit:
+    enabled: false
+    # Allow world editing - WebUI part MOVED TO webui-development
+    # allow-webui-editing: false
+  
+  # LuckPerms Integration
+  luckperms:
+    enabled: false
+    # Sync permissions
+    sync-permissions: true
+  
+  # DiscordSRV Integration
+  discordsrv:
+    enabled: false
+    # Send notifications to Discord
+    send-notifications: false
+
+#---------------------------------
+# Database Settings
+#---------------------------------
+database:
+  # Database type: SQLITE, MYSQL, POSTGRESQL
+  type: "SQLITE"
+  # Database file path (for SQLite)
+  file: "data/essentialscore.db"
+  # Connection settings (for MySQL/PostgreSQL)
+  connection:
+    host: "localhost"
+    port: 3306
+    database: "essentialscore"
+    username: "root"
+    password: "password"
+    # Connection pool settings
+    pool:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000

@@ -1,0 +1,73 @@
+# Security Configuration for EssentialsCore
+# This file contains security-related settings for the plugin
+
+# Encryption settings
+encryption:
+  # Keystore password for data encryption (will be auto-generated if not set)
+  keystorePassword: ""
+
+# Session management
+session:
+  # Session timeout in seconds (default: 3600 = 1 hour)
+  timeout: 3600
+  # Maximum concurrent sessions per user
+  maxConcurrentSessions: 5
+  # Enable session persistence across server restarts
+  persistent: true
+
+# Two-factor authentication settings
+2fa:
+  # Enable 2FA for sensitive operations
+  enabled: true
+  # Backup codes count (for account recovery)
+  backupCodesCount: 8
+  # Operations requiring 2FA
+  required:
+    "essentialscore.admin": true
+    "essentialscore.security": true
+    "essentialscore.backup": true
+
+# Audit logging
+audit:
+  # Enable audit logging
+  enabled: true
+  # Log retention period in days
+  retentionDays: 90
+  # Include detailed operation logs
+  detailed: true
+
+# Security policies
+security:
+  # Enable strict mode (more restrictive)
+  strictMode: false
+  # Blocked operations for modules
+  blockedOperations:
+    - "file.delete"
+    - "system.exit"
+    - "network.raw"
+  # Trusted certificates (SHA-256 fingerprints)
+  trustedCertificates: []
+
+# Module sandbox settings
+sandbox:
+  # Enable module sandboxing
+  enabled: true
+  # Memory limit per module in MB
+  memoryLimit: 256
+  # CPU time limit per module in seconds
+  cpuTimeLimit: 30
+  # Network access restrictions
+  networkRestrictions:
+    # Allow outbound connections
+    allowOutbound: true
+    # Allowed domains (empty = all allowed)
+    allowedDomains: []
+    # Blocked domains
+    blockedDomains: []
+
+# Logging settings
+logging:
+  # Log level (DEBUG, INFO, WARN, ERROR)
+  level: "INFO"
+  # Include stack traces in error logs
+  includeStackTraces: true

@@ -1,0 +1,259 @@
+# EssentialsCore Deutsche Sprachdatei
+# Unterstützt Hex-Farben (#RRGGBB), Verläufe und Minecraft-Formatierungscodes
+
+# Kern-Nachrichten
+prefix: "#555555[#FFD700&lEssentials#FFFF00&lCore#555555] &r"
+plugin-name: "#FFD700&lEssentials#FFFF00&lCore"
+version: "Version {0}"
+separator: "#555555▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+
+# Allgemeine Nachrichten
+general:
+  success: "#00FF00✓ #AAAAAA{0}"
+  error: "#FF0000✗ #AAAAAA{0}"
+  warning: "#FFAA00⚠ #AAAAAA{0}"
+  info: "#00AAFF→ #AAAAAA{0}"
+  loading: "#FFAA00⏳ #AAAAAALade {0}..."
+  complete: "#00FF00✓ #AAAAAA{0} erfolgreich abgeschlossen!"
+  failed: "#FF0000✗ #AAAAAA{0} fehlgeschlagen: {1}"
+
+# Befehls-Nachrichten
+command:
+  no-permission: "#FF0000✗ Du hast keine Berechtigung für diesen Befehl!"
+  player-only: "#FF0000✗ Dieser Befehl kann nur von Spielern verwendet werden!"
+  console-only: "#FF0000✗ Dieser Befehl kann nur von der Konsole verwendet werden!"
+  unknown-command: "#FF0000✗ Unbekannter Befehl! Verwende #00AAFF/apicore help #FF0000für verfügbare Befehle."
+  invalid-syntax: "#FF0000✗ Ungültige Syntax! Verwendung: #FFAA00{0}"
+  cooldown: "#FF0000⏰ Bitte warte {0} Sekunden bevor du diesen Befehl erneut verwendest!"
+  usage: "#AAAAAAVerwendung: #FFAA00{0}"
+
+# Hilfe-Nachrichten
+help:
+  header: "#555555{separator}\n#FFD700&lEssentials#FFFF00&lCore #AAAAAA- #FFFFFFBefehlshilfe\n#555555{separator}"
+  footer: "#555555{separator}\n#AAAAAAVerwende #00AAFF/apicore <befehl> #AAAAAAür weitere Informationen\n#555555{separator}"
+  main-commands: "#00AAFF&lHauptbefehle:"
+  subcommands: "#00AAFF&lUnterbefehle für #FFAA00{0}#00AAFF:"
+  no-subcommands: "#AAAAAAKeine Unterbefehle für #FFAA00{0} #AAAAAAAverfügbar."
+  commands:
+    apicore: "#FFAA00/apicore #555555- #AAAAAAHaupt-EssentialsCore-Befehl"
+    modules: "#FFAA00/apicore modules #555555- #AAAAAAPlugin-Module verwalten"
+    language: "#FFAA00/apicore language #555555- #AAAAAASpracheinstellungen ändern"    performance: "#FFAA00/apicore performance #555555- #AAAAAASystemleistung anzeigen"
+    # webui: "#FFAA00/apicore webui #555555- #AAAAAAWebUI-Interface verwalten"  # MOVED TO webui-development
+    reload: "#FFAA00/apicore reload #555555- #AAAAAAPlugin-Konfiguration neu laden"
+    debug: "#FFAA00/apicore debug #555555- #AAAAAADebug-Modus umschalten"
+    help: "#FFAA00/apicore help #555555- #AAAAAADieses Hilfemenü anzeigen"
+    info: "#FFAA00/apicore info #555555- #AAAAAASystem-Informationen anzeigen"
+    backup: "#FFAA00/apicore backup #555555- #AAAAAABackup-Verwaltung"
+    memory: "#FFAA00/apicore memory #555555- #AAAAAASpeicher-Informationen anzeigen"
+    threads: "#FFAA00/apicore threads #555555- #AAAAAAThread-Informationen anzeigen"
+    security: "#FFAA00/apicore security #555555- #AAAAAASicherheits-Informationen anzeigen"
+    export: "#FFAA00/apicore export #555555- #AAAAAADaten exportieren"
+    config: "#FFAA00/apicore config #555555- #AAAAAAKonfiguration verwalten"
+
+# Modul-Nachrichten
+modules:
+  header: "#555555{separator}\n#00AAFF&lModul-Manager #555555- #AAAAAA{0} Module geladen\n#555555{separator}"
+  footer: "#555555{separator}"
+  list-header: "#555555{separator}\n#00AAFF&lModul-Manager #555555- #AAAAAA{0} Module geladen\n#555555{separator}"
+  list-item: "#555555• #AAAAAA{0} #555555- #FFAA00{1} #555555[{2}#555555]"
+  list-item-enabled: "#555555• #00FF00{0} #555555- #AAAAAA{1} #555555[#00FF00✓ Aktiviert#555555]"
+  list-item-disabled: "#555555• #FF0000{0} #555555- #AAAAAA{1} #555555[#FF0000✗ Deaktiviert#555555]"
+  no-modules: "#FF0000✗ Keine Module sind derzeit geladen!"
+  
+  info:
+    header: "#555555{separator}\n#00AAFF&lModul-Info: #FFAA00{0}\n#555555{separator}"
+    name: "#AAAAAAName: #FFAA00{0}"
+    version: "#AAAAAAVersion: #FFAA00{0}"
+    author: "#AAAAAAAutor: #FFAA00{0}"
+    description: "#AAAAAABeschreibung: #FFAA00{0}"
+    status: "#AAAAAAStatus: {0}"
+    file: "#AAAAAADatei: #FFAA00{0}"
+    dependencies: "#AAAAAAbhängigkeiten: #FFAA00{0}"
+    
+  status:
+    enabled: "#00FF00✓ Aktiviert"
+    disabled: "#FF0000✗ Deaktiviert"
+    loading: "#FFAA00⏳ Lädt"
+    error: "#FF0000⚠ Fehler"
+    
+  actions:
+    enabled: "#00FF00✓ Modul #FFAA00{0} #00FF00wurde aktiviert!"
+    disabled: "#FF0000✗ Modul #FFAA00{0} #FF0000wurde deaktiviert!"
+    loaded: "#00FF00✓ Modul #FFAA00{0} #00FF00erfolgreich geladen!"
+    unloaded: "#FF0000✗ Modul #FFAA00{0} #FF0000erfolgreich entladen!"
+    reloaded: "#00FF00↻ Modul #FFAA00{0} #00FF00erfolgreich neu geladen!"
+    
+  errors:
+    not-found: "#FF0000✗ Modul #FFAA00{0} #FF0000nicht gefunden!"
+    already-enabled: "#FFAA00⚠ Modul #FFAA00{0} #FFAA00ist bereits aktiviert!"
+    already-disabled: "#FFAA00⚠ Modul #FFAA00{0} #FFAA00ist bereits deaktiviert!"
+    load-failed: "#FF0000✗ Fehler beim Laden von Modul #FFAA00{0}#FF0000: {1}"
+    unload-failed: "#FF0000✗ Fehler beim Entladen von Modul #FFAA00{0}#FF0000: {1}"
+
+# Sprach-Nachrichten
+language:
+  header: "&8{separator}\n&b&lSprach-Manager\n&8{separator}"
+  current: "&7Aktuelle Sprache: &e{0}"
+  available: "&7Verfügbare Sprachen: &e{0}"
+  changed: "&a✓ Sprache erfolgreich auf &e{0} &ageändert!"
+  invalid: "&c✗ Ungültige Sprache! Verfügbare Sprachen: &e{0}"
+  reloaded: "&a✓ Sprachdateien erfolgreich neu geladen!"
+  reload-failed: "&c✗ Fehler beim Neuladen der Sprachdateien: {0}"
+  
+  list:
+    header: "&b&lVerfügbare Sprachen:"
+    item: "&8• &7{0} &8- &e{1}"
+    current-marker: "&a(Aktuell)"
+
+# Performance-Nachrichten
+performance:
+  header: "&8{separator}\n&b&lSystemleistung\n&8{separator}"
+  footer: "&8{separator}"
+  
+  tps:
+    label: "&7Server TPS:"
+    excellent: "&a{0} &8(&aAusgezeichnet&8)"
+    good: "&e{0} &8(&6Gut&8)"
+    fair: "&6{0} &8(&6Ordentlich&8)"
+    poor: "&c{0} &8(&cSchlecht&8)"
+    
+  memory:
+    label: "&7Speicherverbrauch:"
+    value: "&e{0}MB &7/ &e{1}MB &8(&e{2}%&8)"
+    status-good: "&a(Gut)"
+    status-warning: "&e(Warnung)"
+    status-critical: "&c(Kritisch)"
+    
+  threads:
+    label: "&7Aktive Threads:"
+    value: "&e{0}"
+    
+  uptime:
+    label: "&7Server-Laufzeit:"
+    value: "&e{0}"
+    
+  cpu:
+    label: "&7CPU-Auslastung:"
+    value: "&e{0}%"
+    
+  disk:
+    label: "&7Festplattenverbrauch:"
+    value: "&e{0}GB &7/ &e{1}GB &8(&e{2}%&8)"
+
+# WebUI-Nachrichten - MOVED TO webui-development
+# webui:
+  header: "&8{separator}\n&b&lWebUI-Manager\n&8{separator}"
+  
+  status:
+    running: "&a✓ WebUI läuft auf Port &e{0}"
+    stopped: "&c✗ WebUI läuft nicht"
+    starting: "&e⏳ Starte WebUI auf Port &e{0}..."
+    stopping: "&e⏳ Stoppe WebUI..."
+    
+  actions:
+    started: "&a✓ WebUI erfolgreich auf Port &e{0} &agestartet"
+    stopped: "&c✗ WebUI erfolgreich gestoppt"
+    restarted: "&a↻ WebUI erfolgreich neu gestartet"
+    
+  errors:
+    already-running: "&e⚠ WebUI läuft bereits auf Port &e{0}!"
+    not-running: "&e⚠ WebUI läuft derzeit nicht!"
+    start-failed: "&c✗ Fehler beim Starten der WebUI: {0}"
+    stop-failed: "&c✗ Fehler beim Stoppen der WebUI: {0}"
+    port-in-use: "&c✗ Port &e{0} &cist bereits in Verwendung!"
+    
+  info:
+    url: "&7WebUI URL: &b{0}"
+    port: "&7Port: &e{0}"
+    users: "&7Aktive Benutzer: &e{0}"
+
+# Neuladen-Nachrichten
+reload:
+  header: "&8{separator}\n&b&lEssentialsCore wird neu geladen\n&8{separator}"
+  starting: "&e⏳ Starte Neuladen-Prozess..."
+  config: "&e⏳ Lade Konfigurationsdateien neu..."  modules: "&e⏳ Lade Module neu..."
+  language: "&e⏳ Lade Sprachdateien neu..."
+  # webui: "&e⏳ Lade WebUI-Einstellungen neu..."  # MOVED TO webui-development
+  complete: "&a✓ Neuladen erfolgreich abgeschlossen! &8(&7{0}ms&8)"
+  error: "&c✗ Neuladen fehlgeschlagen: {0}"
+
+# Debug-Nachrichten
+debug:
+  header: "&8{separator}\n&b&lDebug-Modus\n&8{separator}"
+  enabled: "&a✓ Debug-Modus aktiviert"
+  disabled: "&c✗ Debug-Modus deaktiviert"
+  status: "&7Debug-Modus: {0}"
+  log-level: "&7Log-Level: &e{0}"
+  
+  info:
+    verbose: "&7Ausführliche Protokollierung aktiviert"
+    performance: "&7Leistungsverfolgung aktiviert"
+    modules: "&7Modul-Debugging aktiviert"
+
+# Info-Nachrichten
+info:
+  header: "&8{separator}\n&b&lEssentials&e&lCore &7- &fSystem-Information\n&8{separator}"
+  version: "&7Version: &e{0}"
+  author: "&7Autor: &e{0}"
+  website: "&7Website: &e{0}"
+  modules-loaded: "&7Geladene Module: &a{0}"
+  uptime: "&7Laufzeit: &a{0}"
+  memory-usage: "&7Speicher: &a{0} MB &7/ &e{1} MB"
+
+# Memory-Nachrichten
+memory:
+  header: "&8{separator}\n&e&lSpeicher-Information\n&8{separator}"
+  used: "&7Verwendet: &a{0} MB"
+  free: "&7Verfügbar: &b{0} MB"
+  total: "&7Gesamt: &e{0} MB"
+  max: "&7Maximum: &c{0} MB"
+  usage-percent: "&7Auslastung: &f{0}%"
+  gc-started: "&a✓ &7Garbage Collection wird ausgeführt..."
+  gc-completed: "&a✓ &7Garbage Collection abgeschlossen!"
+
+# Threads-Nachrichten
+threads:
+  header: "&8{separator}\n&e&lThread-Information\n&8{separator}"
+  active: "&7Aktive Threads: &a{0}"
+  daemon: "&7Daemon Threads: &b{0}"
+  groups: "&7Thread-Gruppen: &e{0}"
+  list-header: "&7&lAktive Threads:"
+
+# Backup-Nachrichten
+backup:
+  header: "&8{separator}\n&e&lBackup-Verwaltung\n&8{separator}"
+  creating: "&a✓ &7Backup wird erstellt..."
+  created: "&a✓ &7Backup erfolgreich erstellt!"
+  list-header: "&e&lVerfügbare Backups:"
+  restoring: "&a✓ &7Backup wird wiederhergestellt..."
+  restored: "&a✓ &7Backup erfolgreich wiederhergestellt!"
+
+# Security-Nachrichten
+security:
+  header: "&8{separator}\n&c&lSicherheits-Information\n&8{separator}"
+  debug-mode: "&7Debug-Modus: {0}"  sandbox: "&7Modul-Sandbox: {0}"
+  # webui-security: "&7WebUI-Sicherheit: {0}"  # MOVED TO webui-development
+  permissions: "&7Permissions-Hook: {0}"
+  scan-started: "&a✓ &7Sicherheitsscan wird durchgeführt..."
+  scan-completed: "&a✓ &7Keine Sicherheitsprobleme gefunden!"
+
+# Export-Nachrichten
+export:
+  header: "&8{separator}\n&e&lExport-Optionen\n&8{separator}"
+  config-exporting: "&a✓ &7Konfiguration wird exportiert..."
+  config-exported: "&a✓ &7Export gespeichert: exports/config-export.yml"
+  modules-exporting: "&a✓ &7Modul-Informationen werden exportiert..."
+  modules-exported: "&a✓ &7Export gespeichert: exports/modules-export.json"
+  logs-exporting: "&a✓ &7Logs werden exportiert..."
+  logs-exported: "&a✓ &7Export gespeichert: exports/logs-export.zip"
+  all-exporting: "&a✓ &7Vollständiger Export wird erstellt..."
+  all-exported: "&a✓ &7Export gespeichert: exports/full-export.zip"
+
+# Config-Nachrichten
+config:
+  header: "&8{separator}\n&e&lKonfigurations-Verwaltung\n&8{separator}"
+  reloading: "&a✓ &7Konfiguration wird neu geladen..."
+  reloaded: "&a✓ &7Konfiguration erfolgreich neu geladen!"
+  value: "&7{0}: &f{1}"
+  set: "&a✓ &7Konfigurationswert gesetzt: &e{0} &7= &f{1}"
+  list-header: "&e&lKonfigurations-Schlüssel:"

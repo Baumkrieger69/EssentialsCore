@@ -1,0 +1,88 @@
+package com.essentialscore.api.security;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class SecurityPolicy {
+    private final String name;
+    private final Map<String, Object> rules;
+    private final boolean enforced;
+    
+    public SecurityPolicy(String name, boolean enforced) {
+        this.name = name;
+        this.enforced = enforced;
+        this.rules = new HashMap<>();
+    }
+    
+    public String getName() { return name; }
+    public boolean isEnforced() { return enforced; }
+      // Security policy method implementations
+    /**
+     * Checks if a file operation is allowed.
+     * @param file The file to check
+     * @param operation The operation type (read, write, execute)
+     * @return true if the operation is allowed
+     */
+    public boolean isFileOperationAllowed(java.io.File file, String operation) {
+        if (!enforced) {
+            return true; // Allow all operations when not enforced
+        }
+        // Add more sophisticated logic here if needed
+        return false; // Default: deny when enforced
+    }
+    
+    /**
+     * Checks if a network operation is allowed.
+     * @param host The target host
+     * @param port The target port
+     * @param operation The operation type (connect, listen)
+     * @return true if the operation is allowed
+     */
+    public boolean isNetworkOperationAllowed(String host, int port, String operation) {
+        if (!enforced) {
+            return true; // Allow all operations when not enforced
+        }
+        // Add more sophisticated logic here if needed
+        return false; // Default: deny when enforced
+    }
+    
+    /**
+     * Checks if a plugin interaction is allowed.
+     * @param pluginName The name of the plugin to interact with
+     * @return true if the interaction is allowed
+     */
+    public boolean isPluginInteractionAllowed(String pluginName) {
+        if (!enforced) {
+            return true; // Allow all interactions when not enforced
+        }
+        // Add more sophisticated logic here if needed
+        return false; // Default: deny when enforced
+    }
+    
+    /**
+     * Checks if a general operation is allowed.
+     * @param operationType The type of operation
+     * @param target The target of the operation
+     * @return true if the operation is allowed
+     */
+    public boolean isOperationAllowed(String operationType, String target) {
+        if (!enforced) {
+            return true; // Allow all operations when not enforced
+        }
+        // Add more sophisticated logic here if needed
+        return false; // Default: deny when enforced
+    }
+    
+    // Methods to use the rules map
+    public void addRule(String key, Object value) {
+        rules.put(key, value);
+    }
+    
+    public Object getRule(String key) {
+        return rules.get(key);
+    }
+    
+    public Map<String, Object> getRules() {
+        return new HashMap<>(rules); // Return a copy to prevent modification
+    }
+}
