@@ -11,13 +11,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 /**
- * Performance-Monitor für den Core und Module
+ * Enhanced Performance-Monitor für den Core und Module
+ * Jetzt mit verbesserter Anzeige und MB-Angaben
  */
 public class PerformanceMonitor {
-    private final ApiCore core;
-    private final Map<String, ModulePerformanceData> performanceData = new ConcurrentHashMap<>();
+    private final ApiCore core;    private final Map<String, ModulePerformanceData> performanceData = new ConcurrentHashMap<>();
     private final File performanceLogDir;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+    
+    // Enhanced metrics tracking
+    private double currentTPS = 20.0;
+    private int currentPlayers = 0;
+    private int currentChunks = 0;
+    private int currentEntities = 0;
+    private double cpuUsage = 0.0;
     
     /**
      * Erstellt einen neuen Performance-Monitor
@@ -26,30 +33,32 @@ public class PerformanceMonitor {
      */
     public PerformanceMonitor(ApiCore core) {
         this.core = core;
-        
-        // Performance-Log-Verzeichnis erstellen
+          // Performance-Log-Verzeichnis erstellen
         performanceLogDir = new File(core.getDataFolder(), "performance_logs");
         if (!performanceLogDir.exists() && !performanceLogDir.mkdirs()) {
             core.getLogger().warning("Konnte Performance-Log-Verzeichnis nicht erstellen!");
         }
         
+        // Initiale Datensammlung auf dem Main Thread
+        core.getServer().getScheduler().runTask(core, this::collectPerformanceData);
+        
         // Performance-Monitoring starten
-            startPerformanceMonitoring();
+        startPerformanceMonitoring();
     }
-    
-    /**
+      /**
      * Startet das Performance-Monitoring mit regelmäßigen Überprüfungen
      */
     private void startPerformanceMonitoring() {
-        // Alle 60 Sekunden Performance-Daten sammeln
-        core.getServer().getScheduler().runTaskTimerAsynchronously(core, this::collectPerformanceData, 
-            20 * 10, 20 * 60);
+        // Alle 30 Sekunden Performance-Daten sammeln (auf Main Thread für World-Zugriff)
+        core.getServer().getScheduler().runTaskTimer(core, this::collectPerformanceData, 
+            20 * 5, 20 * 30);
         
-        // Alle 5 Minuten Performance-Daten protokollieren
+        // Alle 5 Minuten Performance-Daten protokollieren (kann async bleiben)
         core.getServer().getScheduler().runTaskTimerAsynchronously(core, this::logPerformanceData,
-            20 * 20, 20 * 60 * 5);
+            20 * 60, 20 * 60 * 5);
     }
-      /**
+    
+    /**
      * Sammelt Performance-Daten für den Core und alle Module
      */
     private void collectPerformanceData() {
@@ -59,7 +68,7 @@ public class PerformanceMonitor {
         // Modul-Performance-Daten sammeln
         for (Map.Entry<String, com.essentialscore.api.module.ModuleManager.ModuleInfo> entry : core.getLoadedModules().entrySet()) {
             String moduleName = entry.getKey();
-              // Erstelle oder aktualisiere Performance-Daten für das Modul
+            // Erstelle oder aktualisiere Performance-Daten für das Modul
             ModulePerformanceData data = performanceData.computeIfAbsent(
                 moduleName, k -> new ModulePerformanceData(moduleName));
             
@@ -76,47 +85,111 @@ public class PerformanceMonitor {
             data.updateMethodData("collection", 0.0, 0);
         }
     }
-    
-    /**
-     * Sammelt System-Performance-Daten
-     */
-    private void collectSystemPerformanceData() {
+      /**
+     * Sammelt System-Performance-Daten mit verbesserter Metriken
+     */    private void collectSystemPerformanceData() {
         Runtime runtime = Runtime.getRuntime();
         long totalMemory = runtime.totalMemory();
         long freeMemory = runtime.freeMemory();
         long usedMemory = totalMemory - freeMemory;
+        long maxMemory = runtime.maxMemory();
+        
+        // Aktuelle Werte für spätere Verwendung speichern
+        currentPlayers = core.getServer().getOnlinePlayers().size();
+        currentChunks = getLoadedChunksCount();
+        currentEntities = getLoadedEntitiesCount();
+        
+        // CPU-Nutzung schätzen (basierend auf Thread-Aktivität)
+        cpuUsage = Math.min(100.0, (Thread.activeCount() / 20.0) * 100.0);
+        
+        // TPS approximieren (vereinfacht)
+        currentTPS = Math.max(1.0, Math.min(20.0, 20.0 - (cpuUsage / 10.0)));
         
         // Speichern der Systemdaten in einem speziellen Modul-Eintrag
         ModulePerformanceData systemData = performanceData.computeIfAbsent(
             "system", k -> new ModulePerformanceData("system"));
         
-        systemData.updateMethodData("total_memory", totalMemory, 0);
-        systemData.updateMethodData("free_memory", freeMemory, 0);
-        systemData.updateMethodData("used_memory", usedMemory, 0);
-        systemData.updateMethodData("players_online", core.getServer().getOnlinePlayers().size(), 0);
-        systemData.updateMethodData("chunks_loaded", getLoadedChunksCount(), 0);
+        // Memory in MB for better readability
+        systemData.updateMethodData("total_memory_mb", bytesToMB(totalMemory), 0);
+        systemData.updateMethodData("free_memory_mb", bytesToMB(freeMemory), 0);
+        systemData.updateMethodData("used_memory_mb", bytesToMB(usedMemory), 0);
+        systemData.updateMethodData("max_memory_mb", bytesToMB(maxMemory), 0);
+        systemData.updateMethodData("memory_usage_percent", ((double) usedMemory / maxMemory) * 100, 0);
         
-        // CPU-Last messen (approximiert durch Thread-Aktivität)
+        // Server metrics
+        systemData.updateMethodData("players_online", currentPlayers, 0);
+        systemData.updateMethodData("chunks_loaded", currentChunks, 0);
+        systemData.updateMethodData("entities_loaded", currentEntities, 0);
+        systemData.updateMethodData("tps", currentTPS, 0);
+        systemData.updateMethodData("cpu_usage_percent", cpuUsage, 0);
+        
+        // Thread information
         systemData.updateMethodData("active_threads", Thread.activeCount(), 0);
+        
+        // JVM information
+        systemData.updateMethodData("jvm_uptime_minutes", getJVMUptimeMinutes(), 0);
     }
     
     /**
+     * Konvertiert Bytes zu MB
+     */
+    private double bytesToMB(long bytes) {
+        return bytes / (1024.0 * 1024.0);
+    }
+      /**
      * Anzahl der geladenen Chunks im Server ermitteln
+     * MUSS auf dem Main Thread aufgerufen werden!
      */
     private int getLoadedChunksCount() {
         try {
+            // Thread-Safety Check
+            if (!core.getServer().isPrimaryThread()) {
+                core.getLogger().warning("getLoadedChunksCount() called from async thread! Returning cached value.");
+                return currentChunks > 0 ? currentChunks : 0;
+            }
+            
             int count = 0;
             for (org.bukkit.World world : core.getServer().getWorlds()) {
                 count += world.getLoadedChunks().length;
             }
             return count;
         } catch (Exception e) {
-            return -1;
+            core.getLogger().warning("Error getting loaded chunks count: " + e.getMessage());
+            return currentChunks > 0 ? currentChunks : 0;
         }
     }
     
     /**
-     * Protokolliert die Performance-Daten in eine Datei
+     * Anzahl der geladenen Entities im Server ermitteln
+     * MUSS auf dem Main Thread aufgerufen werden!
+     */
+    private int getLoadedEntitiesCount() {
+        try {
+            // Thread-Safety Check
+            if (!core.getServer().isPrimaryThread()) {
+                core.getLogger().warning("getLoadedEntitiesCount() called from async thread! Returning cached value.");
+                return currentEntities > 0 ? currentEntities : 0;
+            }
+            
+            int count = 0;
+            for (org.bukkit.World world : core.getServer().getWorlds()) {
+                count += world.getEntities().size();
+            }
+            return count;
+        } catch (Exception e) {
+            core.getLogger().warning("Error getting loaded entities count: " + e.getMessage());
+            return currentEntities > 0 ? currentEntities : 0;
+        }
+    }
+    
+    /**
+     * JVM Uptime in Minuten
+     */
+    private double getJVMUptimeMinutes() {
+        return java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / (1000.0 * 60.0);
+    }
+      /**
+     * Protokolliert die Performance-Daten in eine Datei mit verbesserter Formatierung
      */
     private void logPerformanceData() {
         String timestamp = dateFormat.format(new Date());
@@ -125,7 +198,7 @@ public class PerformanceMonitor {
         try (FileWriter writer = new FileWriter(logFile, true)) {
             // CSV-Header schreiben, falls die Datei neu ist
             if (logFile.length() == 0) {
-                writer.write("Timestamp,Module,Metric,Value\n");
+                writer.write("Timestamp,Module,Metric,Value,Unit,Raw_Value\n");
             }
             
             // Aktuellen Zeitstempel als String
@@ -135,13 +208,61 @@ public class PerformanceMonitor {
             for (ModulePerformanceData data : performanceData.values()) {
                 Map<String, ModulePerformanceData.MethodPerformanceData> methodDataMap = data.getMethodData();
                 for (Map.Entry<String, ModulePerformanceData.MethodPerformanceData> entry : methodDataMap.entrySet()) {
-                    writer.write(String.format("%s,%s,%s,%.2f\n", 
-                        now, data.getModuleName(), entry.getKey(), entry.getValue().getAverageExecutionTime()));
+                    String metricName = entry.getKey();
+                    double rawValue = entry.getValue().getAverageExecutionTime();
+                    String formattedValue = formatMetricValue(metricName, rawValue);
+                    String unit = getMetricUnit(metricName);
+                    
+                    writer.write(String.format("%s,%s,%s,%s,%s,%.6f\n", 
+                        now, data.getModuleName(), metricName, formattedValue, unit, rawValue));
                 }
             }
         } catch (IOException e) {
             core.getLogger().log(Level.WARNING, "Fehler beim Speichern der Performance-Daten: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Formatiert Metrik-Werte entsprechend ihrem Typ
+     */
+    private String formatMetricValue(String metricName, double value) {
+        if (metricName.contains("memory") && metricName.contains("mb")) {
+            return String.format("%.1f", value);
+        } else if (metricName.contains("percent")) {
+            return String.format("%.1f", value);
+        } else if (metricName.contains("tps")) {
+            return String.format("%.1f", value);
+        } else if (metricName.contains("players") || metricName.contains("chunks") || 
+                   metricName.contains("entities") || metricName.contains("threads")) {
+            return String.format("%.0f", value);
+        } else if (metricName.contains("uptime") && metricName.contains("minutes")) {
+            return String.format("%.1f", value);
+        }
+        return String.format("%.2f", value);
+    }
+    
+    /**
+     * Gibt die Einheit für eine Metrik zurück
+     */
+    private String getMetricUnit(String metricName) {
+        if (metricName.contains("memory") && metricName.contains("mb")) {
+            return "MB";
+        } else if (metricName.contains("percent")) {
+            return "%";
+        } else if (metricName.contains("tps")) {
+            return "TPS";
+        } else if (metricName.contains("players")) {
+            return "Players";
+        } else if (metricName.contains("chunks")) {
+            return "Chunks";
+        } else if (metricName.contains("entities")) {
+            return "Entities";
+        } else if (metricName.contains("threads")) {
+            return "Threads";
+        } else if (metricName.contains("uptime") && metricName.contains("minutes")) {
+            return "Minutes";
+        }
+        return "";
     }
     
     /**
@@ -168,8 +289,7 @@ public class PerformanceMonitor {
     public void recordMethodExecution(String moduleName, String methodName, long durationMs) {
         registerMethodExecution(moduleName, methodName, (double) durationMs);
     }
-    
-    /**
+      /**
      * Gibt die Performance-Daten aller Module zurück
      * 
      * @return Map mit Modul-Performance-Daten
@@ -186,6 +306,107 @@ public class PerformanceMonitor {
      */
     public ModulePerformanceData getModulePerformanceData(String moduleName) {
         return performanceData.get(moduleName);
+    }
+    
+    /**
+     * Gibt formatierte Performance-Daten für die Chat-Ausgabe zurück
+     * 
+     * @return Formatierte Performance-String
+     */
+    public String getFormattedPerformanceInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("§8[§b§lPerformance§8] §7Server Metrics:\n");
+        
+        ModulePerformanceData systemData = performanceData.get("system");
+        if (systemData != null) {
+            Map<String, ModulePerformanceData.MethodPerformanceData> methodData = systemData.getMethodData();
+            
+            // Memory Information mit MB-Anzeige
+            double usedMemory = getMethodValue(methodData, "used_memory_mb");
+            double maxMemory = getMethodValue(methodData, "max_memory_mb");
+            double memoryPercent = getMethodValue(methodData, "memory_usage_percent");
+            
+            info.append(String.format("§8• §7Memory: §f%.1f MB §8/ §f%.1f MB §8(§f%.1f%%§8)\n", 
+                usedMemory, maxMemory, memoryPercent));
+            
+            // TPS und CPU
+            double tps = getMethodValue(methodData, "tps");
+            double cpu = getMethodValue(methodData, "cpu_usage_percent");
+            
+            info.append(String.format("§8• §7TPS: §f%.1f §8| §7CPU: §f%.1f%%\n", tps, cpu));
+            
+            // Server Information
+            int players = (int) getMethodValue(methodData, "players_online");
+            int chunks = (int) getMethodValue(methodData, "chunks_loaded");
+            int entities = (int) getMethodValue(methodData, "entities_loaded");
+            
+            info.append(String.format("§8• §7Players: §f%d §8| §7Chunks: §f%d §8| §7Entities: §f%d\n", 
+                players, chunks, entities));
+            
+            // JVM Information
+            double uptime = getMethodValue(methodData, "jvm_uptime_minutes");
+            int threads = (int) getMethodValue(methodData, "active_threads");
+            
+            info.append(String.format("§8• §7Uptime: §f%.1f min §8| §7Threads: §f%d", uptime, threads));
+        } else {
+            info.append("§c No system performance data available");
+        }
+        
+        return info.toString();
+    }
+    
+    /**
+     * Gibt eine kompakte Performance-Übersicht zurück
+     */
+    public String getCompactPerformanceInfo() {
+        ModulePerformanceData systemData = performanceData.get("system");
+        if (systemData == null) return "§c No data available";
+        
+        Map<String, ModulePerformanceData.MethodPerformanceData> methodData = systemData.getMethodData();
+        
+        double memoryPercent = getMethodValue(methodData, "memory_usage_percent");
+        double tps = getMethodValue(methodData, "tps");
+        int players = (int) getMethodValue(methodData, "players_online");
+        
+        return String.format("§7Memory: §f%.1f%% §8| §7TPS: §f%.1f §8| §7Players: §f%d", 
+            memoryPercent, tps, players);
+    }
+    
+    /**
+     * Gibt detaillierte ungerundete Werte zurück
+     */
+    public String getDetailedPerformanceInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append("§8[§b§lDetailed Performance§8] §7Raw Values:\n");
+        
+        ModulePerformanceData systemData = performanceData.get("system");
+        if (systemData != null) {
+            Map<String, ModulePerformanceData.MethodPerformanceData> methodData = systemData.getMethodData();
+            
+            for (Map.Entry<String, ModulePerformanceData.MethodPerformanceData> entry : methodData.entrySet()) {
+                String key = entry.getKey();
+                double value = entry.getValue().getAverageExecutionTime();
+                
+                info.append(String.format("§8• §7%s: §f%.6f\n", formatMetricName(key), value));
+            }
+        }
+        
+        return info.toString();
+    }
+    
+    /**
+     * Hilfsmethode zum Abrufen von Methodenwerten
+     */
+    private double getMethodValue(Map<String, ModulePerformanceData.MethodPerformanceData> methodData, String key) {
+        ModulePerformanceData.MethodPerformanceData data = methodData.get(key);
+        return data != null ? data.getAverageExecutionTime() : 0.0;
+    }
+    
+    /**
+     * Formatiert Metrik-Namen für bessere Lesbarkeit
+     */
+    private String formatMetricName(String key) {
+        return key.replace("_", " ").toUpperCase();
     }
     
     /**

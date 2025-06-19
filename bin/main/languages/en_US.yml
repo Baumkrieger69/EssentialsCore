@@ -37,7 +37,8 @@ help:
   commands:
     apicore: "&e/apicore &8- &7Main EssentialsCore command"
     modules: "&e/apicore modules &8- &7Manage plugin modules"
-    language: "&e/apicore language &8- &7Change language settings"    performance: "&e/apicore performance &8- &7View system performance"
+    language: "&e/apicore language &8- &7Change language settings"
+    performance: "&e/apicore performance &8- &7View system performance"
     # webui: "&e/apicore webui &8- &7Manage WebUI interface"  # MOVED TO webui-development
     reload: "&e/apicore reload &8- &7Reload plugin configuration"
     debug: "&e/apicore debug &8- &7Toggle debug mode"
@@ -171,7 +172,8 @@ performance:
 reload:
   header: "&8{separator}\n&b&lEssentialsCore Reloading\n&8{separator}"
   starting: "&e⏳ Starting reload process..."
-  config: "&e⏳ Reloading configuration files..."  modules: "&e⏳ Reloading modules..."
+  config: "&e⏳ Reloading configuration files..."
+  modules: "&e⏳ Reloading modules..."
   language: "&e⏳ Reloading language files..."
   # webui: "&e⏳ Reloading WebUI settings..."  # MOVED TO webui-development
   complete: "&a✓ Reload completed successfully! &8(&7{0}ms&8)"
@@ -231,7 +233,8 @@ backup:
 # Security Messages
 security:
   header: "&8{separator}\n&c&lSecurity Information\n&8{separator}"
-  debug-mode: "&7Debug Mode: {0}"  sandbox: "&7Module Sandbox: {0}"
+  debug-mode: "&7Debug Mode: {0}"
+  sandbox: "&7Module Sandbox: {0}"
   # webui-security: "&7WebUI Security: {0}"  # MOVED TO webui-development
   permissions: "&7Permissions Hook: {0}"
   scan-started: "&a✓ &7Running security scan..."

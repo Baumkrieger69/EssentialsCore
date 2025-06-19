@@ -1,19 +1,15 @@
 package com.essentialscore;
 
-import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -27,21 +23,19 @@ import com.essentialscore.api.Module;
 import com.essentialscore.api.ModuleAPI;
 import com.essentialscore.api.command.CommandManager;
 import com.essentialscore.api.command.DynamicCommand;
-import com.essentialscore.api.config.ConfigManager;
 import com.essentialscore.api.impl.CoreModuleAPI;
 import com.essentialscore.api.language.LanguageManager;
 import com.essentialscore.api.module.ModuleFileManager;
 import com.essentialscore.api.module.ModuleManager;
 import com.essentialscore.api.module.ModuleSandbox;
 import com.essentialscore.api.permission.PermissionManager;
-import com.essentialscore.api.security.SecurityManager;
 // import com.essentialscore.api.web.WebUIManager; // MOVED TO webui-development
 import com.essentialscore.commands.ApiCoreMainCommand;
 
 /**
  * Main class for the EssentialsCore plugin.
  */
-@SuppressWarnings({"deprecation", "unused"})
+@SuppressWarnings("deprecation")
 public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
 
     /**
@@ -58,21 +52,16 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             // Fallback to using the deprecated method if reflection fails
             return getDescription().getVersion();
         }
-    }
-
-    private File configDir;
+    }    private File configDir;
     private File modulesDir;
     private File dataDir;
     private final Map<String, ModuleInfo> loadedModules = new ConcurrentHashMap<>(16, 0.75f, 2);
-    private final Map<String, List<DynamicCommand>> moduleCommands = new ConcurrentHashMap<>(16, 0.75f, 2);
     private String messagePrefix;
     private boolean debugMode;    // Manager-Instanzen
     private ModuleManager moduleManager;
-    private ConfigManager configManager;
     private PermissionManager permissionManager;
     private CommandManager commandManager;
     private LanguageManager languageManager;
-    private SecurityManager securityManager;
     // private WebUIManager webUIManager; // MOVED TO webui-development
     private ModuleFileManager moduleFileManager;
     private ModuleSandbox moduleSandbox; // Neue Instanzvariable für Modul-Sandbox
@@ -99,18 +88,14 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
                 return size() > getConfig().getInt("performance.cache-size.reflection", 200);
             }
         }
-    );
-    
+    );    
     // Thread pool for asynchronous operations
-    private ExecutorService executorService;
+    // Removed unused executorService field
 
     // Lazy-initialized static pattern for better performance
     private static final Pattern HEX_PATTERN = Pattern.compile("#[a-fA-F0-9]{6}");
     
-    // Map to store method execution timings with optimized structure
-    private final ConcurrentHashMap<String, Map<String, Double>> methodTimings = new ConcurrentHashMap<>(16, 0.75f, 1);
-      // Optimized byte buffers for file operations
-    private static final int BUFFER_SIZE = 8192;
+    // Removed unused methodTimings and BUFFER_SIZE fields
       // String formatting cache for commonly used messages
     private final ConcurrentHashMap<String, String> formattedMessageCache = new ConcurrentHashMap<>(64, 0.75f, 1);
 
@@ -398,12 +383,11 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     /**
      * Initialisiert die Module des Plugins
      */
-    private void initializeModules() {
-        // Initialize modules directory if it doesn't exist
+    private void initializeModules() {        // Initialize modules directory if it doesn't exist
         modulesDir.mkdirs();
-          // Initialize managers        configManager = new ConfigManager(this);        commandManager = new CommandManager(this);        
+          // Initialize managers        commandManager = new CommandManager(this);
         languageManager = new LanguageManager(this);
-        securityManager = new SecurityManager(this);
+        // Removed securityManager initialization as field was removed
         // webUIManager = new WebUIManager(this, securityManager); // MOVED TO webui-development
         performanceMonitor = new PerformanceMonitor(this);
         threadManager = new ThreadManager(this);
@@ -569,11 +553,9 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     
     /**
      * Initialisiert erweiterte Konfigurationswerte
-     */
-    private void initializeAdvancedConfig() {
+     */    private void initializeAdvancedConfig() {
         // Thread-Pool Konfiguration
-        int threadPoolSize = getConfig().getInt("performance.thread-pool-size", 4);
-        boolean threadMonitoring = getConfig().getBoolean("performance.thread-monitoring", true);
+        // Removed unused variables threadPoolSize and threadMonitoring
         
         // Cache-Größen konfigurieren
         int cacheSize = getConfig().getInt("performance.cache-size", 32);
@@ -757,11 +739,10 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     private void scheduleModuleChecker() {
         int checkInterval = getConfig().getInt("modules.check-interval", 300);
         boolean hotReload = getConfig().getBoolean("modules.hot-reload", true);
-        
-        // Konvertiere in Ticks (20 Ticks = 1 Sekunde)
+          // Konvertiere in Ticks (20 Ticks = 1 Sekunde)
         long intervalTicks = checkInterval * 20L;
         
-        BukkitTask task = getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             if (debugMode) {
                 console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, "Prüfe auf neue Module...", true);
             }

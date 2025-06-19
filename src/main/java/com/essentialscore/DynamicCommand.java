@@ -198,11 +198,11 @@ public class DynamicCommand extends Command implements TabCompleter {
         
         // Console hat immer alle Rechte
         return true;
-    }
-
-    @Override
+    }    @Override
     public boolean execute(CommandSender sender, String commandLabel, String[] args) {
-        long startTime = System.nanoTime();            try {
+        long startTime = System.nanoTime();
+        
+        try {
             // Use the executor if it's set
             if (executor != null) {
                 return executor.onCommand(sender, this, commandLabel, args);
@@ -219,7 +219,7 @@ public class DynamicCommand extends Command implements TabCompleter {
                             if (moduleInstance instanceof Module) {
                                 ((Module) moduleInstance).onCommand(commandLabel, sender, args);
                             } else {
-                                    // Fallback auf Reflection
+                                // Fallback auf Reflection
                                 try {
                                     Class<?> moduleClass = moduleInstance.getClass();
                                     moduleClass.getMethod("onCommand", String.class, CommandSender.class, String[].class)
@@ -242,9 +242,11 @@ public class DynamicCommand extends Command implements TabCompleter {
             // Standard-Verhalten für Core-Befehle oder wenn kein Modul gefunden wurde
             return executeDefault(sender, commandLabel, args);
         } finally {
-            @SuppressWarnings("unused")
-            double duration = (System.nanoTime() - startTime) / 1000000.0; // ms
-        }
+            // Record execution time
+            long executionTime = System.nanoTime() - startTime;
+            if (apiCore.isDebugMode()) {
+                apiCore.getLogger().info("Command " + commandLabel + " executed in " + (executionTime / 1000000.0) + "ms");
+            }        }
     }
     
     /**
@@ -460,8 +462,7 @@ public class DynamicCommand extends Command implements TabCompleter {
                 apiCore.getLogger().warning("Fehler beim Aktualisieren des Befehlsnamens " + originalName + " zu " + newName + ": " + e.getMessage());
             }
         }
-        
-        if (newDescription != null) {
+          if (newDescription != null) {
             this.setDescription(newDescription);
         }
         
@@ -470,8 +471,6 @@ public class DynamicCommand extends Command implements TabCompleter {
         }
         
         if (newPermission != null) {
-            @SuppressWarnings("unused")
-            String originalPermission = this.getPermission();
             this.setPermission(newPermission);
         }
     }

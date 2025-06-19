@@ -108,13 +108,83 @@ public class PerformanceBenchmark {
         results.put("cache", cacheResults);
         results.put("module_loading", moduleResults);
         results.put("io_operations", ioResults);
-        
-        // Ergebnisse speichern
+          // Ergebnisse speichern mit verbesserter Formatierung
         String filename = "benchmark_full_" + dateFormat.format(new Date()) + ".yml";
         saveBenchmarkResults(results, filename);
         
+        // Auch eine übersichtliche Text-Datei erstellen
+        saveReadableBenchmarkReport(results, filename.replace(".yml", "_report.txt"));
+        
         isRunning = false;
         return results;
+    }
+
+    /**
+     * Speichert einen lesbaren Benchmark-Bericht
+     */
+    private void saveReadableBenchmarkReport(Map<String, Object> results, String filename) {
+        File reportFile = new File(benchmarkDir, filename);
+        try (FileWriter writer = new FileWriter(reportFile)) {
+            writer.write("=== EssentialsCore Performance Benchmark Report ===\n\n");
+            writer.write("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "\n\n");
+            
+            // Server Information
+            writer.write("Server Information:\n");
+            writer.write("- Server: " + results.get("server_name") + "\n");
+            writer.write("- Version: " + results.get("server_version") + "\n");
+            writer.write("- Java: " + results.get("java_version") + "\n");
+            writer.write("- OS: " + results.get("os_name") + "\n");
+            writer.write("- Processors: " + results.get("processors") + "\n");
+            writer.write("- TPS: " + results.get("tps") + "\n\n");
+            
+            // Memory Information
+            @SuppressWarnings("unchecked")
+            Map<String, Long> memory = (Map<String, Long>) results.get("memory");
+            if (memory != null) {
+                writer.write("Memory Information:\n");
+                writer.write("- Max Memory: " + formatBytes(memory.get("max")) + "\n");
+                writer.write("- Total Memory: " + formatBytes(memory.get("total")) + "\n");
+                writer.write("- Free Memory: " + formatBytes(memory.get("free")) + "\n");
+                writer.write("- Used Memory: " + formatBytes(memory.get("total") - memory.get("free")) + "\n");
+                writer.write("- Usage: " + String.format("%.1f%%", 
+                    ((double)(memory.get("total") - memory.get("free")) / memory.get("max")) * 100) + "\n\n");
+            }
+            
+            // Thread Information
+            @SuppressWarnings("unchecked")
+            Map<String, Object> threads = (Map<String, Object>) results.get("threads");
+            if (threads != null) {
+                writer.write("Thread Information:\n");
+                writer.write("- Active Threads: " + threads.get("count") + "\n");
+                writer.write("- Daemon Threads: " + threads.get("daemon") + "\n\n");
+            }
+            
+            // Performance Results
+            writer.write("Performance Test Results:\n");
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> cache = (Map<String, Object>) results.get("cache");
+            if (cache != null) {
+                writer.write("Cache Performance:\n");
+                writer.write("- Method Cache Accesses: " + cache.get("method_cache_accesses") + "\n");
+                writer.write("- Duration: " + cache.get("method_cache_duration_ms") + " ms\n");
+                writer.write("- Accesses per Second: " + String.format("%.0f", cache.get("method_cache_accesses_per_second")) + "\n\n");
+            }
+            
+            writer.write("=== End of Report ===\n");
+            
+        } catch (IOException e) {
+            apiCore.getLogger().log(Level.WARNING, "Fehler beim Speichern des Benchmark-Berichts: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Formatiert Bytes in lesbare Form
+     */
+    private String formatBytes(long bytes) {        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     }
 
     /**

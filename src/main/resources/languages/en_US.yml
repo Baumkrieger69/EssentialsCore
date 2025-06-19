@@ -2,261 +2,261 @@
 # Supports hex colors (#RRGGBB), gradients, and Minecraft formatting codes
 
 # Core Messages
-prefix: "#555555[#FFD700&lEssentials#FFFF00&lCore#555555] &r"
-plugin-name: "#FFD700&lEssentials#FFFF00&lCore"
+prefix: "&8[&6&lEssentials&e&lCore&8] &r"
+plugin-name: "&6&lEssentials&e&lCore"
 version: "Version {0}"
-separator: "#555555▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+separator: "&8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
 
 # General Messages
 general:
-  success: "#00FF00✓ #AAAAAA{0}"
-  error: "#FF0000✗ #AAAAAA{0}"
-  warning: "#FFAA00⚠ #AAAAAA{0}"
-  info: "#00AAFF→ #AAAAAA{0}"
-  loading: "#FFAA00⏳ #AAAAAALoading {0}..."
-  complete: "#00FF00✓ #AAAAAA{0} completed successfully!"
-  failed: "#FF0000✗ #AAAAAA{0} failed: {1}"
+  success: "&a✓ &7{0}"
+  error: "&c✗ &7{0}"
+  warning: "&e⚠ &7{0}"
+  info: "&b→ &7{0}"
+  loading: "&e⏳ &7Loading {0}..."
+  complete: "&a✓ &7{0} completed successfully!"
+  failed: "&c✗ &7{0} failed: {1}"
 
 # Command Messages
 command:
-  no-permission: "#FF0000✗ You don't have permission to use this command!"
-  player-only: "#FF0000✗ This command can only be used by players!"
-  console-only: "#FF0000✗ This command can only be used from console!"
-  unknown-command: "#FF0000✗ Unknown command! Use #00AAFF/apicore help #FF0000for available commands."
-  invalid-syntax: "#FF0000✗ Invalid syntax! Usage: #FFAA00{0}"
-  cooldown: "#FF0000⏰ Please wait {0} seconds before using this command again!"
-  usage: "#AAAAAAUsage: #FFAA00{0}"
+  no-permission: "&c✗ You don't have permission to use this command!"
+  player-only: "&c✗ This command can only be used by players!"
+  console-only: "&c✗ This command can only be used from console!"
+  unknown-command: "&c✗ Unknown command! Use &b/apicore help &cfor available commands."
+  invalid-syntax: "&c✗ Invalid syntax! Usage: &e{0}"
+  cooldown: "&c⏰ Please wait {0} seconds before using this command again!"
+  usage: "&7Usage: &e{0}"
 
 # Help Messages
 help:
-  header: "#555555{separator}\n#FFD700&lEssentials#FFFF00&lCore #AAAAAA- #FFFFFFCommand Help\n#555555{separator}"
-  footer: "#555555{separator}\n#AAAAAAUse #00AAFF/apicore <command> #AAAAAAfor more information\n#555555{separator}"
-  main-commands: "#00AAFF&lMain Commands:"
-  subcommands: "#00AAFF&lSubcommands for #FFAA00{0}#00AAFF:"
-  no-subcommands: "#AAAAAANo subcommands available for #FFAA00{0}#AAAAAA."
+  header: "&8{separator}\n&6&lEssentials&e&lCore &7- &fCommand Help\n&8{separator}"
+  footer: "&8{separator}\n&7Use &b/apicore <command> &7for more information\n&8{separator}"
+  main-commands: "&b&lMain Commands:"
+  subcommands: "&b&lSubcommands for &e{0}&b:"
+  no-subcommands: "&7No subcommands available for &e{0}&7."
   commands:
-    apicore: "#FFAA00/apicore #555555- #AAAAAAMain EssentialsCore command"
-    modules: "#FFAA00/apicore modules #555555- #AAAAAAManage plugin modules"
-    language: "#FFAA00/apicore language #555555- #AAAAAAChange language settings"
-    performance: "#FFAA00/apicore performance #555555- #AAAAAAView system performance"
-    webui: "#FFAA00/apicore webui #555555- #AAAAAAManage WebUI interface"
-    reload: "#FFAA00/apicore reload #555555- #AAAAAAReload plugin configuration"
-    debug: "#FFAA00/apicore debug #555555- #AAAAAAToggle debug mode"
-    help: "#FFAA00/apicore help #555555- #AAAAAAShow this help menu"
-    info: "#FFAA00/apicore info #555555- #AAAAAAShow system information"
-    backup: "#FFAA00/apicore backup #555555- #AAAAAABackup management"
-    memory: "#FFAA00/apicore memory #555555- #AAAAAAShow memory information"
-    threads: "#FFAA00/apicore threads #555555- #AAAAAAShow thread information"
-    security: "#FFAA00/apicore security #555555- #AAAAAAShow security information"
-    export: "#FFAA00/apicore export #555555- #AAAAAAExport data"
-    config: "#FFAA00/apicore config #555555- #AAAAAAManage configuration"
+    apicore: "&e/apicore &8- &7Main EssentialsCore command"
+    modules: "&e/apicore modules &8- &7Manage plugin modules"
+    language: "&e/apicore language &8- &7Change language settings"
+    performance: "&e/apicore performance &8- &7View system performance"
+    # webui: "&e/apicore webui &8- &7Manage WebUI interface"  # MOVED TO webui-development
+    reload: "&e/apicore reload &8- &7Reload plugin configuration"
+    debug: "&e/apicore debug &8- &7Toggle debug mode"
+    help: "&e/apicore help &8- &7Show this help menu"
+    info: "&e/apicore info &8- &7Show system information"
+    backup: "&e/apicore backup &8- &7Backup management"
+    memory: "&e/apicore memory &8- &7Show memory information"
+    threads: "&e/apicore threads &8- &7Show thread information"
+    security: "&e/apicore security &8- &7Show security information"
+    export: "&e/apicore export &8- &7Export data"
+    config: "&e/apicore config &8- &7Manage configuration"
 
 # Module Messages
 modules:
-  header: "#555555{separator}\n#00AAFF&lModule Manager #555555- #AAAAAA{0} modules loaded\n#555555{separator}"
-  footer: "#555555{separator}"
-  list-header: "#555555{separator}\n#00AAFF&lModule Manager #555555- #AAAAAA{0} modules loaded\n#555555{separator}"
-  list-item: "#555555• #AAAAAA{0} #555555- #FFAA00{1} #555555[{2}#555555]"
-  list-item-enabled: "#555555• #00FF00{0} #555555- #AAAAAA{1} #555555[#00FF00✓ Enabled#555555]"
-  list-item-disabled: "#555555• #FF0000{0} #555555- #AAAAAA{1} #555555[#FF0000✗ Disabled#555555]"
-  no-modules: "#FF0000✗ No modules are currently loaded!"
+  header: "&8{separator}\n&b&lModule Manager &8- &7{0} modules loaded\n&8{separator}"
+  footer: "&8{separator}"
+  list-header: "&8{separator}\n&b&lModule Manager &8- &7{0} modules loaded\n&8{separator}"
+  list-item: "&8• &7{0} &8- &e{1} &8[{2}&8]"
+  list-item-enabled: "&8• &a{0} &8- &7{1} &8[&a✓ Enabled&8]"
+  list-item-disabled: "&8• &c{0} &8- &7{1} &8[&c✗ Disabled&8]"
+  no-modules: "&c✗ No modules are currently loaded!"
   
   info:
-    header: "#555555{separator}\n#00AAFF&lModule Info: #FFAA00{0}\n#555555{separator}"
-    name: "#AAAAAAName: #FFAA00{0}"
-    version: "#AAAAAAVersion: #FFAA00{0}"
-    author: "#AAAAAAAuthor: #FFAA00{0}"
-    description: "#AAAAAADescription: #FFAA00{0}"
-    status: "#AAAAAAStatus: {0}"
-    file: "#AAAAAAFile: #FFAA00{0}"
-    dependencies: "#AAAAAADependencies: #FFAA00{0}"
+    header: "&8{separator}\n&b&lModule Info: &e{0}\n&8{separator}"
+    name: "&7Name: &e{0}"
+    version: "&7Version: &e{0}"
+    author: "&7Author: &e{0}"
+    description: "&7Description: &e{0}"
+    status: "&7Status: {0}"
+    file: "&7File: &e{0}"
+    dependencies: "&7Dependencies: &e{0}"
     
   status:
-    enabled: "#00FF00✓ Enabled"
-    disabled: "#FF0000✗ Disabled"
-    loading: "#FFAA00⏳ Loading"
-    error: "#FF0000⚠ Error"
+    enabled: "&a✓ Enabled"
+    disabled: "&c✗ Disabled"
+    loading: "&e⏳ Loading"
+    error: "&c⚠ Error"
     
   actions:
-    enabled: "#00FF00✓ Module #FFAA00{0} #00FF00has been enabled!"
-    disabled: "#FF0000✗ Module #FFAA00{0} #FF0000has been disabled!"
-    loaded: "#00FF00✓ Module #FFAA00{0} #00FF00loaded successfully!"
-    unloaded: "#FF0000✗ Module #FFAA00{0} #FF0000unloaded successfully!"
-    reloaded: "#00FF00↻ Module #FFAA00{0} #00FF00reloaded successfully!"
+    enabled: "&a✓ Module &e{0} &ahas been enabled!"
+    disabled: "&c✗ Module &e{0} &chas been disabled!"
+    loaded: "&a✓ Module &e{0} &aloaded successfully!"
+    unloaded: "&c✗ Module &e{0} &cunloaded successfully!"
+    reloaded: "&a↻ Module &e{0} &areloaded successfully!"
     
   errors:
-    not-found: "#FF0000✗ Module #FFAA00{0} #FF0000not found!"
-    already-enabled: "#FFAA00⚠ Module #FFAA00{0} #FFAA00is already enabled!"
-    already-disabled: "#FFAA00⚠ Module #FFAA00{0} #FFAA00is already disabled!"
-    load-failed: "#FF0000✗ Failed to load module #FFAA00{0}#FF0000: {1}"
-    unload-failed: "#FF0000✗ Failed to unload module #FFAA00{0}#FF0000: {1}"
+    not-found: "&c✗ Module &e{0} &cnot found!"
+    already-enabled: "&e⚠ Module &e{0} &eis already enabled!"
+    already-disabled: "&e⚠ Module &e{0} &eis already disabled!"
+    load-failed: "&c✗ Failed to load module &e{0}&c: {1}"
+    unload-failed: "&c✗ Failed to unload module &e{0}&c: {1}"
 
 # Language Messages
 language:
-  header: "#555555{separator}\n#00AAFF&lLanguage Manager\n#555555{separator}"
-  current: "#AAAAAADurrent language: #FFAA00{0}"
-  available: "#AAAAAAAvailable languages: #FFAA00{0}"
-  changed: "#00FF00✓ Language successfully changed to #FFAA00{0}#00FF00!"
-  not-found: "#FF0000✗ Language #FFAA00{0} #FF0000not found!"
-  reload-success: "#00FF00✓ Language files successfully reloaded!"
-  reload-failed: "#FF0000✗ Failed to reload language files: {0}"
+  header: "&8{separator}\n&b&lLanguage Manager\n&8{separator}"
+  current: "&7Current language: &e{0}"
+  available: "&7Available languages: &e{0}"
+  changed: "&a✓ Language successfully changed to &e{0}&a!"
+  not-found: "&c✗ Language &e{0} &cnot found!"
+  reload-success: "&a✓ Language files successfully reloaded!"
+  reload-failed: "&c✗ Failed to reload language files: {0}"
   
   list:
-    header: "#00AAFF&lAvailable Languages:"
-    item: "#555555• #AAAAAA{0} #555555- #FFAA00{1}"
-    current-marker: "#00FF00(Current)"
-
-# Info Messages
-info:
-  header: "#555555{separator}\n#00AAFF&lEssentials#FFAA00&lCore #AAAAAA- #FFFFFFSystem Information\n#555555{separator}"
-  version: "#AAAAAAVersion: #FFAA00{0}"
-  author: "#AAAAAAAuthor: #FFAA00{0}"
-  website: "#AAAAAAWebsite: #FFAA00{0}"
-  modules-loaded: "#AAAAAALoaded Modules: #00FF00{0}"
-  uptime: "#AAAAAAUptime: #00FF00{0}"
-  memory-usage: "#AAAAAAMemory: #00FF00{0} MB #AAAAAA/ #FFAA00{1} MB"
-
-# Memory Messages
-memory:
-  header: "#555555{separator}\n#FFAA00&lMemory Information\n#555555{separator}"
-  used: "#AAAAAAUsed: #00FF00{0} MB"
-  free: "#AAAAAAAvailable: #00AAFF{0} MB"
-  total: "#AAAAAATotal: #FFAA00{0} MB"
-  max: "#AAAAAAMaximum: #FF0000{0} MB"
-  usage-percent: "#AAAAAAUsage: #FFFFFF{0}%"
-  gc-started: "#00FF00✓ #AAAAAARunning garbage collection..."
-  gc-completed: "#00FF00✓ #AAAAAAGarbage collection completed!"
-
-# Threads Messages
-threads:
-  header: "#555555{separator}\n#FFAA00&lThread Information\n#555555{separator}"
-  active: "#AAAAAAActive Threads: #00FF00{0}"
-  daemon: "#AAAAAADaemon Threads: #00AAFF{0}"
-  groups: "#AAAAAAThread Groups: #FFAA00{0}"
-  list-header: "#AAAAAA&lActive Threads:"
-
-# Backup Messages
-backup:
-  header: "#555555{separator}\n#FFAA00&lBackup Management\n#555555{separator}"
-  creating: "#00FF00✓ #AAAAAACreating backup..."
-  created: "#00FF00✓ #AAAAAABackup created successfully!"
-  list-header: "#FFAA00&lAvailable Backups:"
-  restoring: "#00FF00✓ #AAAAAARestoring backup..."
-  restored: "#00FF00✓ #AAAAAABackup restored successfully!"
-
-# Security Messages
-security:
-  header: "#555555{separator}\n#FF0000&lSecurity Information\n#555555{separator}"
-  debug-mode: "#AAAAAADebug Mode: {0}"
-  sandbox: "#AAAAAAModule Sandbox: {0}"
-  webui-security: "#AAAAAAWebUI Security: {0}"
-  permissions: "#AAAAAAPermissions Hook: {0}"
-  scan-started: "#00FF00✓ #AAAAAARunning security scan..."
-  scan-completed: "#00FF00✓ #AAAAAANo security issues found!"
-
-# Export Messages
-export:
-  header: "#555555{separator}\n#FFAA00&lExport Options\n#555555{separator}"
-  config-exporting: "#00FF00✓ #AAAAAAExporting configuration..."
-  config-exported: "#00FF00✓ #AAAAAAExport saved: exports/config-export.yml"
-  modules-exporting: "#00FF00✓ #AAAAAAExporting module information..."
-  modules-exported: "#00FF00✓ #AAAAAAExport saved: exports/modules-export.json"
-  logs-exporting: "#00FF00✓ #AAAAAAExporting logs..."
-  logs-exported: "#00FF00✓ #AAAAAAExport saved: exports/logs-export.zip"
-  all-exporting: "#00FF00✓ #AAAAAACreating full export..."
-  all-exported: "#00FF00✓ #AAAAAAExport saved: exports/full-export.zip"
-
-# Config Messages
-config:
-  header: "#555555{separator}\n#FFAA00&lConfiguration Management\n#555555{separator}"
-  reloading: "#00FF00✓ #AAAAAAReloading configuration..."
-  reloaded: "#00FF00✓ #AAAAAAConfiguration reloaded successfully!"
-  value: "#AAAAAA{0}: #FFFFFF{1}"
-  set: "#00FF00✓ #AAAAAAConfiguration value set: #FFAA00{0} #AAAAAA= #FFFFFF{1}"
-  list-header: "#FFAA00&lConfiguration Keys:"
+    header: "&b&lAvailable Languages:"
+    item: "&8• &7{0} &8- &e{1}"
+    current-marker: "&a(Current)"
 
 # Performance Messages
 performance:
-  header: "#555555{separator}\n#00AAFF&lSystem Performance\n#555555{separator}"
-  footer: "#555555{separator}"
+  header: "&8{separator}\n&b&lSystem Performance\n&8{separator}"
+  footer: "&8{separator}"
   
   tps:
-    label: "#AAAAAAServer TPS:"
-    excellent: "#00FF00{0} #555555(#00FF00Excellent#555555)"
-    good: "#FFAA00{0} #555555(#FFD700Good#555555)"
-    fair: "#FFD700{0} #555555(#FFD700Fair#555555)"
-    poor: "#FF0000{0} #555555(#FF0000Poor#555555)"
+    label: "&7Server TPS:"
+    excellent: "&a{0} &8(&aExcellent&8)"
+    good: "&e{0} &8(&6Good&8)"
+    fair: "&6{0} &8(&6Fair&8)"
+    poor: "&c{0} &8(&cPoor&8)"
     
   memory:
-    label: "#AAAAAAMemory Usage:"
-    value: "#FFAA00{0}MB #AAAAAA/ #FFAA00{1}MB #555555(#FFAA00{2}%#555555)"
-    status-good: "#00FF00(Good)"
-    status-warning: "#FFAA00(Warning)"
-    status-critical: "#FF0000(Critical)"
+    label: "&7Memory Usage:"
+    value: "&e{0}MB &7/ &e{1}MB &8(&e{2}%&8)"
+    status-good: "&a(Good)"
+    status-warning: "&e(Warning)"
+    status-critical: "&c(Critical)"
     
   threads:
-    label: "#AAAAAAActive Threads:"
-    value: "#FFAA00{0}"
+    label: "&7Active Threads:"
+    value: "&e{0}"
     
   uptime:
-    label: "#AAAAAAServer Uptime:"
-    value: "#FFAA00{0}"
+    label: "&7Server Uptime:"
+    value: "&e{0}"
     
   cpu:
-    label: "#AAAAAACPU Usage:"
-    value: "#FFAA00{0}%"
+    label: "&7CPU Usage:"
+    value: "&e{0}%"
     
   disk:
-    label: "#AAAAAADisk Usage:"
-    value: "#FFAA00{0}GB #AAAAAA/ #FFAA00{1}GB #555555(#FFAA00{2}%#555555)"
+    label: "&7Disk Usage:"
+    value: "&e{0}GB &7/ &e{1}GB &8(&e{2}%&8)"
 
-# WebUI Messages
-webui:
-  header: "#555555{separator}\n#00AAFF&lWebUI Manager\n#555555{separator}"
+# WebUI Messages - MOVED TO webui-development
+# webui:
+  header: "&8{separator}\n&b&lWebUI Manager\n&8{separator}"
   
   status:
-    running: "#00FF00✓ WebUI is running on port #FFAA00{0}"
-    stopped: "#FF0000✗ WebUI is not running"
-    starting: "#FFAA00⏳ Starting WebUI on port #FFAA00{0}..."
-    stopping: "#FFAA00⏳ Stopping WebUI..."
+    running: "&a✓ WebUI running on port &e{0}"
+    stopped: "&c✗ WebUI is not running"
+    starting: "&e⏳ Starting WebUI on port &e{0}..."
+    stopping: "&e⏳ Stopping WebUI..."
     
   actions:
-    started: "#00FF00✓ WebUI started successfully on port #FFAA00{0}"
-    stopped: "#FF0000✗ WebUI stopped successfully"
-    restarted: "#00FF00↻ WebUI restarted successfully"
+    started: "&a✓ WebUI successfully started on port &e{0}"
+    stopped: "&c✗ WebUI successfully stopped"
+    restarted: "&a↻ WebUI successfully restarted"
     
   errors:
-    already-running: "#FFAA00⚠ WebUI is already running on port #FFAA00{0}!"
-    not-running: "#FFAA00⚠ WebUI is not currently running!"
-    start-failed: "#FF0000✗ Failed to start WebUI: {0}"
-    stop-failed: "#FF0000✗ Failed to stop WebUI: {0}"
-    port-in-use: "#FF0000✗ Port #FFAA00{0} #FF0000is already in use!"
+    already-running: "&e⚠ WebUI is already running on port &e{0}!"
+    not-running: "&e⚠ WebUI is not currently running!"
+    start-failed: "&c✗ Failed to start WebUI: {0}"
+    stop-failed: "&c✗ Failed to stop WebUI: {0}"
+    port-in-use: "&c✗ Port &e{0} &cis already in use!"
     
   info:
-    url: "#AAAAAAWebUI URL: #00AAFF{0}"
-    port: "#AAAAAAPort: #FFAA00{0}"
-    users: "#AAAAAAActive users: #FFAA00{0}"
+    url: "&7WebUI URL: &b{0}"
+    port: "&7Port: &e{0}"
+    users: "&7Active Users: &e{0}"
 
 # Reload Messages
 reload:
-  header: "#555555{separator}\n#00AAFF&lReloading EssentialsCore\n#555555{separator}"
-  starting: "#FFAA00⏳ Starting reload process..."
-  config: "#FFAA00⏳ Reloading configuration files..."
-  modules: "#FFAA00⏳ Reloading modules..."
-  language: "#FFAA00⏳ Reloading language files..."
-  webui: "#FFAA00⏳ Reloading WebUI settings..."
-  complete: "#00FF00✓ Reload completed successfully! #555555(#AAAAAA{0}ms#555555)"
-  error: "#FF0000✗ Reload failed: {0}"
+  header: "&8{separator}\n&b&lEssentialsCore Reloading\n&8{separator}"
+  starting: "&e⏳ Starting reload process..."
+  config: "&e⏳ Reloading configuration files..."
+  modules: "&e⏳ Reloading modules..."
+  language: "&e⏳ Reloading language files..."
+  # webui: "&e⏳ Reloading WebUI settings..."  # MOVED TO webui-development
+  complete: "&a✓ Reload completed successfully! &8(&7{0}ms&8)"
+  error: "&c✗ Reload failed: {0}"
 
 # Debug Messages
 debug:
-  header: "#555555{separator}\n#00AAFF&lDebug Mode\n#555555{separator}"
-  enabled: "#00FF00✓ Debug mode enabled"
-  disabled: "#FF0000✗ Debug mode disabled"
-  status: "#AAAAAADebug mode: {0}"
-  log-level: "#AAAAAALog level: #FFAA00{0}"
+  header: "&8{separator}\n&b&lDebug Mode\n&8{separator}"
+  enabled: "&a✓ Debug mode enabled"
+  disabled: "&c✗ Debug mode disabled"
+  status: "&7Debug mode: {0}"
+  log-level: "&7Log level: &e{0}"
   
   info:
-    verbose: "#AAAAAAVerbose logging enabled"
-    performance: "#AAAAAAPerformance tracking enabled"
-    modules: "#AAAAAAModule debugging enabled"
+    verbose: "&7Verbose logging enabled"
+    performance: "&7Performance tracking enabled"
+    modules: "&7Module debugging enabled"
+
+# Info Messages
+info:
+  header: "&8{separator}\n&b&lEssentials&e&lCore &7- &fSystem Information\n&8{separator}"
+  version: "&7Version: &e{0}"
+  author: "&7Author: &e{0}"
+  website: "&7Website: &e{0}"
+  modules-loaded: "&7Loaded Modules: &a{0}"
+  uptime: "&7Uptime: &a{0}"
+  memory-usage: "&7Memory: &a{0} MB &7/ &e{1} MB"
+
+# Memory Messages
+memory:
+  header: "&8{separator}\n&e&lMemory Information\n&8{separator}"
+  used: "&7Used: &a{0} MB"
+  free: "&7Available: &b{0} MB"
+  total: "&7Total: &e{0} MB"
+  max: "&7Maximum: &c{0} MB"
+  usage-percent: "&7Usage: &f{0}%"
+  gc-started: "&a✓ &7Running garbage collection..."
+  gc-completed: "&a✓ &7Garbage collection completed!"
+
+# Threads Messages
+threads:
+  header: "&8{separator}\n&e&lThread Information\n&8{separator}"
+  active: "&7Active Threads: &a{0}"
+  daemon: "&7Daemon Threads: &b{0}"
+  groups: "&7Thread Groups: &e{0}"
+  list-header: "&7&lActive Threads:"
+
+# Backup Messages
+backup:
+  header: "&8{separator}\n&e&lBackup Management\n&8{separator}"
+  creating: "&a✓ &7Creating backup..."
+  created: "&a✓ &7Backup created successfully!"
+  list-header: "&e&lAvailable Backups:"
+  restoring: "&a✓ &7Restoring backup..."
+  restored: "&a✓ &7Backup restored successfully!"
+
+# Security Messages
+security:
+  header: "&8{separator}\n&c&lSecurity Information\n&8{separator}"
+  debug-mode: "&7Debug Mode: {0}"
+  sandbox: "&7Module Sandbox: {0}"
+  # webui-security: "&7WebUI Security: {0}"  # MOVED TO webui-development
+  permissions: "&7Permissions Hook: {0}"
+  scan-started: "&a✓ &7Running security scan..."
+  scan-completed: "&a✓ &7No security issues found!"
+
+# Export Messages
+export:
+  header: "&8{separator}\n&e&lExport Options\n&8{separator}"
+  config-exporting: "&a✓ &7Exporting configuration..."
+  config-exported: "&a✓ &7Export saved: exports/config-export.yml"
+  modules-exporting: "&a✓ &7Exporting module information..."
+  modules-exported: "&a✓ &7Export saved: exports/modules-export.json"
+  logs-exporting: "&a✓ &7Exporting logs..."
+  logs-exported: "&a✓ &7Export saved: exports/logs-export.zip"
+  all-exporting: "&a✓ &7Creating full export..."
+  all-exported: "&a✓ &7Export saved: exports/full-export.zip"
+
+# Config Messages
+config:
+  header: "&8{separator}\n&e&lConfiguration Management\n&8{separator}"
+  reloading: "&a✓ &7Reloading configuration..."
+  reloaded: "&a✓ &7Configuration reloaded successfully!"
+  value: "&7{0}: &f{1}"
+  set: "&a✓ &7Configuration value set: &e{0} &7= &f{1}"
+  list-header: "&e&lConfiguration Keys:"

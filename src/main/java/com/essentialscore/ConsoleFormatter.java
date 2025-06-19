@@ -80,14 +80,11 @@ public class ConsoleFormatter {
     
     // Zeitformat
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-    
-    private final Logger logger;
+      private final Logger logger;
     private final String prefix;
     private final boolean useColors;
     private final boolean showTimestamp;
     private final boolean useUnicodeSymbols;
-    @SuppressWarnings("unused")
-    private final String stylePreset;
     
     // Konfiguration für die Kategorien
     private boolean categoriesEnabledGlobal = true;
@@ -149,14 +146,12 @@ public class ConsoleFormatter {
      * @param stylePreset Das zu verwendende Stil-Preset
      */
     public ConsoleFormatter(Logger logger, String prefix, boolean useColors, 
-                          boolean showTimestamp, boolean useUnicodeSymbols, String stylePreset) {
-        this.logger = logger;
+                          boolean showTimestamp, boolean useUnicodeSymbols, String stylePreset) {        this.logger = logger;
         // Process prefix to convert Minecraft color codes to ANSI codes
         this.prefix = useColors ? formatHexCodes(prefix) : stripMinecraftColors(prefix);
         this.useColors = useColors;
         this.showTimestamp = showTimestamp;
         this.useUnicodeSymbols = useUnicodeSymbols;
-        this.stylePreset = stylePreset;
         
         initializeCategoryStyles();
     }

@@ -7,13 +7,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.command.CommandSender;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.management.ThreadInfo;
-import java.lang.management.ThreadMXBean;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -36,20 +33,11 @@ import com.essentialscore.api.command.DynamicCommand;
  */
 public class ModuleManager {
     private final ApiCore apiCore;
-    private final File modulesDir;
-    private final File configDir;
+    private final File modulesDir;    private final File configDir;
     private final Map<String, Object> loadedModules;
     private final Map<String, List<DynamicCommand>> moduleCommands;
     private final ExecutorService executorService;
     private static final int BUFFER_SIZE = 8192;
-    @SuppressWarnings("unused")
-    private ApiCore core;
-    @SuppressWarnings("unused")
-    private final Map<String, String> resourcePathMappings = new ConcurrentHashMap<>();
-    @SuppressWarnings("unused")
-    private Object moduleFileWatcher;
-    @SuppressWarnings("unused")
-    private BukkitTask watcherTask;
     private ConsoleFormatter console;
       // Performance-Tracking für Module
     private final Map<String, ModulePerformanceData> modulePerformanceMap = new ConcurrentHashMap<>();
@@ -194,248 +182,10 @@ public class ModuleManager {
                     apiCore.getLogger().info("Loaded: " + file.getName());
                     }
                 }
-            } catch (Exception e) {
-                apiCore.getLogger().log(Level.SEVERE, "Fehler beim Laden des Moduls " + file.getName(), e);
-            }
-        }
-    }    
-    /**
-     * Rekursive Methode zum Laden eines Moduls mit seinen Abhängigkeiten
-     */
-    @SuppressWarnings("unused")
-    private void loadModuleWithDependencies(
-            ModuleMetadata metadata, 
-            Map<String, ModuleMetadata> allModules,
-            Set<String> loadedModules,
-            Set<String> processingModules,
-            CompletionService<String> completionService) {
-        
-        String moduleName = metadata.getName();
-        
-        // Überspringe, wenn das Modul bereits geladen ist
-        if (loadedModules.contains(moduleName)) {
-            return;
-        }
-        
-        // Prüfe nochmals, ob das Modul deaktiviert ist
-        File moduleConfigFile = new File(configDir, moduleName + ".yml");
-        if (moduleConfigFile.exists()) {
-            try {
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(moduleConfigFile);
-                if (!config.getBoolean("enabled", true)) {
-                    return;
-                }
-            } catch (Exception e) {
-                apiCore.getLogger().warning("Fehler beim Lesen der Modulkonfiguration für " + moduleName + ": " + e.getMessage());
-            }
-        }
-        
-        // Erkennung zyklischer Abhängigkeiten
-        if (processingModules.contains(moduleName)) {
-            apiCore.getLogger().severe("Zyklische Abhängigkeit erkannt für Modul: " + moduleName);
-            return;
-        }
-        
-        processingModules.add(moduleName);
-        
-        // Zeitlimit für Modulladung
-        final long moduleLoadTimeout = apiCore.getConfig().getLong("modules.module-load-timeout", 30000);
-        
-        // Liste der Abhängigkeiten
-        List<String> dependencies = metadata.getDependencies();
-        
-        // Verarbeite alle Abhängigkeiten (mit verbessertem Fehlerhandling)
-        boolean allDependenciesLoaded = true;
-        List<String> failedDependencies = new ArrayList<>();
-        
-        for (String dependency : dependencies) {
-            // Wenn Abhängigkeit bereits geladen wurde, überspringen
-            if (loadedModules.contains(dependency)) {
-                continue;
-            }
-            
-            ModuleMetadata dependencyMetadata = allModules.get(dependency);
-            if (dependencyMetadata == null) {
-                apiCore.getLogger().warning("Abhängigkeit " + dependency + " für Modul " + 
-                    moduleName + " nicht gefunden. Überspringe Abhängigkeit.");
-                failedDependencies.add(dependency);
-                if (!apiCore.getConfig().getBoolean("modules.ignore-failed-dependencies", true)) {
-                    allDependenciesLoaded = false;
-                }
-                continue;
-            }
-            
-            try {
-                // Lade die Abhängigkeit rekursiv
-                loadModuleWithDependencies(dependencyMetadata, allModules, loadedModules, processingModules, completionService);
-                
-                if (!loadedModules.contains(dependency)) {
-                    apiCore.getLogger().warning("Abhängigkeit " + dependency + " konnte nicht geladen werden");
-                    failedDependencies.add(dependency);
-                    if (!apiCore.getConfig().getBoolean("modules.ignore-failed-dependencies", true)) {
-                        allDependenciesLoaded = false;
-                    }
-                }
-            } catch (Exception e) {
-                apiCore.getLogger().log(Level.SEVERE, "Fehler beim Laden der Abhängigkeit " + dependency, e);
-                failedDependencies.add(dependency);
-                if (!apiCore.getConfig().getBoolean("modules.ignore-failed-dependencies", true)) {
-                    allDependenciesLoaded = false;
-                }
-            }
-        }
-        
-        // Prüfe, ob das Modul geladen werden kann
-        if (!allDependenciesLoaded) {
-            apiCore.getLogger().warning("Modul " + moduleName + " wird nicht geladen, da Abhängigkeiten fehlen: " + 
-                String.join(", ", failedDependencies));
-            processingModules.remove(moduleName);
-            return;
-        }
-        
-        // WICHTIG: Überprüfen, ob der ExecutorService noch aktiv ist
-        if (executorService == null || executorService.isShutdown()) {
-            apiCore.getLogger().severe("ExecutorService ist nicht mehr verfügbar! Versuche direktes Laden...");
-            try {
-                // Direktes Laden im aktuellen Thread als Fallback
-                boolean success = loadModuleDirect(metadata.getJarFile());
-                if (success) {
-                    loadedModules.add(moduleName);
-                    apiCore.getLogger().info("Modul " + moduleName + " direkt geladen (ExecutorService nicht verfügbar)");
-                }
-                processingModules.remove(moduleName);
-                return;
-            } catch (Exception e) {
-                apiCore.getLogger().log(Level.SEVERE, "Fehler beim direkten Laden des Moduls " + moduleName, e);
-                processingModules.remove(moduleName);
-                return;
-            }
-        }
-        
-        // Führe die Modulladung asynchron durch mit Timeout-Schutz
-        apiCore.getLogger().info("Reiche Modul " + moduleName + " an Task-Ausführer weiter");
-        
-        // WICHTIG: Validiere, dass der ClassLoader des Moduls einwandfrei funktioniert
-        File jarFile = metadata.getJarFile();
-        try {
-            // Versuche, die JAR-Datei zu öffnen und zu lesen, um sicherzustellen, dass der Zugriff funktioniert
-            try (JarFile jar = new JarFile(jarFile)) {
-                JarEntry moduleYml = jar.getJarEntry("module.yml");
-                if (moduleYml != null) {
-                    apiCore.getLogger().info("module.yml in " + jarFile.getName() + " erfolgreich geöffnet");
-                }
-            }
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.SEVERE, "Fehler beim Vortest der JAR-Datei für " + moduleName, e);
-        }
-        
-        // Erzeuge einen Thread mit eindeutigem Namen für bessere Diagnostik
-        String threadName = "ModuleLoader-" + moduleName + "-" + System.currentTimeMillis();
-        
-        try {
-        completionService.submit(() -> {
-                // Setze Thread-Namen für bessere Diagnostik
-                Thread.currentThread().setName(threadName);
-                
-            try {
-                // Timeout-Schutz für die eigentliche Modulladung
-                    apiCore.getLogger().info("Erstelle Future für Modulladung von " + moduleName);
-                    
-                    // WICHTIG: Erneute Prüfung des ExecutorService im Task
-                    if (executorService == null || executorService.isShutdown()) {
-                        // Fallback: Direktes Laden als letzter Ausweg
-                        apiCore.getLogger().warning("ExecutorService nicht mehr verfügbar im Task! Direktladung...");
-                        try {
-                            boolean success = loadModuleDirect(metadata.getJarFile());
-                            if (success) {
-                                loadedModules.add(moduleName);
-                                return "Modul " + moduleName + " direkt geladen (ExecutorService nicht verfügbar)";
-                            } else {
-                                return "Modul " + moduleName + " konnte nicht direkt geladen werden";
-                            }
-                        } catch (Exception e) {
-                            apiCore.getLogger().log(Level.SEVERE, "Fehler bei Direktladung von " + moduleName, e);
-                            return "Fehler bei Direktladung von " + moduleName;
-                        }
-                    }
-                    
-                Future<Boolean> loadFuture = executorService.submit(() -> {
-                    try {
-                        loadModule(metadata.getJarFile());
-                        return true;
-                    } catch (Exception e) {
-                        apiCore.getLogger().log(Level.SEVERE, "Fehler beim Laden des Moduls " + moduleName, e);
-                        return false;
-                    }
-                });
-                
-                try {
-                        apiCore.getLogger().info("Warte auf Abschluss der Modulladung für " + moduleName + " mit Timeout: " + moduleLoadTimeout + "ms");
-                        
-                    if (loadFuture.get(moduleLoadTimeout, TimeUnit.MILLISECONDS)) {
-                        loadedModules.add(moduleName);
-                        apiCore.getLogger().info("Modul " + moduleName + " erfolgreich geladen");
-                        return "Modul " + moduleName + " geladen";
-                    } else {
-                        apiCore.getLogger().warning("Modul " + moduleName + " konnte nicht geladen werden");
-                        return "Modul " + moduleName + " fehlgeschlagen";
-                    }
-                } catch (TimeoutException e) {
-                        apiCore.getLogger().severe("TIMEOUT beim Laden des Moduls " + moduleName);
-                    loadFuture.cancel(true);
-                    apiCore.getLogger().severe("Timeout beim Laden des Moduls " + moduleName + 
-                        " nach " + moduleLoadTimeout + "ms");
-                        
-                        // Stelle Diagnoseinformationen bereit
-                        apiCore.getLogger().severe("Thread-Status zum Zeitpunkt des Timeouts:");
-                        ThreadMXBean threadMXBean = java.lang.management.ManagementFactory.getThreadMXBean();
-                        ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(true, true);
-                        
-                        for (ThreadInfo threadInfo : threadInfos) {
-                            apiCore.getLogger().info("[ThreadDump] Name: " + threadInfo.getThreadName() + 
-                                    ", Status: " + threadInfo.getThreadState());
-                        }
-                        
-                    return "Modul " + moduleName + " - Timeout";
-                }
-            } finally {
-                processingModules.remove(moduleName);
-            }
-        });
-        } catch (RejectedExecutionException e) {
-            apiCore.getLogger().severe("Task für " + moduleName + " wurde abgelehnt: " + e.getMessage());
-            apiCore.getLogger().info("Versuche direktes Laden von " + moduleName + " als Fallback...");
-            
-            try {
-                boolean success = loadModuleDirect(metadata.getJarFile());
-                if (success) {
-                    loadedModules.add(moduleName);
-                    apiCore.getLogger().info("Modul " + moduleName + " erfolgreich direkt geladen nach Ablehnung");
-                } else {
-                    apiCore.getLogger().warning("Direktes Laden von " + moduleName + " nach Ablehnung fehlgeschlagen");
-                }
-            } catch (Exception loadEx) {
-                apiCore.getLogger().log(Level.SEVERE, "Fehler beim direkten Laden von " + moduleName + " nach Ablehnung", loadEx);
-            } finally {
-                processingModules.remove(moduleName);
-            }
-        }
+            } catch (Exception e) {                apiCore.getLogger().log(Level.SEVERE, "Fehler beim Laden des Moduls " + file.getName(), e);
+            }        }
     }
-    
-    /**
-     * Direktes Laden eines Moduls im aktuellen Thread als Fallback
-     */
-    private boolean loadModuleDirect(File jarFile) {
-        try {
-            apiCore.getLogger().info("DIREKTES Laden des Moduls: " + jarFile.getName() + " im aktuellen Thread");
-            loadModule(jarFile);
-            return true;
-        } catch (Exception e) {
-            apiCore.getLogger().log(Level.SEVERE, "Fehler beim direkten Laden des Moduls " + jarFile.getName(), e);
-            return false;
-        }
-    }
-    
+      
     /**
      * Lädt alle verfügbaren Module asynchron
      */
@@ -675,30 +425,61 @@ public class ModuleManager {
                                     // Kopie für Lambda-Zugriff
                                     final String moduleNameFinal = moduleName;
                                     final File moduleFileFinal = moduleFile;
-                                    
-                                    // Run module reload on main thread to ensure thread safety
+                                      // Run module reload on main thread to ensure thread safety
                                     Bukkit.getScheduler().runTask(apiCore, () -> {
                                         try {
-                                            if (loadedModules.containsKey(moduleNameFinal)) {
+                                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Hot-Reload erkannt für Modul: " + moduleNameFinal);
+                                            
+                                            // Backup current module info for better reload
+                                            Object currentModuleInfo = loadedModules.get(moduleNameFinal);
+                                            
+                                            if (currentModuleInfo != null) {
                                                 console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Entlade Modul vor Hot-Reload: " + moduleNameFinal);
                                                 unloadModule(moduleNameFinal);
                                             }
                                             
-                                            // Kurze Pause, um sicherzustellen, dass die Datei fertig geschrieben ist
-                                            try {
-                                                Thread.sleep(100);
-                                            } catch (InterruptedException e) {
-                                                Thread.currentThread().interrupt();
+                                            // Warte bis Datei vollständig geschrieben wurde
+                                            int maxRetries = 5;
+                                            for (int i = 0; i < maxRetries; i++) {
+                                                try {
+                                                    Thread.sleep(200); // Länger warten
+                                                    
+                                                    // Teste ob Datei lesbar ist
+                                                    if (moduleFileFinal.exists() && moduleFileFinal.canRead() && moduleFileFinal.length() > 0) {
+                                                        break;
+                                                    }
+                                                } catch (InterruptedException e) {
+                                                    Thread.currentThread().interrupt();
+                                                    break;
+                                                }
                                             }
+                                            
+                                            // Force garbage collection to clean old module classes
+                                            System.gc();
+                                            Thread.sleep(100);
                                             
                                             console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Lade Modul neu: " + moduleNameFinal);
                                             loadModule(moduleFileFinal);
+                                            
+                                            // Synchronize commands after hot reload
+                                            synchronizeCommands();
+                                            
                                             console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Hot-Reload für Modul " + moduleNameFinal + " erfolgreich abgeschlossen");
+                                            
+                                            // Fire module reload event
+                                            Map<String, Object> eventData = new HashMap<>();
+                                            eventData.put("moduleName", moduleNameFinal);
+                                            eventData.put("reloadType", "hot-reload");
+                                            apiCore.fireModuleEvent("module_hot_reloaded", eventData);
+                                            
                                         } catch (Exception e) {
                                             console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Hot-Reload fehlgeschlagen für " + moduleNameFinal + ": " + e.getMessage());
                                             if (apiCore.isDebugMode()) {
                                                 e.printStackTrace();
                                             }
+                                            
+                                            // Try to restore backup or fallback
+                                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Versuche Fallback für " + moduleNameFinal);
                                         }
                                     });
                                 } else {
@@ -1552,24 +1333,27 @@ public class ModuleManager {
                 e.printStackTrace();
             }
         }
-    }
-
-    /**
+    }    /**
      * Lädt alle Module neu - verbesserte Implementierung für sicheren Reload
      */
     public void reloadAllModules() {
         console.header("MODULE NEU LADEN");
         
-        // Zuerst alle Module entladen
+        // Safety check
+        if (loadedModules.isEmpty()) {
+            console.info("Keine Module zum Neuladen gefunden");
+            return;
+        }
+        
+        // Backup module information
+        Map<String, File> moduleBackups = new HashMap<>();
         List<String> modulesToReload = new ArrayList<>(loadedModules.keySet());
         
-        console.info("Entlade " + modulesToReload.size() + " Module...");
+        console.info("Sichere " + modulesToReload.size() + " Module...");
         
-        // Module in umgekehrter Reihenfolge entladen (für Abhängigkeiten)
-        for (int i = modulesToReload.size() - 1; i >= 0; i--) {
-            String moduleName = modulesToReload.get(i);
+        // Backup module jar files
+        for (String moduleName : modulesToReload) {
             try {
-                // Speichere Informationen über das Modul vor dem Entladen
                 Object moduleObj = loadedModules.get(moduleName);
                 File jarFile = null;
                 
@@ -1578,123 +1362,133 @@ public class ModuleManager {
                     jarFile = info.getJarFile();
                 }
                 
-                // Modul entladen
-                unloadModule(moduleName);
-                
-                // Falls die JAR-Datei bekannt ist, speichern wir sie für das spätere Neuladen
-                if (jarFile != null) {
-                    // Wir speichern die Informationen in einem gemeinsamen Kontext
-                    apiCore.setSharedData("reload_jar_" + moduleName, jarFile);
+                if (jarFile != null && jarFile.exists()) {
+                    moduleBackups.put(moduleName, jarFile);
+                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                        "Module " + moduleName + " JAR gesichert: " + jarFile.getName(), apiCore.isDebugMode());
                 }
             } catch (Exception e) {
-                console.error("Fehler beim Entladen von Modul " + moduleName + ": " + e.getMessage());
+                console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE,
+                    "Konnte Backup für Modul " + moduleName + " nicht erstellen: " + e.getMessage());
+            }
+        }
+        
+        console.info("Entlade " + modulesToReload.size() + " Module...");
+        
+        // Unload modules in reverse dependency order
+        Collections.reverse(modulesToReload);
+        for (String moduleName : modulesToReload) {
+            try {
+                console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Entlade Modul: " + moduleName);
+                unloadModule(moduleName);
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                    "Fehler beim Entladen von Modul " + moduleName + ": " + e.getMessage());
                 if (apiCore.isDebugMode()) {
                     e.printStackTrace();
                 }
             }
         }
         
-        // Kleine Pause, um dem System Zeit zum Aufräumen zu geben
+        // Wait for cleanup
         try {
-            Thread.sleep(500);
+            Thread.sleep(1000); // Longer wait for proper cleanup
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
         
-        // System.gc() aufrufen, um nicht mehr benötigte ClassLoader zu entfernen
-        System.gc();
-        
-        // Kleine Pause nach GC
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        // Force garbage collection multiple times for better ClassLoader cleanup
+        for (int i = 0; i < 3; i++) {
+            System.gc();
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
         
         console.info("Module wurden entladen, lade Module neu...");
         
-        // Modul-Verzeichnis aktualisieren
-        File[] files = modulesDir.listFiles((dir, name) -> name.endsWith(".jar"));
+        // Clear various caches
+        apiCore.cleanMethodCache(null); // Clear entire method cache
         
-        if (files == null || files.length == 0) {
-            console.warning("Keine Module im Verzeichnis gefunden");
-            return;
-        }
+        // Reload modules
+        int reloadedCount = 0;
+        Collections.reverse(modulesToReload); // Back to original order
         
-        // Alle statischen Caches leeren, die Modulreferenzen enthalten könnten
-        apiCore.cleanMethodCache(null); // Leert den gesamten Methoden-Cache
-        
-        // Lade alle Module mit Abhängigkeitsauflösung neu
-        loadModulesWithDependencyResolution();
-        
-        // Befehle nach dem Neuladen synchronisieren
-        synchronizeCommands();
-        
-        // Stelle sicher, dass alle Listener korrekt registriert sind
-        for (String moduleName : loadedModules.keySet()) {
-            Object moduleObj = loadedModules.get(moduleName);
-            if (moduleObj instanceof ApiCore.ModuleInfo) {
-                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleObj;
-                Object instance = info.getInstance();
-                
-                if (instance != null) {
-                    // Prüfe, ob das Modul ein Listener ist
-                    if (instance.getClass().isAnnotationPresent(com.essentialscore.api.event.Listener.class)) {
-                        try {
-                            // Registriere Listener erneut
-                            Bukkit.getPluginManager().registerEvents((Listener)instance, apiCore);
-                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
-                                "Listener für Modul " + moduleName + " neu registriert");
-                        } catch (Exception e) {
-                            console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
-                                "Konnte Listener für Modul " + moduleName + " nicht neu registrieren: " + e.getMessage());
-                        }
+        for (String moduleName : modulesToReload) {
+            File jarFile = moduleBackups.get(moduleName);
+            if (jarFile != null && jarFile.exists()) {
+                try {
+                    console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Lade Modul neu: " + moduleName);
+                    loadModule(jarFile);
+                    reloadedCount++;
+                    console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, 
+                        "Modul " + moduleName + " erfolgreich neu geladen");
+                } catch (Exception e) {
+                    console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                        "Fehler beim Neuladen von Modul " + moduleName + ": " + e.getMessage());
+                    if (apiCore.isDebugMode()) {
+                        e.printStackTrace();
                     }
                 }
+            } else {
+                console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
+                    "JAR-Datei für Modul " + moduleName + " nicht gefunden oder nicht lesbar");
             }
         }
         
-        // Führe onEnable für alle Module erneut aus, um sicherzustellen, dass sie korrekt initialisiert sind
+        // Post-reload tasks
+        synchronizeCommands();
+        
+        // Re-register event listeners
+        console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, "Registriere Event-Listener neu...");
         for (String moduleName : loadedModules.keySet()) {
-            Object moduleObj = loadedModules.get(moduleName);
-            if (moduleObj instanceof ApiCore.ModuleInfo) {
-                ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleObj;
-                Object instance = info.getInstance();
-                
-                if (instance != null) {
+            try {
+                Object moduleObj = loadedModules.get(moduleName);
+                if (moduleObj instanceof ApiCore.ModuleInfo) {
+                    ApiCore.ModuleInfo info = (ApiCore.ModuleInfo) moduleObj;
+                    Object instance = info.getInstance();
+                    
+                    // Re-register Bukkit event listeners
+                    if (instance instanceof Listener) {
+                        Bukkit.getPluginManager().registerEvents((Listener)instance, apiCore);
+                        console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                            "Event-Listener für Modul " + moduleName + " neu registriert", apiCore.isDebugMode());
+                    }
+                    
+                    // Call onEnable again
                     try {
-                        // Versuche onEnable aufzurufen
                         if (instance instanceof com.essentialscore.api.Module) {
                             ((com.essentialscore.api.Module) instance).onEnable();
-                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
-                                "onEnable für Modul " + moduleName + " aufgerufen");
                         } else {
-                            // Versuche über Reflection
+                            // Try reflection for legacy modules
                             try {
                                 Method onEnableMethod = instance.getClass().getMethod("onEnable");
                                 onEnableMethod.invoke(instance);
-                                console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
-                                    "onEnable für Legacy-Modul " + moduleName + " aufgerufen");
                             } catch (NoSuchMethodException e) {
-                                // Keine onEnable-Methode gefunden, ist okay
+                                // No onEnable method, that's okay
                             }
                         }
                     } catch (Exception e) {
                         console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, 
                             "Fehler beim Aufrufen von onEnable für Modul " + moduleName + ": " + e.getMessage());
-                        if (apiCore.isDebugMode()) {
-                            e.printStackTrace();
-                        }
                     }
                 }
+            } catch (Exception e) {
+                console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE,
+                    "Fehler bei der Nachbearbeitung für Modul " + moduleName + ": " + e.getMessage());
             }
         }
         
-        console.success("Module wurden neu geladen");
+        console.success("Module wurden neu geladen (" + reloadedCount + "/" + modulesToReload.size() + " erfolgreich)");
         
-        // Event für das Neuladen der Module auslösen
+        // Fire global reload event
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("moduleCount", loadedModules.size());
+        eventData.put("reloadedCount", reloadedCount);
+        eventData.put("totalCount", modulesToReload.size());
         apiCore.fireModuleEvent("modules_reloaded", eventData);
     }
     

@@ -53,7 +53,7 @@ public class ModuleOptimizer {
         this.optimizationModels = new ConcurrentHashMap<>();
         this.performanceMonitor = new PerformanceMonitor();
         this.anomalyDetector = new AnomalyDetector();
-        this.predictiveScaler = new PredictiveScaler(plugin); // Use plugin parameter
+        this.predictiveScaler = new PredictiveScaler(60);
         this.loadBalancer = new LoadBalancer(this);
         this.selfHealingManager = new SelfHealingManager(this);
         

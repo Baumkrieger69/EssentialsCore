@@ -1,0 +1,89 @@
+# Backup Configuration for EssentialsCore
+# This file contains backup-related settings for the plugin
+
+backup:
+  # Full backup settings
+  full:
+    # Interval between full backups in hours (default: 24)
+    interval: 24
+    
+    # Time of day to perform full backups (24-hour format, e.g., "02:00")
+    time: "02:00"
+    
+    # Enable full backups
+    enabled: true
+    
+    # Compression level (0-9, 0=no compression, 9=maximum compression)
+    compression: 6
+    
+    # Maximum number of full backups to keep
+    retention: 7
+  
+  # Incremental backup settings
+  incremental:
+    # Interval between incremental backups in hours (default: 4)
+    interval: 4
+    
+    # Enable incremental backups
+    enabled: true
+    
+    # Maximum number of incremental backups to keep
+    retention: 24
+  
+  # Backup paths
+  paths:
+    # Directory to store backups
+    backupDirectory: "backups"
+    
+    # Directories to include in backups
+    include:
+      - "plugins/EssentialsCore/data"
+      - "plugins/EssentialsCore/modules"
+      - "plugins/EssentialsCore/config"
+    
+    # Directories to exclude from backups
+    exclude:
+      - "plugins/EssentialsCore/temp"
+      - "plugins/EssentialsCore/logs"
+  
+  # Remote backup settings (optional)
+  remote:
+    # Enable remote backups
+    enabled: false
+    
+    # Remote backup type (ftp, sftp, s3, etc.)
+    type: "local"
+    
+    # Remote backup configuration
+    config:
+      # Example for FTP:
+      # host: "backup.example.com"
+      # port: 21
+      # username: "backup_user"
+      # password: "backup_password"
+      # directory: "/backups/minecraft"
+
+# Notification settings
+notifications:
+  # Enable backup notifications
+  enabled: true
+  
+  # Notify on successful backups
+  onSuccess: false
+  
+  # Notify on failed backups
+  onFailure: true
+  
+  # Players to notify (permission-based)
+  notifyAdmins: true
+
+# Performance settings
+performance:
+  # Use async operations for backups
+  async: true
+  
+  # Maximum CPU usage during backups (percentage)
+  maxCpuUsage: 50
+  
+  # Pause between file operations (milliseconds)
+  pauseBetweenFiles: 10

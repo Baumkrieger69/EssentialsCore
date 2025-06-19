@@ -37,7 +37,8 @@ help:
   commands:
     apicore: "#FFAA00/apicore #555555- #AAAAAAHaupt-EssentialsCore-Befehl"
     modules: "#FFAA00/apicore modules #555555- #AAAAAAPlugin-Module verwalten"
-    language: "#FFAA00/apicore language #555555- #AAAAAASpracheinstellungen ändern"    performance: "#FFAA00/apicore performance #555555- #AAAAAASystemleistung anzeigen"
+    language: "#FFAA00/apicore language #555555- #AAAAAASpracheinstellungen ändern"
+    performance: "#FFAA00/apicore performance #555555- #AAAAAASystemleistung anzeigen"
     # webui: "#FFAA00/apicore webui #555555- #AAAAAAWebUI-Interface verwalten"  # MOVED TO webui-development
     reload: "#FFAA00/apicore reload #555555- #AAAAAAPlugin-Konfiguration neu laden"
     debug: "#FFAA00/apicore debug #555555- #AAAAAADebug-Modus umschalten"
@@ -171,7 +172,8 @@ performance:
 reload:
   header: "&8{separator}\n&b&lEssentialsCore wird neu geladen\n&8{separator}"
   starting: "&e⏳ Starte Neuladen-Prozess..."
-  config: "&e⏳ Lade Konfigurationsdateien neu..."  modules: "&e⏳ Lade Module neu..."
+  config: "&e⏳ Lade Konfigurationsdateien neu..."
+  modules: "&e⏳ Lade Module neu..."
   language: "&e⏳ Lade Sprachdateien neu..."
   # webui: "&e⏳ Lade WebUI-Einstellungen neu..."  # MOVED TO webui-development
   complete: "&a✓ Neuladen erfolgreich abgeschlossen! &8(&7{0}ms&8)"
@@ -231,7 +233,8 @@ backup:
 # Security-Nachrichten
 security:
   header: "&8{separator}\n&c&lSicherheits-Information\n&8{separator}"
-  debug-mode: "&7Debug-Modus: {0}"  sandbox: "&7Modul-Sandbox: {0}"
+  debug-mode: "&7Debug-Modus: {0}"
+  sandbox: "&7Modul-Sandbox: {0}"
   # webui-security: "&7WebUI-Sicherheit: {0}"  # MOVED TO webui-development
   permissions: "&7Permissions-Hook: {0}"
   scan-started: "&a✓ &7Sicherheitsscan wird durchgeführt..."

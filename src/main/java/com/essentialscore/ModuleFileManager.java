@@ -334,60 +334,12 @@ public class ModuleFileManager {
     private void logInfo(String message) {
         String color = getNextColor();
         core.getLogger().info(color + "[" + getTimestamp() + "] " + message);
-    }
-
-    /**
-     * Protokolliert eine Erfolgsmeldung
-     */
-    @SuppressWarnings("unused")
-    private void logSuccess(String message) {
-        console.success(message);
-    }
-    
-    /**
-     * Protokolliert eine Warnung
-     */
-    @SuppressWarnings("unused")
-    private void logWarning(String message) {
-        console.warning(message);
-    }
-    
-    /**
-     * Protokolliert einen Fehler
-     */
-    @SuppressWarnings("unused")
-    private void logError(String message) {
-        console.error(message);
-    }
-
-    private String getNextColor() {
+    }    private String getNextColor() {
         String color = CONSOLE_COLORS[colorIndex];
         colorIndex = (colorIndex + 1) % CONSOLE_COLORS.length;
         return color;
-    }
-
-    private String getTimestamp() {
+    }    private String getTimestamp() {
         return new java.text.SimpleDateFormat("HH:mm:ss").format(new Date());
-    }
-
-    /**
-     * Hilfsmethoden für Dateioperationen
-     */
-    /**
-     * Erstellt mehrere Verzeichnisse auf einmal
-     */
-    @SuppressWarnings("unused")
-    private boolean createDirectories(File... directories) {
-        boolean allSuccess = true;
-        
-        for (File dir : directories) {
-            if (!dir.exists() && !dir.mkdirs()) {
-                console.error("Konnte Verzeichnis nicht erstellen: " + dir.getAbsolutePath());
-                allSuccess = false;
-            }
-        }
-        
-        return allSuccess;
     }
 
     private boolean isResourceFile(String fileName) {
