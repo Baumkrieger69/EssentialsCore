@@ -35,10 +35,10 @@ public class ModuleManager {
     private final com.essentialscore.ApiCore apiCore;
     private final File modulesDirectory;
     private final Map<String, ModuleInfo> loadedModules;
-    private final Map<String, ModuleLogger> moduleLoggers;
-    private final Map<String, Boolean> moduleEnableStatus;
+    private final Map<String, ModuleLogger> moduleLoggers;    private final Map<String, Boolean> moduleEnableStatus;
     private final List<String> loadOrder;
     private boolean isShuttingDown;
+    private boolean isReloading = false;
 
     /**
      * Creates a new module manager.
@@ -106,10 +106,12 @@ public class ModuleManager {
         }
 
         String moduleName = file.getName().substring(0, file.getName().length() - 4);
-        
-        // Check if already loaded
+          // Check if already loaded
         if (loadedModules.containsKey(moduleName)) {
-            plugin.getLogger().info("Module already loaded: " + moduleName);
+            // Only log during normal loading, not during reload operations
+            if (!isReloading) {
+                plugin.getLogger().info("Module already loaded: " + moduleName);
+            }
             return false;
         }
 
@@ -350,14 +352,17 @@ public class ModuleManager {
             plugin.getLogger().log(Level.SEVERE, "Error reloading module: " + moduleName, e);
             return false;
         }
-    }
-
-    /**
+    }    /**
      * Reloads all modules.
      */
     public void reloadModules() {
-        for (String moduleName : new ArrayList<>(loadOrder)) {
-            reloadModule(moduleName);
+        isReloading = true;
+        try {
+            for (String moduleName : new ArrayList<>(loadOrder)) {
+                reloadModule(moduleName);
+            }
+        } finally {
+            isReloading = false;
         }
     }
 

@@ -11,9 +11,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * Modernes Sprachsystem für EssentialsCore
@@ -123,10 +122,8 @@ public class LanguageManager {
         
         return formatMessage(message);
     }
-    
-    /**
-     * Formatiert eine Nachricht mit modernen Minecraft-Formatierungen
-     * Unterstützt Hex-Farben, Gradienten und spezielle Effekte
+      /**
+     * Formatiert eine Nachricht mit coolen Effekten
      */
     public String formatMessage(String message) {
         if (message == null) return "";
@@ -168,36 +165,86 @@ public class LanguageManager {
     /**
      * Sendet eine formatierte Nachricht an einen CommandSender
      */
-    public void sendMessage(CommandSender sender, String key, Object... args) {
+    public void sendMessage(org.bukkit.command.CommandSender sender, String key, Object... args) {
         sender.sendMessage(getPrefix() + getMessage(key, args));
     }
     
     /**
      * Sendet eine Erfolgs-Nachricht
      */
-    public void sendSuccess(CommandSender sender, String key, Object... args) {
+    public void sendSuccess(org.bukkit.command.CommandSender sender, String key, Object... args) {
         sender.sendMessage(getPrefix() + "§a" + getMessage(key, args));
     }
     
     /**
      * Sendet eine Fehler-Nachricht
      */
-    public void sendError(CommandSender sender, String key, Object... args) {
+    public void sendError(org.bukkit.command.CommandSender sender, String key, Object... args) {
         sender.sendMessage(getPrefix() + "§c" + getMessage(key, args));
     }
     
     /**
      * Sendet eine Warn-Nachricht
      */
-    public void sendWarning(CommandSender sender, String key, Object... args) {
+    public void sendWarning(org.bukkit.command.CommandSender sender, String key, Object... args) {
         sender.sendMessage(getPrefix() + "§e" + getMessage(key, args));
     }
     
     /**
      * Sendet eine Info-Nachricht
      */
-    public void sendInfo(CommandSender sender, String key, Object... args) {
+    public void sendInfo(org.bukkit.command.CommandSender sender, String key, Object... args) {
         sender.sendMessage(getPrefix() + "§b" + getMessage(key, args));
+    }
+    
+    public String getCurrentLanguage() {
+        return currentLanguage;
+    }
+    
+    public String[] getSupportedLanguages() {
+        return SUPPORTED_LANGUAGES.clone();
+    }
+      /**
+     * Lädt alle Sprachen neu
+     */
+    public void reload() {
+        languages.clear();
+        loadLanguages();
+        LOGGER.info("Sprachsystem neu geladen");
+    }
+    
+    /**
+     * Formatiert eine Nachricht mit modernen Minecraft-Formatierungen
+     * Unterstützt Hex-Farben, Gradienten und spezielle Effekte
+     */
+    public String formatMessage(String message) {
+        if (message == null) return "";
+        
+        // Hex-Farben unterstützen (#RRGGBB format)
+        message = message.replaceAll("#([A-Fa-f0-9]{6})", "§x§$1");
+        message = message.replaceAll("§x§([A-Fa-f0-9])([A-Fa-f0-9])([A-Fa-f0-9])([A-Fa-f0-9])([A-Fa-f0-9])([A-Fa-f0-9])", 
+            "§x§$1§$2§$3§$4§$5§$6");
+        
+        // Standard-Farbcodes
+        message = message.replace("&", "§");
+        
+        // Spezielle Formatierungen
+        message = message.replace("<gradient>", "§6");
+        message = message.replace("</gradient>", "§r");
+        message = message.replace("<rainbow>", "§c");
+        message = message.replace("</rainbow>", "§r");
+        message = message.replace("<bold>", "§l");
+        message = message.replace("</bold>", "§r");
+        message = message.replace("<italic>", "§o");
+        message = message.replace("</italic>", "§r");
+        message = message.replace("<underline>", "§n");
+        message = message.replace("</underline>", "§r");
+        message = message.replace("<strikethrough>", "§m");
+        message = message.replace("</strikethrough>", "§r");
+        message = message.replace("<obfuscated>", "§k");
+        message = message.replace("</obfuscated>", "§r");
+        
+        return message;
     }
     
     /**
@@ -220,12 +267,12 @@ public class LanguageManager {
     /**
      * Holt eine Liste von Nachrichten (für mehrzeilige Nachrichten)
      */
-    public List<String> getMessageList(String key, Object... args) {
+    public java.util.List<String> getMessageList(String key, Object... args) {
         if (currentConfig == null) {
             return java.util.Arrays.asList("§c[Missing Language Config] " + key);
         }
         
-        List<String> messages = currentConfig.getStringList(key);
+        java.util.List<String> messages = currentConfig.getStringList(key);
         if (messages.isEmpty()) {
             // Fallback zu Englisch
             YamlConfiguration englishConfig = languages.get("en_US");
@@ -238,7 +285,7 @@ public class LanguageManager {
         }
         
         // Argumente in alle Nachrichten ersetzen und formatieren
-        List<String> formattedMessages = new ArrayList<>();
+        java.util.List<String> formattedMessages = new java.util.ArrayList<>();
         for (String message : messages) {
             if (args.length > 0) {
                 for (int i = 0; i < args.length; i++) {
@@ -254,8 +301,8 @@ public class LanguageManager {
     /**
      * Sendet eine Liste von Nachrichten an einen CommandSender
      */
-    public void sendMessageList(CommandSender sender, String key, Object... args) {
-        List<String> messages = getMessageList(key, args);
+    public void sendMessageList(org.bukkit.command.CommandSender sender, String key, Object... args) {
+        java.util.List<String> messages = getMessageList(key, args);
         for (String message : messages) {
             sender.sendMessage(getPrefix() + message);
         }
@@ -264,7 +311,7 @@ public class LanguageManager {
     /**
      * Erstellt eine Debug-Nachricht für Entwickler
      */
-    public void sendDebug(CommandSender sender, String message) {
+    public void sendDebug(org.bukkit.command.CommandSender sender, String message) {
         if (plugin.getConfig().getBoolean("general.debug-mode", false)) {
             sender.sendMessage(getPrefix() + "§7[DEBUG] " + formatMessage(message));
         }
@@ -284,56 +331,5 @@ public class LanguageManager {
         }
         return languageMap;
     }
-    
-    public String getCurrentLanguage() {
-        return currentLanguage;
-    }
-    
-    public String[] getSupportedLanguages() {
-        return SUPPORTED_LANGUAGES.clone();
-    }
-    
-    /**
-     * Lädt alle Sprachen neu
-     */
-    public void reload() {
-        languages.clear();
-        loadLanguages();
-        LOGGER.info("Sprachsystem neu geladen");
-    }
-      /**
-     * Sendet eine Nachricht an einen Spieler mit personalisierten Platzhaltern
-     */
-    public void sendPersonalizedMessage(Player player, String key, Object... args) {
-        String message = getMessage(key, args);
-        // Spieler-spezifische Platzhalter ersetzen
-        message = message.replace("{player}", player.getName());
-        message = message.replace("{displayname}", player.displayName().toString());
-        message = message.replace("{world}", player.getWorld().getName());
-        
-        player.sendMessage(getPrefix() + message);
-    }
-    
-    /**
-     * Broadcast eine Nachricht an alle Online-Spieler
-     */
-    public void broadcastMessage(String key, Object... args) {
-        String message = getPrefix() + getMessage(key, args);
-        // Use modern broadcast method instead of deprecated one
-        plugin.getServer().getOnlinePlayers().forEach(player -> 
-            player.sendMessage(message)
-        );
-    }
-    
-    /**
-     * Sendet eine Nachricht mit Berechtigung (nur Spieler mit der Berechtigung erhalten sie)
-     */
-    public void sendPermissionMessage(String permission, String key, Object... args) {
-        String message = getPrefix() + getMessage(key, args);
-        plugin.getServer().getOnlinePlayers().forEach(player -> {
-            if (player.hasPermission(permission)) {
-                player.sendMessage(message);
-            }
-        });
-    }
+}
 }

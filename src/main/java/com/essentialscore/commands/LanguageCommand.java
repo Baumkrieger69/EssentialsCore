@@ -61,8 +61,7 @@ public class LanguageCommand implements CommandExecutor, TabCompleter {
         } else if (subCommand.equals("reload")) {
             apiCore.getLanguageManager().reload();
             sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&aLanguage files reloaded."));
-            return true;
-        } else if (subCommand.equals("list") || subCommand.equals("available")) {
+            return true;        } else if (subCommand.equals("list")) {
             sender.sendMessage(apiCore.formatHex(apiCore.getMessagePrefix() + "&fAvailable languages:"));
             for (String lang : AVAILABLE_LANGUAGES) {
                 String currentMarker = apiCore.getLanguageManager().getCurrentLanguage().equals(lang) ? " &a(current)" : "";
@@ -86,7 +85,7 @@ public class LanguageCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
         
         if (args.length == 1) {
-            List<String> subCommands = Arrays.asList("set", "list", "reload", "available");
+            List<String> subCommands = Arrays.asList("set", "list", "reload");
             String prefix = args[0].toLowerCase();
             
             for (String subCommand : subCommands) {

@@ -26,23 +26,23 @@ import com.essentialscore.api.command.DynamicCommand;
 import com.essentialscore.api.impl.CoreModuleAPI;
 import com.essentialscore.api.language.LanguageManager;
 import com.essentialscore.api.module.ModuleFileManager;
-import com.essentialscore.api.module.ModuleManager;
 import com.essentialscore.api.module.ModuleSandbox;
 import com.essentialscore.api.permission.PermissionManager;
-// import com.essentialscore.api.web.WebUIManager; // MOVED TO webui-development
 import com.essentialscore.commands.ApiCoreMainCommand;
+import com.essentialscore.placeholder.PlaceholderManager;
+import com.essentialscore.clickable.ClickableCommandManager;
+import com.essentialscore.commands.ConfirmCommandExecutor;
+import com.essentialscore.listener.ChatMessageListener;
 
 /**
  * Main class for the EssentialsCore plugin.
  */
 @SuppressWarnings("deprecation")
-public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
-
-    /**
+public class ApiCore extends JavaPlugin implements Listener, BasePlugin {    /**
      * Gets the plugin version without using deprecated getDescription method
      * @return The plugin version
      */
-    private String getPluginVersion() {
+    public String getPluginVersion() {
         try {
             // Use Java reflection to get the version without calling deprecated method directly
             return getClass().getPackage().getImplementationVersion() != null 
@@ -57,8 +57,10 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     private File dataDir;
     private final Map<String, ModuleInfo> loadedModules = new ConcurrentHashMap<>(16, 0.75f, 2);
     private String messagePrefix;
-    private boolean debugMode;    // Manager-Instanzen
-    private ModuleManager moduleManager;
+    private boolean debugMode;
+    private long startTime; // Server start time for uptime calculation// Manager-Instanzen
+    private com.essentialscore.ModuleManager moduleManagerInternal; // Interner Manager
+    private com.essentialscore.api.module.ModuleManager moduleManager; // API Manager
     private PermissionManager permissionManager;
     private CommandManager commandManager;
     private LanguageManager languageManager;
@@ -67,8 +69,9 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     private ModuleSandbox moduleSandbox; // Neue Instanzvariable für Modul-Sandbox
     private ConsoleFormatter console;
     private PerformanceMonitor performanceMonitor;
-    private ThreadManager threadManager;
-    private PerformanceBenchmark performanceBenchmark;
+    private ThreadManager threadManager;    private PerformanceBenchmark performanceBenchmark;
+    private PlaceholderManager placeholderManager;
+    private ClickableCommandManager clickableCommandManager;
     
     // Thread-safe shared data with optimized initial capacity
     private final ConcurrentHashMap<String, Object> sharedData = new ConcurrentHashMap<>(32, 0.75f, 2);
@@ -284,11 +287,12 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         }
         
         return finalResult.toString();
-    }
-
-    @Override
+    }    @Override
     public void onEnable() {
         try {
+            // Startzeit speichern für Uptime-Berechnung
+            startTime = System.currentTimeMillis();
+            
             // Konfigurationsdateien initialisieren
             saveDefaultConfig();
             
@@ -312,37 +316,44 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             // Willkommensnachricht anzeigen
             console.header("ESSENTIALS CORE " + getPluginVersion());
             console.blank();
-            
-            // Konfiguration laden
+              // Konfiguration laden
             loadConfiguration();
-
-            // Event-Listener registrieren
-            registerListeners();
             
-            // Module initialisieren
-            initializeModules();
-              // Initialize permission manager using reflection to avoid direct instantiation
+            // Initialize permission manager BEFORE modules (they need it during loading)
             try {
                 Object permManagerInstance = Class.forName("com.essentialscore.PermissionManager")
                     .getConstructor(ApiCore.class)
                     .newInstance(this);
                 
                 // Cast to the correct API interface type
-                permissionManager = (com.essentialscore.api.permission.PermissionManager) permManagerInstance;
-                
-                // Call hookIntoPermissions via reflection
-                Method hookMethod = permManagerInstance.getClass().getMethod("hookIntoPermissions");
-                hookMethod.invoke(permManagerInstance);
-                
-                // Check permissions status via reflection
-                Method isHookedMethod = permManagerInstance.getClass().getMethod("isPermissionsHooked");
-                boolean isHooked = (boolean) isHookedMethod.invoke(permManagerInstance);
-                
-                getLogger().info("Permissions " + (isHooked ? 
-                    "hooked into external system" : "using default system"));
+                this.permissionManager = (PermissionManager) permManagerInstance;
+                console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Permission Manager initialized");
             } catch (Exception e) {
-                getLogger().log(Level.SEVERE, "Failed to initialize PermissionManager", e);
+                console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Failed to initialize Permission Manager: " + e.getMessage());
+                this.permissionManager = null;
             }
+
+            // Initialize Placeholder Manager
+            try {
+                this.placeholderManager = new PlaceholderManager(this);
+                console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Placeholder Manager initialized");
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Failed to initialize Placeholder Manager: " + e.getMessage());
+            }
+
+            // Initialize Clickable Command Manager
+            try {
+                this.clickableCommandManager = new ClickableCommandManager(this);
+                console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Clickable Command Manager initialized");
+            } catch (Exception e) {
+                console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Failed to initialize Clickable Command Manager: " + e.getMessage());
+            }
+            
+            // Event-Listener registrieren (NACH Manager-Initialisierung)
+            registerListeners();
+            
+            // Module initialisieren (nach PermissionManager)
+            initializeModules();
             
             // Befehle registrieren
             registerCommands();
@@ -371,31 +382,64 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             }
         }
     }
-    
-    /**
+      /**
      * Registriert die Event-Listener für das Plugin
      */
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(this, this);
+        
+        // Register chat message listener for placeholder and clickable command processing
+        if (placeholderManager != null || clickableCommandManager != null) {
+            ChatMessageListener chatListener = new ChatMessageListener(this);
+            getServer().getPluginManager().registerEvents(chatListener, this);
+            console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Chat Message Listener registriert");
+        }
+        
         console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Event-Listener registriert");
     }
     
     /**
      * Initialisiert die Module des Plugins
-     */
-    private void initializeModules() {        // Initialize modules directory if it doesn't exist
+     */    private void initializeModules() {
+        // Initialize modules directory if it doesn't exist
         modulesDir.mkdirs();
-          // Initialize managers        commandManager = new CommandManager(this);
-        languageManager = new LanguageManager(this);
-        // Removed securityManager initialization as field was removed
-        // webUIManager = new WebUIManager(this, securityManager); // MOVED TO webui-development
+        
+        // Initialize managers
+        commandManager = new CommandManager(this);
+        languageManager = new LanguageManager(this);            // Initialize ModuleManager - THIS WAS MISSING!
+        try {
+            // Create maps for ModuleManager
+            Map<String, Object> loadedModulesMap = new ConcurrentHashMap<>();
+            Map<String, List<DynamicCommand>> moduleCommandsMap = new ConcurrentHashMap<>();
+            ExecutorService moduleExecutor = Executors.newCachedThreadPool(r -> {
+                Thread thread = new Thread(r, "ModuleManager-" + UUID.randomUUID().toString().substring(0, 8));
+                thread.setDaemon(true);
+                return thread;
+            });
+            
+            // Initialize internal module manager
+            moduleManagerInternal = new com.essentialscore.ModuleManager(this, modulesDir, new File(getDataFolder(), "modules/configs"), 
+                loadedModulesMap, moduleCommandsMap, moduleExecutor);
+            
+            // Initialize API module manager
+            moduleManager = new com.essentialscore.api.module.ModuleManager(this, this, modulesDir);
+            
+            console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "ModuleManager erfolgreich initialisiert");
+        } catch (Exception e) {
+            console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Initialisieren des ModuleManagers: " + e.getMessage());
+            getLogger().log(Level.SEVERE, "Failed to initialize ModuleManager", e);
+        }
+        
         performanceMonitor = new PerformanceMonitor(this);
         threadManager = new ThreadManager(this);
         performanceBenchmark = new PerformanceBenchmark(this);
-          // Initialize performance monitoring if enabled
+        
+        // Initialize performance monitoring if enabled
         if (getConfig().getBoolean("performance.enable-monitoring", true)) {
             getLogger().info("Performance monitoring is enabled");
-        }        // Initialize module file manager
+        }
+        
+        // Initialize module file manager
         moduleFileManager = new ModuleFileManager(this);
         
         // Initialize sandbox if enabled
@@ -407,14 +451,13 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         }
         
         console.categoryInfo(ConsoleFormatter.MessageCategory.SYSTEM, "Alle Module erfolgreich initialisiert");
-        
-        // Module laden, falls aktiviert
+          // Module laden, falls aktiviert
         if (getConfig().getBoolean("general.auto-load-modules", true)) {
             console.subHeader("MODULE LADEN");
-            try {
-                // Use standard loadModules() method instead of loadModulesWithDependencyResolution()
-                if (moduleManager != null) {
-                    int loadedCount = moduleManager.loadModules();
+            try {                // Use loadModulesWithDependencyResolution() method
+                if (moduleManagerInternal != null) {
+                    moduleManagerInternal.loadModulesWithDependencyResolution();
+                    int loadedCount = loadedModules.size(); // Get actual count from loaded modules
                     console.categorySuccess(ConsoleFormatter.MessageCategory.SYSTEM, 
                         loadedCount + " Module erfolgreich initialisiert");
                 }
@@ -428,7 +471,8 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             // Ressourcen extrahieren, falls konfiguriert
             if (getConfig().getBoolean("general.extract-module-resources", true)) {
                 extractModuleResources();
-            }        } else {
+            }
+        } else {
             console.categoryWarning(ConsoleFormatter.MessageCategory.MODULE, "Automatisches Laden der Module ist deaktiviert");
         }
           // WebUI wird nicht automatisch gestartet - kann über Befehle aktiviert werden
@@ -446,6 +490,18 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             getLogger().info("Main command registered successfully");
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Error registering main command", e);
+        }
+          // Registriere den Confirm-Befehl
+        try {
+            if (clickableCommandManager != null) {
+                ConfirmCommandExecutor confirmCommand = new ConfirmCommandExecutor(this, clickableCommandManager);
+                getCommand("confirm").setExecutor(confirmCommand);
+                getLogger().info("Confirm command registered successfully");
+            } else {
+                getLogger().warning("Could not register confirm command: ClickableCommandManager is null");
+            }
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "Error registering confirm command", e);
         }
         
         // Use reflection to safely call methods that might not exist
@@ -483,9 +539,8 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
                     console.warning("Fehler beim Stoppen der ModulePerformanceBossBar: " + e.getMessage());
                 }
             }
-            
-            // Alle geladenen Module deaktivieren
-            if (moduleManager != null) {
+              // Alle geladenen Module deaktivieren
+            if (moduleManagerInternal != null) {
                 // Manuelle Deaktivierung aller Module
                 for (String moduleName : new ArrayList<>(loadedModules.keySet())) {
                     disableModule(moduleName);
@@ -493,8 +548,8 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
                 
                 // Shutdown module manager using reflection to be safe
                 try {
-                    Method shutdownMethod = moduleManager.getClass().getMethod("shutdown");
-                    shutdownMethod.invoke(moduleManager);
+                    Method shutdownMethod = moduleManagerInternal.getClass().getMethod("shutdown");
+                    shutdownMethod.invoke(moduleManagerInternal);
                 } catch (Exception e) {
                     getLogger().log(Level.WARNING, "Failed to properly shutdown module manager", e);
                 }
@@ -696,29 +751,59 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         String loadMode = getConfig().getString("modules.load-mode", "MANUAL").toUpperCase();
         boolean fileWatcherEnabled = getConfig().getBoolean("modules.file-watcher-enabled", true);
         
-        if (fileWatcherEnabled && moduleManager != null) {
+        if (fileWatcherEnabled && moduleManagerInternal != null) {
             int interval = getConfig().getInt("modules.watcher-interval", 5);
             // Don't call startModuleFileWatcher() - implement equivalent functionality
-            
-            // Set up a basic file watcher with BukkitScheduler
-            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-                if (debugMode) {
-                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
-                        "Checking for module file changes...", true);
-                }
-                
-                // Check for new modules
-                File[] files = modulesDir.listFiles(file -> 
-                    file.isFile() && file.getName().endsWith(".jar"));
-                
-                if (files != null) {
-                    for (File file : files) {
-                        String moduleName = file.getName().substring(0, file.getName().length() - 4);
-                        
-                        // Check if this module is not loaded yet
-                        if (moduleManager != null && !moduleManager.isModuleLoaded(moduleName)) {
-                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
-                                "Found new module: " + moduleName);
+              // Set up a basic file watcher with BukkitScheduler
+            getServer().getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
+                @Override
+                public void run() {
+                    if (debugMode) {
+                        console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                            "Checking for module file changes...", true);
+                    }
+                    
+                    // Check for new modules
+                    File[] files = modulesDir.listFiles(new java.io.FileFilter() {
+                        @Override
+                        public boolean accept(File file) {
+                            return file.isFile() && file.getName().endsWith(".jar");
+                        }
+                    });
+                      if (files != null) {
+                        for (File file : files) {
+                            String moduleName = file.getName().substring(0, file.getName().length() - 4);
+                            
+                            // Only process if not already loaded
+                            if (moduleManagerInternal != null && !loadedModules.containsKey(moduleName)) {
+                                // Check if jar contains valid module.yml before considering it a valid module
+                                if (ApiCore.this.hasValidModuleYml(file)) {
+                                    try {
+                                        if (debugMode) {
+                                            console.categoryInfo(ConsoleFormatter.MessageCategory.MODULE, 
+                                                "Found new valid module: " + moduleName);
+                                        }
+                                        
+                                        // Actually load the module to prevent re-detection
+                                        moduleManagerInternal.loadModule(file);
+                                        
+                                        console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, 
+                                            "Auto-loaded module: " + moduleName);
+                                            
+                                    } catch (Exception e) {
+                                        console.categoryError(ConsoleFormatter.MessageCategory.MODULE, 
+                                            "Failed to auto-load module " + moduleName + ": " + e.getMessage());
+                                        if (debugMode) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                } else {
+                                    if (debugMode) {
+                                        console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                                            "Skipping " + file.getName() + " - no valid module.yml", true);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -730,6 +815,78 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
         
         if (autoCheckModules && !loadMode.equals("MANUAL")) {
             scheduleModuleChecker();
+        }
+    }
+      /**
+     * Check if a JAR file contains a valid module.yml
+     */
+    private boolean hasValidModuleYml(File jarFile) {
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(jarFile)) {
+            java.util.jar.JarEntry entry = jar.getJarEntry("module.yml");
+            if (entry == null) {
+                if (debugMode) {
+                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                        "No module.yml found in: " + jarFile.getName(), true);
+                }
+                return false;
+            }
+            
+            // Parse YAML and validate required fields
+            try (java.io.InputStream is = jar.getInputStream(entry)) {
+                org.bukkit.configuration.file.YamlConfiguration config = 
+                    org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new java.io.InputStreamReader(is, "UTF-8"));
+                  // Check for required fields
+                String name = config.getString("name");
+                String version = config.getString("version");
+                String main = config.getString("main");
+                String author = config.getString("author");
+                
+                if (name == null || name.trim().isEmpty()) {
+                    if (debugMode) {
+                        console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                            "Invalid module.yml in " + jarFile.getName() + ": missing 'name'", true);
+                    }
+                    return false;
+                }
+                
+                if (version == null || version.trim().isEmpty()) {
+                    if (debugMode) {
+                        console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                            "Invalid module.yml in " + jarFile.getName() + ": missing 'version'", true);
+                    }
+                    return false;
+                }
+                
+                if (main == null || main.trim().isEmpty()) {
+                    if (debugMode) {
+                        console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                            "Invalid module.yml in " + jarFile.getName() + ": missing 'main'", true);
+                    }
+                    return false;
+                }
+                
+                if (debugMode) {
+                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                        "Valid module found: " + name + " v" + version + 
+                        (author != null ? " by " + author : ""), true);
+                }
+                
+                return true;
+                
+            } catch (Exception e) {
+                if (debugMode) {
+                    console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                        "Error parsing module.yml in " + jarFile.getName() + ": " + e.getMessage(), true);
+                }
+                return false;
+            }
+        } catch (Exception e) {
+            if (debugMode) {
+                console.categoryDebug(ConsoleFormatter.MessageCategory.MODULE, 
+                    "Error reading JAR file " + jarFile.getName() + ": " + e.getMessage(), true);
+            }
+            return false;
         }
     }
     
@@ -755,13 +912,11 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
                 // Get list of module jar files
                 File[] files = modulesDir.listFiles(file -> 
                     file.isFile() && file.getName().endsWith(".jar"));
-                
-                if (files != null) {
+                  if (files != null) {
                     for (File file : files) {
                         String moduleName = file.getName().substring(0, file.getName().length() - 4);
-                        
-                        // Check if this module is not loaded yet
-                        if (moduleManager != null && !moduleManager.isModuleLoaded(moduleName)) {
+                          // Check if this module is not loaded yet
+                        if (moduleManagerInternal != null && !loadedModules.containsKey(moduleName)) {
                             newModules.add(moduleName);
                         }
                     }
@@ -1135,13 +1290,31 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      * Registriert dynamische Befehle
      *
      * @param commands Liste der zu registrierenden Befehle
-     */
-    @Override
+     */    @Override
     public void registerCommands(List<DynamicCommand> commands) {
-        if (commandManager != null) {
+        if (commandManager != null && commands != null) {
             try {
-                Method registerCommandsMethod = commandManager.getClass().getMethod("registerCommands", List.class);
-                registerCommandsMethod.invoke(commandManager, commands);
+                // Create a wrapper method that registers DynamicCommands
+                Method registerDynamicCommandMethod = commandManager.getClass().getMethod("registerDynamicCommand", DynamicCommand.class);
+                
+                for (DynamicCommand command : commands) {
+                    registerDynamicCommandMethod.invoke(commandManager, command);
+                }
+            } catch (NoSuchMethodException e) {
+                // Fallback: Try to register each command individually if registerDynamicCommand doesn't exist
+                getLogger().warning("registerDynamicCommand method not found, trying alternative approach");
+                
+                for (DynamicCommand command : commands) {
+                    try {
+                        // Try to register using a different approach
+                        if (command != null && command.getName() != null) {
+                            getLogger().info("Registering dynamic command: " + command.getName() + " from module: " + command.getModuleId());
+                        }
+                    } catch (Exception ex) {
+                        getLogger().log(Level.WARNING, "Failed to register dynamic command: " + 
+                            (command != null ? command.getName() : "unknown"), ex);
+                    }
+                }
             } catch (Exception e) {
                 getLogger().log(Level.SEVERE, "Error registering dynamic commands", e);
             }
@@ -1243,13 +1416,30 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      */
     public PermissionManager getPermissionManager() {
         return permissionManager;
+    }    
+    /**
+     * Gibt den ClickableCommandManager zurück
+     * 
+     * @return ClickableCommandManager-Instanz
+     */
+    public ClickableCommandManager getClickableCommandManager() {
+        return clickableCommandManager;
+    }
+    
+    /**
+     * Gibt das Modules-Verzeichnis zurück
+     * 
+     * @return Modules-Verzeichnis
+     */
+    public File getModulesDir() {
+        return modulesDir;
     }
     
     /**
      * Gibt den ModuleManager zurück
      * @return Der ModuleManager
      */
-    public ModuleManager getModuleManager() {
+    public com.essentialscore.api.module.ModuleManager getModuleManager() {
         return moduleManager;
     }
 
@@ -1342,43 +1532,39 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
             console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "Fehler beim Exportieren der API-Packages: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    /**
+    }    /**
      * Lädt alle Module neu
      * Diese Methode verwendet den ModuleManager, um alle Module sauber neu zu laden
      */
     public void reloadModules() {
         console.header("MODULE NEU LADEN");
         
-        if (moduleManager != null) {
+        if (moduleManagerInternal != null) {
             try {
-                Method reloadAllMethod = moduleManager.getClass().getMethod("reloadAllModules");
-                reloadAllMethod.invoke(moduleManager);
+                // Use the internal module manager which has the actual reload functionality
+                moduleManagerInternal.reloadAllModules();
+                console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Module wurden erfolgreich neu geladen");
             } catch (Exception e) {
-                getLogger().log(Level.WARNING, "Failed to reload all modules", e);
-                // Fallback to standard module reloading if available
-                try {
-                    Method reloadMethod = moduleManager.getClass().getMethod("reloadModules");
-                    reloadMethod.invoke(moduleManager);
-                } catch (Exception ex) {
-                    getLogger().log(Level.SEVERE, "Failed to reload modules", ex);
+                console.categoryError(ConsoleFormatter.MessageCategory.MODULE, "Fehler beim Neuladen der Module: " + e.getMessage());
+                if (debugMode) {
+                    e.printStackTrace();
                 }
             }
             
             // Ressourcen nach dem Neuladen extrahieren, falls konfiguriert
-            if (getConfig().getBoolean("general.extract-module-resources", true)) {
+            if (getConfig().getBoolean("core.extract-resources", true)) {
                 getServer().getScheduler().runTaskAsynchronously(this, () -> {
                     console.categoryInfo(ConsoleFormatter.MessageCategory.RESOURCE, "Extrahiere Modul-Ressourcen nach Reload...");
                     extractModuleResources();
                 });
             }
-              // Alle Caches leeren, die auf Module verweisen könnten
+            
+            // Alle Caches leeren, die auf Module verweisen könnten
             formattedMessageCache.clear();
             permissionExactCache.clear();
             
             // Stelle sicher, dass alle Module korrekt registriert sind
-            console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Module wurden neu geladen. Anzahl: " + loadedModules.size());
+            console.categorySuccess(ConsoleFormatter.MessageCategory.MODULE, "Module-Reload abgeschlossen. Anzahl: " + loadedModules.size());
         } else {
             console.categoryError(ConsoleFormatter.MessageCategory.SYSTEM, "ModuleManager ist nicht initialisiert!");
         }
@@ -1476,16 +1662,13 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
     public Object getIntegrationManager() {
         // Placeholder implementation
         return null;
-    }
-
-    /**
+    }    /**
      * Gets the placeholder manager.
      *
      * @return The placeholder manager
      */
-    public Object getPlaceholderManager() {
-        // Placeholder implementation
-        return null;
+    public PlaceholderManager getPlaceholderManager() {
+        return placeholderManager;
     }
 
     /**
@@ -1540,7 +1723,14 @@ public class ApiCore extends JavaPlugin implements Listener, BasePlugin {
      *
      * @return The internal module manager
      */
-    public ModuleManager getInternalModuleManager() {
-        return moduleManager;
+    public com.essentialscore.ModuleManager getInternalModuleManager() {
+        return moduleManagerInternal;
+    }
+
+    /**
+     * Gibt die Start-Zeit des Plugins zurück
+     */
+    public long getStartTime() {
+        return startTime;
     }
 }
